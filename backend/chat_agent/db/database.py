@@ -1,0 +1,100 @@
+"""Database connection and session management."""
+
+import logging
+from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
+from typing import Generator
+
+from ..core.config import get_settings
+from .base import Base
+
+
+# Global variables
+engine = None
+SessionLocal = None
+
+
+def create_database_engine():
+    """Create database engine."""
+    global engine, SessionLocal
+    
+    settings = get_settings()
+    database_url = settings.database.url
+    
+    # Create data directory if using SQLite
+    if database_url.startswith("sqlite"):
+        db_path = database_url.replace("sqlite:///", "")
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    
+    # Engine configuration
+    engine_kwargs = {
+        "echo": settings.database.echo,
+    }
+    
+    # SQLite specific configuration
+    if database_url.startswith("sqlite"):
+        engine_kwargs.update({
+            "poolclass": StaticPool,
+            "connect_args": {
+                "check_same_thread": False,
+                "timeout": 20
+            }
+        })
+    else:
+        # PostgreSQL/MySQL configuration
+        engine_kwargs.update({
+            "pool_size": settings.database.pool_size,
+            "max_overflow": settings.database.max_overflow,
+            "pool_pre_ping": True,
+            "pool_recycle": 3600,
+        })
+    
+    engine = create_engine(database_url, **engine_kwargs)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    logging.info(f"Database engine created: {database_url}")
+
+
+async def init_db():
+    """Initialize database."""
+    global engine
+    
+    if engine is None:
+        create_database_engine()
+    
+    # Import all models to ensure they are registered
+    from ..models import user, conversation, message, knowledge_base
+    
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+    logging.info("Database tables created")
+
+
+def get_db() -> Generator[Session, None, None]:
+    """Get database session."""
+    global SessionLocal
+    
+    if SessionLocal is None:
+        create_database_engine()
+    
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Database session error: {e}")
+        raise
+    finally:
+        db.close()
+
+
+def get_db_session() -> Session:
+    """Get database session (synchronous)."""
+    global SessionLocal
+    
+    if SessionLocal is None:
+        create_database_engine()
+    
+    return SessionLocal()

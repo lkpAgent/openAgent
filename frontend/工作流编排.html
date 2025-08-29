@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作流编排 - 智能对话平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1800px;
+            height: 95vh;
+            margin: auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        
+        /* 顶部工具栏 */
+        .toolbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        
+        .toolbar-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-right: 30px;
+        }
+        
+        .toolbar-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .toolbar-btn {
+            padding: 8px 16px;
+            background: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .toolbar-btn:hover {
+            background: #3a5a80;
+        }
+        
+        .toolbar-btn i {
+            font-size: 14px;
+        }
+        
+        /* 左侧组件库 */
+        .components-panel {
+            width: 280px;
+            background: #f8f9fa;
+            border-right: 1px solid #eaeaea;
+            display: flex;
+            flex-direction: column;
+            padding-top: 60px;
+        }
+        
+        .components-header {
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .components-search {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .components-search input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .components-categories {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        .components-category {
+            margin-bottom: 15px;
+        }
+        
+        .category-header {
+            padding: 10px 20px;
+            font-weight: 600;
+            color: #4a6fa5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .category-header i {
+            font-size: 14px;
+            transition: transform 0.3s;
+        }
+        
+        .category-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 5px 20px;
+        }
+        
+        .component-item {
+            padding: 12px 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #eaeaea;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .component-item:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .component-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .component-icon.model {
+            background: #4a6fa5;
+        }
+        
+        .component-icon.plugin {
+            background: #28a745;
+        }
+        
+        .component-icon.tool {
+            background: #ffc107;
+        }
+        
+        .component-icon.input {
+            background: #17a2b8;
+        }
+        
+        .component-icon.output {
+            background: #dc3545;
+        }
+        
+        .component-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        /* 中间画布区域 */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            background: #f8f9fa;
+            padding-top: 60px;
+        }
+        
+        .canvas {
+            position: relative;
+            width: 2000px;
+            height: 2000px;
+            background-image: 
+                linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .node {
+            position: absolute;
+            width: 180px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            cursor: move;
+            transition: box-shadow 0.3s;
+        }
+        
+        .node:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .node-header {
+            padding: 12px 15px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .node-header.model {
+            background: #4a6fa5;
+        }
+        
+        .node-header.plugin {
+            background: #28a745;
+        }
+        
+        .node-header.tool {
+            background: #ffc107;
+        }
+        
+        .node-header.input {
+            background: #17a2b8;
+        }
+        
+        .node-header.output {
+            background: #dc3545;
+        }
+        
+        .node-title {
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .node-content {
+            padding: 15px;
+        }
+        
+        .node-param {
+            margin-bottom: 10px;
+        }
+        
+        .node-param label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #6c757d;
+        }
+        
+        .node-param input,
+        .node-param select {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .node-connectors {
+            position: relative;
+            height: 20px;
+        }
+        
+        .connector {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #adb5bd;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .connector-input {
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .connector-output {
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* 右侧属性面板 */
+        .properties-panel {
+            width: 300px;
+            background: white;
+            border-left: 1px solid #eaeaea;
+            display: flex;
+            flex-direction: column;
+            padding-top: 60px;
+        }
+        
+        .properties-header {
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .properties-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .property-group {
+            margin-bottom: 25px;
+        }
+        
+        .property-group-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .property-item {
+            margin-bottom: 15px;
+        }
+        
+        .property-item label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #5c6b7e;
+        }
+        
+        .property-item input,
+        .property-item select,
+        .property-item textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .property-item textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .property-actions {
+            padding: 20px;
+            border-top: 1px solid #eaeaea;
+        }
+        
+        .property-btn {
+            width: 100%;
+            padding: 12px;
+            background: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .property-btn:hover {
+            background: #3a5a80;
+        }
+        
+        /* 连接线样式 */
+        .connection {
+            stroke: #4a6fa5;
+            stroke-width: 3;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1400px) {
+            .container {
+                width: 95%;
+            }
+            
+            .components-panel {
+                width: 240px;
+            }
+            
+            .properties-panel {
+                width: 260px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .components-panel {
+                width: 100%;
+                height: 250px;
+                border-right: none;
+                border-bottom: 1px solid #eaeaea;
+            }
+            
+            .properties-panel {
+                width: 100%;
+                height: 400px;
+                border-left: none;
+                border-top: 1px solid #eaeaea;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-title">工作流编排</div>
+            <div class="toolbar-actions">
+                <button class="toolbar-btn"><i class="fas fa-save"></i> 保存</button>
+                <button class="toolbar-btn"><i class="fas fa-download"></i> 导出</button>
+                <button class="toolbar-btn"><i class="fas fa-plus"></i> 新建</button>
+                <button class="toolbar-btn"><i class="fas fa-undo"></i> 撤销</button>
+                <button class="toolbar-btn"><i class="fas fa-redo"></i> 重做</button>
+                <button class="toolbar-btn"><i class="fas fa-play"></i> 运行</button>
+            </div>
+        </div>
+        
+        <!-- 左侧组件库 -->
+        <div class="components-panel">
+            <div class="components-header">组件库</div>
+            
+            <div class="components-search">
+                <input type="text" placeholder="搜索组件...">
+            </div>
+            
+            <div class="components-categories">
+                <div class="components-category">
+                    <div class="category-header">
+                        <span>大模型</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content">
+                        <div class="component-item" draggable="true" data-type="model">
+                            <div class="component-icon model"><i class="fas fa-brain"></i></div>
+                            <div class="component-name">GPT-4</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="model">
+                            <div class="component-icon model"><i class="fas fa-brain"></i></div>
+                            <div class="component-name">ChatGLM</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="model">
+                            <div class="component-icon model"><i class="fas fa-brain"></i></div>
+                            <div class="component-name">ERNIE</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="components-category">
+                    <div class="category-header">
+                        <span>输入组件</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content">
+                        <div class="component-item" draggable="true" data-type="input">
+                            <div class="component-icon input"><i class="fas fa-keyboard"></i></div>
+                            <div class="component-name">文本输入</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="input">
+                            <div class="component-icon input"><i class="fas fa-file"></i></div>
+                            <div class="component-name">文件上传</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="input">
+                            <div class="component-icon input"><i class="fas fa-database"></i></div>
+                            <div class="component-name">数据连接</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="components-category">
+                    <div class="category-header">
+                        <span>处理插件</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content">
+                        <div class="component-item" draggable="true" data-type="plugin">
+                            <div class="component-icon plugin"><i class="fas fa-language"></i></div>
+                            <div class="component-name">翻译插件</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="plugin">
+                            <div class="component-icon plugin"><i class="fas fa-code"></i></div>
+                            <div class="component-name">代码执行</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="plugin">
+                            <div class="component-icon plugin"><i class="fas fa-calculator"></i></div>
+                            <div class="component-name">数学计算</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="components-category">
+                    <div class="category-header">
+                        <span>输出组件</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content">
+                        <div class="component-item" draggable="true" data-type="output">
+                            <div class="component-icon output"><i class="fas fa-text-width"></i></div>
+                            <div class="component-name">文本输出</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="output">
+                            <div class="component-icon output"><i class="fas fa-chart-bar"></i></div>
+                            <div class="component-name">可视化</div>
+                        </div>
+                        <div class="component-item" draggable="true" data-type="output">
+                            <div class="component-icon output"><i class="fas fa-file-export"></i></div>
+                            <div class="component-name">文件导出</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 中间画布区域 -->
+        <div class="canvas-container">
+            <div class="canvas" id="workflow-canvas">
+                <!-- 示例节点 -->
+                <div class="node" style="left: 300px; top: 200px;">
+                    <div class="node-header input">
+                        <div class="node-title">文本输入</div>
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="node-content">
+                        <div class="node-param">
+                            <label>输入文本</label>
+                            <input type="text" value="你好，请介绍你自己">
+                        </div>
+                    </div>
+                    <div class="node-connectors">
+                        <div class="connector connector-output"></div>
+                    </div>
+                </div>
+                
+                <div class="node" style="left: 600px; top: 180px;">
+                    <div class="node-header model">
+                        <div class="node-title">GPT-4 模型</div>
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="node-content">
+                        <div class="node-param">
+                            <label>温度</label>
+                            <input type="range" min="0" max="1" step="0.1" value="0.7">
+                        </div>
+                        <div class="node-param">
+                            <label>最大令牌数</label>
+                            <input type="number" value="1000">
+                        </div>
+                    </div>
+                    <div class="node-connectors">
+                        <div class="connector connector-input"></div>
+                        <div class="connector connector-output"></div>
+                    </div>
+                </div>
+                
+                <div class="node" style="left: 900px; top: 250px;">
+                    <div class="node-header plugin">
+                        <div class="node-title">翻译插件</div>
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="node-content">
+                        <div class="node-param">
+                            <label>目标语言</label>
+                            <select>
+                                <option>英语</option>
+                                <option>中文</option>
+                                <option>日语</option>
+                                <option>法语</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="node-connectors">
+                        <div class="connector connector-input"></div>
+                        <div class="connector connector-output"></div>
+                    </div>
+                </div>
+                
+                <div class="node" style="left: 1200px; top: 300px;">
+                    <div class="node-header output">
+                        <div class="node-title">文本输出</div>
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="node-content">
+                        <div class="node-param">
+                            <label>输出格式</label>
+                            <select>
+                                <option>纯文本</option>
+                                <option>Markdown</option>
+                                <option>HTML</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="node-connectors">
+                        <div class="connector connector-input"></div>
+                    </div>
+                </div>
+                
+                <!-- SVG画布用于连接线 -->
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#4a6fa5"></polygon>
+                        </marker>
+                    </defs>
+                    <!-- 示例连接线 -->
+                    <path d="M 306 220 L 600 200" class="connection"></path>
+                    <path d="M 706 200 L 900 270" class="connection"></path>
+                    <path d="M 1006 270 L 1200 320" class="connection"></path>
+                </svg>
+            </div>
+        </div>
+        
+        <!-- 右侧属性面板 -->
+        <div class="properties-panel">
+            <div class="properties-header">属性配置</div>
+            
+            <div class="properties-content">
+                <div class="property-group">
+                    <div class="property-group-title">节点属性</div>
+                    
+                    <div class="property-item">
+                        <label>节点名称</label>
+                        <input type="text" value="GPT-4 模型">
+                    </div>
+                    
+                    <div class="property-item">
+                        <label>模型版本</label>
+                        <select>
+                            <option>gpt-4</option>
+                            <option>gpt-4-32k</option>
+                            <option>gpt-4-turbo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="property-item">
+                        <label>温度</label>
+                        <input type="range" min="0" max="1" step="0.1" value="0.7">
+                    </div>
+                    
+                    <div class="property-item">
+                        <label>最大令牌数</label>
+                        <input type="number" value="1000">
+                    </div>
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-group-title">高级设置</div>
+                    
+                    <div class="property-item">
+                        <label>系统提示</label>
+                        <textarea>你是一个有帮助的AI助手，请用中文回答用户的问题。</textarea>
+                    </div>
+                    
+                    <div class="property-item">
+                        <label>停止序列</label>
+                        <input type="text" placeholder="输入停止序列，用逗号分隔">
+                    </div>
+                    
+                    <div class="property-item">
+                        <label>频率惩罚</label>
+                        <input type="range" min="0" max="2" step="0.1" value="0">
+                    </div>
+                    
+                    <div class="property-item">
+                        <label>存在惩罚</label>
+                        <input type="range" min="0" max="2" step="0.1" value="0">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="property-actions">
+                <button class="property-btn">应用更改</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 简单的拖放功能实现
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('workflow-canvas');
+            let selectedNode = null;
+            let offsetX, offsetY;
+            
+            // 组件拖拽到画布
+            document.querySelectorAll('.component-item').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', this.getAttribute('data-type'));
+                });
+            });
+            
+            canvas.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            canvas.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('text/plain');
+                const x = e.clientX - canvas.getBoundingClientRect().left;
+                const y = e.clientY - canvas.getBoundingClientRect().top;
+                
+                // 创建新节点
+                createNode(type, x, y);
+            });
+            
+            // 节点拖拽移动
+            document.querySelectorAll('.node').forEach(node => {
+                node.addEventListener('mousedown', function(e) {
+                    if (e.target.classList.contains('connector')) {
+                        // 处理连接逻辑
+                        startConnecting(this, e.target);
+                        return;
+                    }
+                    
+                    if (e.target.classList.contains('fa-grip-vertical') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                        // 允许拖动和输入
+                        return;
+                    }
+                    
+                    selectedNode = this;
+                    offsetX = e.clientX - selectedNode.getBoundingClientRect().left;
+                    offsetY = e.clientY - selectedNode.getBoundingClientRect().top;
+                    
+                    // 提升选中节点的z-index
+                    document.querySelectorAll('.node').forEach(n => {
+                        n.style.zIndex = 1;
+                    });
+                    selectedNode.style.zIndex = 10;
+                });
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (selectedNode) {
+                    const x = e.clientX - canvas.getBoundingClientRect().left - offsetX;
+                    const y = e.clientY - canvas.getBoundingClientRect().top - offsetY;
+                    
+                    selectedNode.style.left = x + 'px';
+                    selectedNode.style.top = y + 'px';
+                    
+                    // 更新连接线
+                    updateConnections();
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                selectedNode = null;
+            });
+            
+            // 创建新节点函数
+            function createNode(type, x, y) {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.style.left = x + 'px';
+                node.style.top = y + 'px';
+                
+                let headerClass = '';
+                let icon = '';
+                let title = '';
+                let content = '';
+                
+                switch(type) {
+                    case 'model':
+                        headerClass = 'model';
+                        icon = 'fa-brain';
+                        title = '新模型';
+                        content = `
+                            <div class="node-param">
+                                <label>温度</label>
+                                <input type="range" min="0" max="1" step="0.1" value="0.7">
+                            </div>
+                            <div class="node-param">
+                                <label>最大令牌数</label>
+                                <input type="number" value="1000">
+                            </div>
+                        `;
+                        break;
+                    case 'input':
+                        headerClass = 'input';
+                        icon = 'fa-keyboard';
+                        title = '文本输入';
+                        content = `
+                            <div class="node-param">
+                                <label>输入文本</label>
+                                <input type="text" placeholder="输入文本内容">
+                            </div>
+                        `;
+                        break;
+                    case 'plugin':
+                        headerClass = 'plugin';
+                        icon = 'fa-cogs';
+                        title = '新插件';
+                        content = `
+                            <div class="node-param">
+                                <label>插件参数</label>
+                                <input type="text" placeholder="参数值">
+                            </div>
+                        `;
+                        break;
+                    case 'output':
+                        headerClass = 'output';
+                        icon = 'fa-text-width';
+                        title = '文本输出';
+                        content = `
+                            <div class="node-param">
+                                <label>输出格式</label>
+                                <select>
+                                    <option>纯文本</option>
+                                    <option>Markdown</option>
+                                    <option>HTML</option>
+                                </select>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                node.innerHTML = `
+                    <div class="node-header ${headerClass}">
+                        <div class="node-title">${title}</div>
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="node-content">
+                        ${content}
+                    </div>
+                    <div class="node-connectors">
+                        <div class="connector connector-input"></div>
+                        <div class="connector connector-output"></div>
+                    </div>
+                `;
+                
+                canvas.appendChild(node);
+                
+                // 添加新节点的事件监听
+                node.addEventListener('mousedown', function(e) {
+                    if (e.target.classList.contains('connector')) {
+                        startConnecting(this, e.target);
+                        return;
+                    }
+                    
+                    if (e.target.classList.contains('fa-grip-vertical') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                        return;
+                    }
+                    
+                    selectedNode = this;
+                    offsetX = e.clientX - selectedNode.getBoundingClientRect().left;
+                    offsetY = e.clientY - selectedNode.getBoundingClientRect().top;
+                    
+                    document.querySelectorAll('.node').forEach(n => {
+                        n.style.zIndex = 1;
+                    });
+                    selectedNode.style.zIndex = 10;
+                });
+            }
+            
+            // 简单的连接功能
+            let connectingFrom = null;
+            let connectingFromType = null;
+            
+            function startConnecting(node, connector) {
+                connectingFrom = node;
+                connectingFromType = connector.classList.contains('connector-output') ? 'output' : 'input';
+                
+                document.addEventListener('mousemove', drawTempConnection);
+                document.addEventListener('mouseup', finishConnection);
+            }
+            
+            function drawTempConnection(e) {
+                // 绘制临时连接线
+                // 实际实现需要更复杂的逻辑
+            }
+            
+            function finishConnection(e) {
+                // 完成连接
+                document.removeEventListener('mousemove', drawTempConnection);
+                document.removeEventListener('mouseup', finishConnection);
+                
+                const x = e.clientX;
+                const y = e.clientY;
+                
+                // 检查是否连接到另一个节点的连接器
+                document.querySelectorAll('.connector').forEach(connector => {
+                    const rect = connector.getBoundingClientRect();
+                    const connectorX = rect.left + rect.width / 2;
+                    const connectorY = rect.top + rect.height / 2;
+                    
+                    // 简单距离检测
+                    const distance = Math.sqrt(Math.pow(x - connectorX, 2) + Math.pow(y - connectorY, 2));
+                    
+                    if (distance < 20) {
+                        const node = connector.closest('.node');
+                        if (node !== connectingFrom) {
+                            // 创建连接
+                            createConnection(connectingFrom, connector, node);
+                        }
+                    }
+                });
+                
+                connectingFrom = null;
+                connectingFromType = null;
+            }
+            
+            function createConnection(fromNode, toConnector, toNode) {
+                // 实际实现需要绘制SVG连接线
+                // 这里只是示例
+                console.log('创建连接从', fromNode, '到', toNode);
+            }
+            
+            function updateConnections() {
+                // 更新所有连接线的位置
+                // 实际实现需要更新SVG路径
+            }
+            
+            // 节点点击选中显示属性
+            document.querySelectorAll('.node').forEach(node => {
+                node.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('connector')) return;
+                    
+                    document.querySelectorAll('.node').forEach(n => {
+                        n.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.1)';
+                    });
+                    
+                    this.style.boxShadow = '0 5px 20px rgba(74, 111, 165, 0.5)';
+                    
+                    // 更新属性面板
+                    // 实际实现需要根据节点类型显示不同的属性
+                });
+            });
+        });
+    </script>
+</body>
+</html>

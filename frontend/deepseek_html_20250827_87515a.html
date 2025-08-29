@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能对话平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1800px;
+            height: 95vh;
+            margin: auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        
+        /* 左侧导航和历史对话样式 */
+        .sidebar {
+            width: 320px;
+            background: linear-gradient(to bottom, #4a6fa5, #2c3e50);
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo {
+            text-align: center;
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        .logo p {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .nav-items {
+            list-style: none;
+            padding: 20px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-item {
+            margin-bottom: 10px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 12px;
+        }
+        
+        .nav-link i {
+            font-size: 20px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .history-section {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .history-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .history-search {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .history-search input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+        
+        .history-search i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.7;
+        }
+        
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .history-item.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .history-item-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .history-item-content {
+            font-size: 13px;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .history-item-time {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        /* 中间聊天区域样式 */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            border-right: 1px solid #eaeaea;
+        }
+        
+        .chat-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eaeaea;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .chat-mode-selector {
+            display: flex;
+            background: #f0f4f8;
+            border-radius: 12px;
+            padding: 4px;
+        }
+        
+        .mode-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .messages {
+            flex: 1;
+            padding: 25px 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            max-width: 75%;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 18px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.bot {
+            align-self: flex-start;
+            background: white;
+            border-top-left-radius: 5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: #4a6fa5;
+            color: white;
+            border-top-right-radius: 5px;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.7;
+            text-align: right;
+        }
+        
+        .input-area {
+            padding: 20px 30px;
+            background: white;
+            border-top: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            resize: none;
+            height: 60px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: #4a6fa5;
+        }
+        
+        .send-button {
+            margin-left: 15px;
+            background: #4a6fa5;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .send-button:hover {
+            background: #3a5a80;
+        }
+        
+        /* 右侧智能体规划区域样式 */
+        .agent-panel {
+            width: 320px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid #eaeaea;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-header i {
+            color: #4a6fa5;
+            font-size: 20px;
+        }
+        
+        .workflow-process {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .process-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .process-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .process-step {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #4a6fa5;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            background: #4a6fa5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            color: white;
+        }
+        
+        .step-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .step-content {
+            font-size: 14px;
+            color: #5c6b7e;
+            line-height: 1.5;
+        }
+        
+        .step-status {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-dot.completed {
+            background: #28a745;
+        }
+        
+        .status-dot.processing {
+            background: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .status-dot.pending {
+            background: #6c757d;
+        }
+        
+        .knowledge-base {
+            padding: 20px;
+            border-top: 1px solid #eaeaea;
+        }
+        
+        .kb-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .kb-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .kb-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .kb-item:hover {
+            background: #e9ecef;
+        }
+        
+        .kb-icon {
+            width: 36px;
+            height: 36px;
+            background: #4a6fa5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+        }
+        
+        .kb-item-info {
+            flex: 1;
+        }
+        
+        .kb-item-title {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .kb-item-desc {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1400px) {
+            .container {
+                width: 95%;
+            }
+            
+            .sidebar {
+                width: 280px;
+            }
+            
+            .agent-panel {
+                width: 280px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 300px;
+            }
+            
+            .nav-items {
+                display: flex;
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+            
+            .nav-item {
+                flex-shrink: 0;
+                margin-right: 10px;
+                margin-bottom: 0;
+            }
+            
+            .agent-panel {
+                width: 100%;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧导航和历史对话 -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>智能对话平台</h1>
+                <p>多模态对话与工作流编排</p>
+            </div>
+            
+            <ul class="nav-items">
+                <li class="nav-item active">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-comments"></i>
+                        <span>对话中心</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>知识库管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>工作流编排</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-robot"></i>
+                        <span>智能体管理</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="history-section">
+                <div class="history-header">
+                    <div class="history-title">历史对话</div>
+                    <i class="fas fa-plus" title="新建对话"></i>
+                </div>
+                
+                <div class="history-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="搜索历史对话...">
+                </div>
+                
+                <div class="history-list">
+                    <div class="history-item active">
+                        <div class="history-item-title">
+                            <span>推荐系统设计讨论</span>
+                            <span class="history-item-time">今天</span>
+                        </div>
+                        <div class="history-item-content">我想了解如何设计一个推荐系统</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-item-title">
+                            <span>RAG技术探讨</span>
+                            <span class="history-item-time">昨天</span>
+                        </div>
+                        <div class="history-item-content">请介绍一下RAG对话和智能体对话的区别</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-item-title">
+                            <span>机器学习问题</span>
+                            <span class="history-item-time">10月22日</span>
+                        </div>
+                        <div class="history-item-content">如何解决过拟合问题？</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-item-title">
+                            <span>产品需求讨论</span>
+                            <span class="history-item-time">10月20日</span>
+                        </div>
+                        <div class="history-item-content">我们需要设计一个用户友好的界面</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-item-title">
+                            <span>技术架构咨询</span>
+                            <span class="history-item-time">10月18日</span>
+                        </div>
+                        <div class="history-item-content">微服务架构有哪些最佳实践？</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-item-title">
+                            <span>数据分析方法</span>
+                            <span class="history-item-time">10月15日</span>
+                        </div>
+                        <div class="history-item-content">如何对用户行为数据进行分析？</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 中间聊天区域 -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="chat-title">智能对话</div>
+                <div class="chat-mode-selector">
+                    <button class="mode-btn active">自由对话</button>
+                    <button class="mode-btn">RAG对话</button>
+                    <button class="mode-btn">智能体对话</button>
+                </div>
+                <div class="chat-actions">
+                    <button>导出对话</button>
+                </div>
+            </div>
+            
+            <div class="messages">
+                <div class="message bot">
+                    <div class="message-content">
+                        您好！我是AI助手，支持三种对话模式：自由对话、RAG对话和智能体对话。请问有什么可以帮您？
+                    </div>
+                    <div class="message-time">10:20</div>
+                </div>
+                
+                <div class="message user">
+                    <div class="message-content">
+                        请介绍一下RAG对话和智能体对话的区别
+                    </div>
+                    <div class="message-time">10:21</div>
+                </div>
+                
+                <div class="message bot">
+                    <div class="message-content">
+                        RAG对话基于检索增强生成技术，从知识库中检索相关信息来生成回答。而智能体对话使用工作流编排，通过多个智能体协作处理复杂任务，每个智能体有特定功能。
+                    </div>
+                    <div class="message-time">10:22</div>
+                </div>
+                
+                <div class="message user">
+                    <div class="message-content">
+                        我想了解如何设计一个推荐系统
+                    </div>
+                    <div class="message-time">10:23</div>
+                </div>
+                
+                <div class="message bot">
+                    <div class="message-content">
+                        设计推荐系统通常需要考虑以下几个关键组成部分：<br><br>
+                        1. 数据收集：用户行为数据、物品元数据、上下文信息等<br>
+                        2. 特征工程：用户特征、物品特征、上下文特征等<br>
+                        3. 算法选择：协同过滤、内容-based、深度学习等<br>
+                        4. 评估指标：准确率、召回率、多样性、新颖性等<br>
+                        5. 系统架构：离线处理、近实时处理、在线服务等<br><br>
+                        您对哪个方面特别感兴趣？
+                    </div>
+                    <div class="message-time">10:24</div>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <textarea class="message-input" placeholder="输入您的问题..."></textarea>
+                <button class="send-button">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 右侧智能体规划区域 -->
+        <div class="agent-panel">
+            <div class="panel-header">
+                <span>智能体工作流</span>
+                <i class="fas fa-info-circle"></i>
+            </div>
+            
+            <div class="workflow-process">
+                <div class="process-title">当前工作流执行过程</div>
+                
+                <div class="process-steps">
+                    <div class="process-step">
+                        <div class="step-header">
+                            <div class="step-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <div class="step-title">自然语言理解</div>
+                        </div>
+                        <div class="step-content">
+                            解析用户查询意图，识别实体和关键信息
+                        </div>
+                        <div class="step-status">
+                            <div class="status-dot completed"></div>
+                            已完成
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-header">
+                            <div class="step-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="step-title">知识检索</div>
+                        </div>
+                        <div class="step-content">
+                            从知识库中检索与"推荐系统设计"相关的文档
+                        </div>
+                        <div class="step-status">
+                            <div class="status-dot processing"></div>
+                            进行中
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-header">
+                            <div class="step-icon">
+                                <i class="fas fa-cogs"></i>
+                            </div>
+                            <div class="step-title">智能体协作</div>
+                        </div>
+                        <div class="step-content">
+                            协调推荐系统专家、算法工程师和架构师智能体
+                        </div>
+                        <div class="step-status">
+                            <div class="status-dot pending"></div>
+                            等待中
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-header">
+                            <div class="step-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="step-title">回答生成</div>
+                        </div>
+                        <div class="step-content">
+                            整合各智能体的输出，生成最终回答
+                        </div>
+                        <div class="step-status">
+                            <div class="status-dot pending"></div>
+                            等待中
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="knowledge-base">
+                <div class="kb-title">相关知识库</div>
+                
+                <div class="kb-items">
+                    <div class="kb-item">
+                        <div class="kb-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="kb-item-info">
+                            <div class="kb-item-title">推荐系统原理</div>
+                            <div class="kb-item-desc">更新于2023-09-15</div>
+                        </div>
+                    </div>
+                    
+                    <div class="kb-item">
+                        <div class="kb-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="kb-item-info">
+                            <div class="kb-item-title">协同过滤算法</div>
+                            <div class="kb-item-desc">更新于2023-10-02</div>
+                        </div>
+                    </div>
+                    
+                    <div class="kb-item">
+                        <div class="kb-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="kb-item-info">
+                            <div class="kb-item-title">深度学习推荐模型</div>
+                            <div class="kb-item-desc">更新于2023-10-20</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 发送消息功能
+        document.querySelector('.send-button').addEventListener('click', function() {
+            const input = document.querySelector('.message-input');
+            const message = input.value.trim();
+            
+            if (message) {
+                // 添加用户消息
+                addMessage(message, 'user');
+                input.value = '';
+                
+                // 根据当前模式生成不同的回复
+                const activeMode = document.querySelector('.mode-btn.active').textContent;
+                let reply = '';
+                
+                if (activeMode === '自由对话') {
+                    reply = '这是自由对话模式的回复。在此模式下，我直接基于我的训练数据回答您的问题。';
+                } else if (activeMode === 'RAG对话') {
+                    reply = '这是RAG对话模式的回复。我会从知识库中检索相关信息，并基于这些信息生成回答。';
+                } else {
+                    reply = '这是智能体对话模式的回复。我会协调多个专业智能体共同处理您的问题，提供更专业的解答。';
+                }
+                
+                // 模拟AI回复
+                setTimeout(() => {
+                    addMessage(reply, 'bot');
+                    // 更新工作流状态
+                    updateWorkflow();
+                    // 更新历史对话列表
+                    updateHistory(message);
+                }, 1000);
+            }
+        });
+        
+        // 支持按Enter发送消息
+        document.querySelector('.message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.querySelector('.send-button').click();
+            }
+        });
+        
+        // 模式切换
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelector('.mode-btn.active').classList.remove('active');
+                this.classList.add('active');
+                
+                // 更新聊天标题
+                const mode = this.textContent;
+                document.querySelector('.chat-title').textContent = mode;
+                
+                // 清空消息
+                const messagesContainer = document.querySelector('.messages');
+                messagesContainer.innerHTML = '';
+                
+                // 添加欢迎消息
+                let welcomeMsg = '';
+                if (mode === '自由对话') {
+                    welcomeMsg = '已切换到自由对话模式。我可以直接回答您的各种问题。';
+                } else if (mode === 'RAG对话') {
+                    welcomeMsg = '已切换到RAG对话模式。我会从知识库中检索相关信息来回答您的问题。';
+                } else {
+                    welcomeMsg = '已切换到智能体对话模式。我会协调多个专业智能体共同处理您的问题。';
+                }
+                
+                addMessage(welcomeMsg, 'bot');
+            });
+        });
+        
+        // 历史对话项点击事件
+        document.querySelectorAll('.history-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelector('.history-item.active').classList.remove('active');
+                this.classList.add('active');
+                
+                // 清空消息
+                const messagesContainer = document.querySelector('.messages');
+                messagesContainer.innerHTML = '';
+                
+                // 添加示例消息
+                const title = this.querySelector('.history-item-title span:first-child').textContent;
+                
+                addMessage('这是从历史记录加载的对话：' + title, 'bot');
+                addMessage(this.querySelector('.history-item-content').textContent, 'user');
+                addMessage('这是之前的回答内容...', 'bot');
+            });
+        });
+        
+        // 添加消息函数
+        function addMessage(content, type) {
+            const messagesContainer = document.querySelector('.messages');
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('message', type);
+            
+            const now = new Date();
+            const timeString = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+            
+            messageEl.innerHTML = `
+                <div class="message-content">${content}</div>
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            messagesContainer.appendChild(messageEl);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // 更新工作流状态
+        function updateWorkflow() {
+            const steps = document.querySelectorAll('.process-step');
+            let allCompleted = true;
+            
+            steps.forEach(step => {
+                const status = step.querySelector('.status-dot');
+                if (status.classList.contains('processing')) {
+                    status.classList.remove('processing');
+                    status.classList.add('completed');
+                    step.querySelector('.step-status').textContent = '已完成';
+                    allCompleted = false;
+                } else if (status.classList.contains('pending') && allCompleted) {
+                    status.classList.remove('pending');
+                    status.classList.add('processing');
+                    step.querySelector('.step-status').textContent = '进行中';
+                    allCompleted = false;
+                }
+            });
+            
+            // 如果所有步骤都完成了，重置工作流
+            if (allCompleted) {
+                setTimeout(() => {
+                    steps.forEach(step => {
+                        const status = step.querySelector('.status-dot');
+                        status.classList.remove('completed', 'processing');
+                        status.classList.add('pending');
+                        step.querySelector('.step-status').textContent = '等待中';
+                    });
+                    
+                    // 重置第一个步骤
+                    const firstStatus = steps[0].querySelector('.status-dot');
+                    firstStatus.classList.remove('pending');
+                    firstStatus.classList.add('completed');
+                    steps[0].querySelector('.step-status').textContent = '已完成';
+                    
+                    // 重置第二个步骤
+                    const secondStatus = steps[1].querySelector('.status-dot');
+                    secondStatus.classList.remove('pending');
+                    secondStatus.classList.add('processing');
+                    steps[1].querySelector('.step-status').textContent = '进行中';
+                }, 2000);
+            }
+        }
+        
+        // 更新历史对话列表
+        function updateHistory(message) {
+            const historyList = document.querySelector('.history-list');
+            const now = new Date();
+            const timeString = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+            
+            const newItem = document.createElement('div');
+            newItem.classList.add('history-item', 'active');
+            
+            // 移除之前的active状态
+            document.querySelectorAll('.history-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            newItem.innerHTML = `
+                <div class="history-item-title">
+                    <span>新对话 ${timeString}</span>
+                    <span class="history-item-time">刚刚</span>
+                </div>
+                <div class="history-item-content">${message}</div>
+            `;
+            
+            // 添加到列表顶部
+            historyList.insertBefore(newItem, historyList.firstChild);
+            
+            // 添加点击事件
+            newItem.addEventListener('click', function() {
+                document.querySelectorAll('.history-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        }
+        
+        // 导航项点击事件
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelector('.nav-item.active').classList.remove('active');
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

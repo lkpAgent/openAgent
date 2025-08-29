@@ -1,0 +1,193 @@
+// Global styles for ChatAgent
+
+// Custom CSS variables
+:root {
+  // Colors
+  --chat-primary-color: #409eff;
+  --chat-success-color: #67c23a;
+  --chat-warning-color: #e6a23c;
+  --chat-danger-color: #f56c6c;
+  --chat-info-color: #909399;
+  
+  // Chat specific colors
+  --chat-bg-color: #f5f7fa;
+  --chat-sidebar-bg: #ffffff;
+  --chat-message-user-bg: #409eff;
+  --chat-message-assistant-bg: #f0f2f5;
+  --chat-message-system-bg: #e1f3d8;
+  
+  // Spacing
+  --chat-padding-sm: 8px;
+  --chat-padding-md: 16px;
+  --chat-padding-lg: 24px;
+  --chat-padding-xl: 32px;
+  
+  // Border radius
+  --chat-border-radius-sm: 4px;
+  --chat-border-radius-md: 8px;
+  --chat-border-radius-lg: 12px;
+  
+  // Shadows
+  --chat-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --chat-shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --chat-shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.2);
+  
+  // Transitions
+  --chat-transition-fast: 0.2s ease;
+  --chat-transition-normal: 0.3s ease;
+  --chat-transition-slow: 0.5s ease;
+}
+
+// Reset and base styles
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--chat-bg-color);
+  line-height: 1.6;
+}
+
+#app {
+  height: 100vh;
+  overflow: hidden;
+}
+
+// Chat specific styles
+.chat-layout {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+.chat-sidebar {
+  width: 280px;
+  background: var(--chat-sidebar-bg);
+  border-right: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--chat-padding-md);
+  background: var(--chat-bg-color);
+}
+
+.chat-input {
+  padding: var(--chat-padding-md);
+  border-top: 1px solid #e4e7ed;
+  background: #ffffff;
+}
+
+.message-item {
+  margin-bottom: var(--chat-padding-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--chat-padding-sm);
+}
+
+.message-item.user {
+  flex-direction: row-reverse;
+}
+
+.message-content {
+  max-width: 70%;
+  padding: var(--chat-padding-sm) var(--chat-padding-md);
+  border-radius: var(--chat-border-radius-lg);
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.message-content.user {
+  background: var(--chat-message-user-bg);
+  color: white;
+}
+
+.message-content.assistant {
+  background: var(--chat-message-assistant-bg);
+  color: #303133;
+}
+
+.message-content.system {
+  background: var(--chat-message-system-bg);
+  color: #303133;
+  font-style: italic;
+}
+
+// Utility classes
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .chat-sidebar {
+    width: 100%;
+    position: absolute;
+    z-index: 1000;
+    height: 100%;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .chat-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .message-content {
+    max-width: 85%;
+  }
+}
