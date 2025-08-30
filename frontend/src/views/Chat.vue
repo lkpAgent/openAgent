@@ -12,6 +12,15 @@
           <el-icon><component :is="mode.icon" /></el-icon>
           <span>{{ mode.label }}</span>
         </div>
+        
+        <!-- 历史对话按钮 -->
+        <div 
+          :class="['mode-tab', 'history-tab', { active: showHistoryPanel }]"
+          @click="toggleHistoryPanel"
+        >
+          <el-icon><Clock /></el-icon>
+          <span>历史对话</span>
+        </div>
       </div>
       
       <div class="mode-config">
@@ -60,6 +69,35 @@
       </div>
     </div>
 
+    <!-- 历史对话面板 -->
+    <div v-if="showHistoryPanel" class="history-panel" @click.self="showHistoryPanel = false">
+      <div class="history-content">
+        <div class="history-header">
+          <h3>历史对话</h3>
+          <el-button size="small" text @click="toggleHistoryPanel">
+            <el-icon><Close /></el-icon>
+          </el-button>
+        </div>
+        
+        <div class="history-list">
+          <div 
+            v-for="conversation in conversations" 
+            :key="conversation.id"
+            class="history-item"
+            @click="selectConversation(conversation)"
+          >
+            <div class="conversation-info">
+              <div class="conversation-title">{{ conversation.title }}</div>
+              <div class="conversation-meta">
+                <span class="conversation-time">{{ formatConversationTime(conversation.updated_at) }}</span>
+                <span class="conversation-count">{{ conversation.message_count }}条消息</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 左侧对话区域 -->
@@ -103,14 +141,26 @@
               </div>
               
               <div class="message-content">
-                <div class="message-text">{{ message.content }}</div>
+                <!-- 如果有状态信息，显示状态 -->
+                <div v-if="message.status" class="message-status">
+                  <el-icon class="status-icon"><Loading /></el-icon>
+                  <span>{{ message.status }}</span>
+                </div>
+                <!-- 如果是空的assistant消息且没有状态，显示打字指示器 -->
+                <div v-else-if="message.role === 'assistant' && message.content === ''" class="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <!-- 否则显示正常消息内容 -->
+                <div v-else class="message-text" v-html="renderMarkdown(message.content)"></div>
                 <div class="message-time">{{ formatTime(message.created_at) }}</div>
               </div>
             </div>
           </div>
           
-          <!-- 加载中状态 -->
-          <div v-if="isLoading" class="message-item">
+          <!-- 加载中状态 - 只在没有空的assistant消息时显示 -->
+          <div v-if="isLoading && !hasEmptyAssistantMessage" class="message-item">
             <div class="message assistant">
               <div class="message-avatar">
                 <el-avatar :size="32" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
@@ -230,15 +280,62 @@ import {
   Check,
   Loading,
   Clock,
-  User
+  User,
+  Close
 } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useKnowledgeStore } from '@/stores/knowledge'
 import { formatTime } from '@/utils'
+import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
 
 const router = useRouter()
 const chatStore = useChatStore()
 const knowledgeStore = useKnowledgeStore()
+
+// 配置markdown渲染器
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(str, { language: lang }).value
+      } catch (__) {}
+    }
+    return '' // 使用外部默认转义
+  }
+})
+
+// 渲染markdown内容的方法
+const renderMarkdown = (content: string) => {
+  if (!content) return ''
+  return md.render(content)
+}
+
+// 历史对话相关
+const conversations = ref([
+  {
+    id: '1',
+    title: '产品咨询对话',
+    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    message_count: 15
+  },
+  {
+    id: '2',
+    title: '技术支持对话',
+    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    message_count: 8
+  },
+  {
+    id: '3',
+    title: '售后服务咨询',
+    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    message_count: 12
+  }
+])
 
 // 对话模式相关
 const currentMode = ref('free')
@@ -249,6 +346,13 @@ const selectedAgent = ref('')
 const inputMessage = ref('')
 const isLoading = ref(false)
 const messagesContainer = ref<HTMLElement>()
+const showHistoryPanel = ref(false)
+
+// 检测是否有空的assistant消息（流式传输占位符）
+const hasEmptyAssistantMessage = computed(() => {
+  const lastMessage = messages.value[messages.value.length - 1]
+  return lastMessage && lastMessage.role === 'assistant' && lastMessage.content === ''
+})
 
 // 对话模式配置
 const chatModes = [
@@ -413,11 +517,24 @@ const sendMessage = async () => {
       conversationId = newConversation.id
     }
     
-    // 发送消息
-    await chatStore.sendMessageStream({
+    // 根据当前模式构建消息数据
+    const messageData: any = {
       message: messageContent,
       conversation_id: conversationId
-    })
+    }
+    
+    // 如果是agent模式，添加use_agent参数
+    if (currentMode.value === 'agent') {
+      messageData.use_agent = true
+    }
+    
+    // 如果是RAG模式，添加知识库参数
+    if (currentMode.value === 'rag' && selectedKnowledgeBase.value) {
+      messageData.knowledge_base_id = selectedKnowledgeBase.value
+    }
+    
+    // 发送消息
+    await chatStore.sendMessageStream(messageData)
     
   } catch (error) {
     console.error('发送消息失败:', error)
@@ -432,14 +549,42 @@ const scrollToBottom = () => {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
   }
 }
+
+const toggleHistoryPanel = () => {
+  showHistoryPanel.value = !showHistoryPanel.value
+}
+
+const selectConversation = (conversation: any) => {
+  // 选择历史对话的逻辑
+  ElMessage.info(`加载对话: ${conversation.title}`)
+  showHistoryPanel.value = false
+}
+
+const formatConversationTime = (timeStr: string) => {
+  const time = new Date(timeStr)
+  const now = new Date()
+  const diff = now.getTime() - time.getTime()
+  
+  if (diff < 60000) {
+    return '刚刚'
+  } else if (diff < 3600000) {
+    return `${Math.floor(diff / 60000)}分钟前`
+  } else if (diff < 86400000) {
+    return `${Math.floor(diff / 3600000)}小时前`
+  } else {
+    return `${Math.floor(diff / 86400000)}天前`
+  }
+}
 </script>
 
 <style scoped>
 .chat-container {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
+  flex: 1;
+  min-height: 0;
 }
 
 /* 模式选择器样式 */
@@ -484,6 +629,16 @@ const scrollToBottom = () => {
   color: white;
 }
 
+.mode-tab.history-tab {
+  border: 1px solid #dcdfe6;
+}
+
+.mode-tab.history-tab.active {
+  background: #f0f9ff;
+  color: #409eff;
+  border-color: #409eff;
+}
+
 .mode-config {
   display: flex;
   align-items: center;
@@ -501,6 +656,8 @@ const scrollToBottom = () => {
   flex: 1;
   display: flex;
   overflow: hidden;
+  width: 100%;
+  height: 100%;
 }
 
 /* 左侧对话区域 */
@@ -510,6 +667,9 @@ const scrollToBottom = () => {
   flex-direction: column;
   background: white;
   margin: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
 }
 
 /* 消息容器 */
@@ -608,6 +768,98 @@ const scrollToBottom = () => {
   word-wrap: break-word;
 }
 
+/* Markdown样式 */
+.message-text h1,
+.message-text h2,
+.message-text h3,
+.message-text h4,
+.message-text h5,
+.message-text h6 {
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.message-text h1 { font-size: 1.5em; }
+.message-text h2 { font-size: 1.3em; }
+.message-text h3 { font-size: 1.1em; }
+
+.message-text p {
+  margin: 8px 0;
+}
+
+.message-text ul,
+.message-text ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.message-text li {
+  margin: 4px 0;
+}
+
+.message-text pre {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.message-text code {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.message-text pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.message-text blockquote {
+  border-left: 4px solid #dfe2e5;
+  padding-left: 16px;
+  margin: 12px 0;
+  color: #6a737d;
+  font-style: italic;
+}
+
+.message-text table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  width: 100%;
+}
+
+.message-text th,
+.message-text td {
+  border: 1px solid #dfe2e5;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.message-text th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+.message-text a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.message-text a:hover {
+  text-decoration: underline;
+}
+
 .message.user .message-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -622,6 +874,29 @@ const scrollToBottom = () => {
 
 .message.user .message-time {
   text-align: left;
+}
+
+/* 消息状态显示 */
+.message-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 8px;
+  color: #1890ff;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.status-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* 打字指示器 */
@@ -684,6 +959,93 @@ const scrollToBottom = () => {
 .input-tips {
   font-size: 12px;
   color: #909399;
+}
+
+/* 历史对话面板样式 */
+.history-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10vh;
+  z-index: 1000;
+}
+
+.history-content {
+  background: white;
+  border-radius: 8px;
+  width: 500px;
+  max-height: 70vh;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.history-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #303133;
+}
+
+.history-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.history-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border-bottom: 1px solid #f5f7fa;
+}
+
+.history-item:hover {
+  background: #f5f7fa;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.conversation-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conversation-title {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.conversation-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #909399;
+}
+
+.conversation-time {
+  color: #909399;
+}
+
+.conversation-count {
+  color: #67c23a;
 }
 
 /* 右侧工作流面板样式 */

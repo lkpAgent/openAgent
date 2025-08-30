@@ -87,159 +87,23 @@
     
     <!-- 中间内容区域 -->
     <div class="main-content">
-      <!-- 智能问答模块 -->
-      <div v-if="activeModule === 'chat'" class="chat-module">
-        <!-- 对话模式选择 -->
-        <div class="chat-header">
-          <div class="chat-tabs">
-            <div 
-              class="chat-tab"
-              :class="{ active: chatMode === 'free' }"
-              @click="setChatMode('free')"
-            >
-              自由对话
-            </div>
-            <div 
-              class="chat-tab"
-              :class="{ active: chatMode === 'rag' }"
-              @click="setChatMode('rag')"
-            >
-              RAG对话
-            </div>
-            <div 
-              class="chat-tab"
-              :class="{ active: chatMode === 'agent' }"
-              @click="setChatMode('agent')"
-            >
-              智能体对话
-            </div>
-          </div>
-          <div class="chat-actions">
-            <el-button size="small" @click="exportConversation">导出对话</el-button>
-          </div>
+      <!-- 模块内容区域 -->
+      <div class="module-content">
+        <!-- 智能问答模块使用router-view -->
+        <div v-if="activeModule === 'chat'" style="flex: 1; display: flex; flex-direction: column; height: 100%;">
+          <router-view />
         </div>
         
-        <!-- 消息列表 -->
-        <div ref="messagesContainer" class="messages-container">
-          <!-- 欢迎消息 -->
-          <div v-if="messages.length === 0" class="welcome-message">
-            <div class="welcome-content">
-              <h3>👋 欢迎使用智能对话助手</h3>
-              <div v-if="chatMode === 'free'">
-                <p>自由对话模式：与AI进行开放式对话，探讨任何话题。</p>
-              </div>
-              <div v-else-if="chatMode === 'rag'">
-                <p>RAG对话模式：基于知识库的专业问答，获得更准确的信息。</p>
-                <p>当前知识库：{{ selectedKnowledgeBase?.name || '请先选择知识库' }}</p>
-              </div>
-              <div v-else-if="chatMode === 'agent'">
-                <p>智能体对话模式：任务导向的智能助手，帮您完成复杂工作。</p>
-                <p>当前智能体：{{ selectedAgent?.name || '请先选择智能体' }}</p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 消息列表 -->
-          <div v-for="message in messages" :key="message.id" class="message-item">
-            <div :class="['message', message.role]">
-              <div class="message-avatar">
-                <el-avatar v-if="message.role === 'user'" :size="32">
-                  <el-icon><User /></el-icon>
-                </el-avatar>
-                <el-avatar v-else :size="32" class="ai-avatar">
-                  <el-icon><Robot /></el-icon>
-                </el-avatar>
-              </div>
-              <div class="message-content">
-                <div class="message-text" v-html="formatMessageContent(message.content)"></div>
-                <div class="message-time">{{ formatTime(message.created_at) }}</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 加载状态 -->
-          <div v-if="isLoading" class="loading-message">
-            <div class="message assistant">
-              <div class="message-avatar">
-                <el-avatar :size="32" class="ai-avatar">
-                  <el-icon><Robot /></el-icon>
-                </el-avatar>
-              </div>
-              <div class="message-content">
-                <div class="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            </div>
+        <!-- 其他模块的占位内容 -->
+        <div v-else class="module-placeholder">
+          <div class="placeholder-content">
+            <h2>{{ getModuleTitle(activeModule) }}</h2>
+            <p>{{ getModuleDescription(activeModule) }}</p>
+            <el-button type="primary" @click="handleModuleAction(activeModule)">
+              开始使用
+            </el-button>
           </div>
         </div>
-        
-        <!-- 输入区域 -->
-        <div class="input-area">
-          <!-- RAG模式知识库选择 -->
-          <div v-if="chatMode === 'rag'" class="mode-config">
-            <el-select v-model="selectedKnowledgeBaseId" placeholder="选择知识库" size="small">
-              <el-option 
-                v-for="kb in knowledgeBases" 
-                :key="kb.id" 
-                :label="kb.name" 
-                :value="kb.id"
-              />
-            </el-select>
-          </div>
-          
-          <!-- 智能体模式配置 -->
-          <div v-if="chatMode === 'agent'" class="mode-config">
-            <el-select v-model="selectedAgentId" placeholder="选择智能体" size="small">
-              <el-option 
-                v-for="agent in agents" 
-                :key="agent.id" 
-                :label="agent.name" 
-                :value="agent.id"
-              />
-            </el-select>
-          </div>
-          
-          <!-- 消息输入框 -->
-          <div class="input-container">
-            <el-input
-              v-model="inputMessage"
-              type="textarea"
-              :rows="3"
-              placeholder="输入您的问题..."
-              @keydown.enter.exact="sendMessage"
-              @keydown.enter.shift.exact.prevent="inputMessage += '\n'"
-              :disabled="isLoading"
-            />
-            <div class="input-actions">
-              <el-button 
-                type="primary" 
-                @click="sendMessage" 
-                :loading="isLoading"
-                :disabled="!inputMessage.trim()"
-              >
-                发送
-              </el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 知识库管理模块 -->
-      <div v-else-if="activeModule === 'knowledge'" class="knowledge-module">
-        <KnowledgeManagement />
-      </div>
-      
-      <!-- 工作流编排模块 -->
-      <div v-else-if="activeModule === 'workflow'" class="workflow-module">
-        <WorkflowEditor />
-      </div>
-      
-      <!-- 智能体管理模块 -->
-      <div v-else-if="activeModule === 'agent'" class="agent-module">
-        <AgentManagement />
       </div>
     </div>
     
@@ -660,6 +524,14 @@ watch(messages, () => {
   display: flex;
   flex-direction: column;
   background: white;
+}
+
+.module-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
 }
 
 .chat-module {

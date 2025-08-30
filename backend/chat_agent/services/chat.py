@@ -108,7 +108,7 @@ class ChatService:
         message: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        use_agent: bool = True
+        use_agent: bool = False
     ) -> AsyncGenerator[str, None]:
         """Send a message and get streaming AI response using LangChain or Agent."""
         if use_agent:
@@ -141,20 +141,16 @@ class ChatService:
                     full_response = chunk["content"]
                     tool_calls = chunk.get("tool_calls", [])
                     
-                    # Create stream chunk for compatibility with existing API
-                    stream_chunk = StreamChunk(
-                        content=chunk["content"],
-                        role=MessageRole.ASSISTANT
-                    )
-                    yield json.dumps(stream_chunk.dict(), ensure_ascii=False)
+                    # Return the chunk as-is to maintain type information
+                    yield json.dumps(chunk, ensure_ascii=False)
                     
                 elif chunk["type"] == "error":
-                    stream_chunk = StreamChunk(
-                        content=chunk["content"],
-                        role=MessageRole.ASSISTANT
-                    )
-                    yield json.dumps(stream_chunk.dict(), ensure_ascii=False)
+                    # Return the chunk as-is to maintain type information
+                    yield json.dumps(chunk, ensure_ascii=False)
                     return
+                else:
+                    # For other types (status, tool_start, etc.), pass through
+                    yield json.dumps(chunk, ensure_ascii=False)
             
             # Save assistant response
             if full_response:

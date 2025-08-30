@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业AI智能平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            min-height: 100vh;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1800px;
+            height: 95vh;
+            margin: auto;
+            background: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        /* 左侧导航样式 */
+        .sidebar {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            background: #1e293b;
+            border-right: 1px solid #334155;
+        }
+        
+        .logo-section {
+            padding: 25px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            font-size: 28px;
+            color: #6366f1;
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #818cf8 0%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .user-logout {
+            cursor: pointer;
+            color: #94a3b8;
+            transition: color 0.3s;
+        }
+        
+        .user-logout:hover {
+            color: #e2e8f0;
+        }
+        
+        .nav-sections {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .nav-section {
+            padding: 20px 0;
+        }
+        
+        .nav-section-title {
+            padding: 0 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+        }
+        
+        .nav-items {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 5px;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: #e2e8f0;
+        }
+        
+        .nav-link.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: #e2e8f0;
+        }
+        
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: #6366f1;
+        }
+        
+        .nav-link i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        /* 主内容区域样式 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .content-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #334155;
+            background: rgba(30, 41, 59, 0.5);
+        }
+        
+        .content-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .content-description {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        /* 智能问答区域 */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-tabs {
+            display: flex;
+            padding: 0 30px;
+            background: rgba(30, 41, 59, 0.7);
+            border-bottom: 1px solid #334155;
+        }
+        
+        .chat-tab {
+            padding: 15px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #94a3b8;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .chat-tab.active {
+            color: #e2e8f0;
+        }
+        
+        .chat-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #6366f1;
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .chat-tab i {
+            margin-right: 8px;
+        }
+        
+        .history-toggle {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .history-toggle:hover {
+            color: #e2e8f0;
+        }
+        
+        .history-toggle i {
+            margin-right: 8px;
+        }
+        
+        .messages-container {
+            flex: 1;
+            padding: 25px 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            max-width: 75%;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.bot {
+            align-self: flex-start;
+            background: #334155;
+            border-top-left-radius: 5px;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: #6366f1;
+            color: white;
+            border-top-right-radius: 5px;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.7;
+            text-align: right;
+        }
+        
+        .input-area {
+            padding: 20px 30px;
+            background: rgba(30, 41, 59, 0.7);
+            border-top: 1px solid #334155;
+            display: flex;
+            align-items: center;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 1px solid #475569;
+            border-radius: 12px;
+            resize: none;
+            height: 60px;
+            font-size: 16px;
+            background: #1e293b;
+            color: #e2e8f0;
+            transition: border 0.3s;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        
+        .send-button {
+            margin-left: 15px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .send-button:hover {
+            background: #818cf8;
+        }
+        
+        /* 历史对话面板 */
+        .history-panel {
+            width: 0;
+            background: #1e293b;
+            border-left: 1px solid #334155;
+            overflow: hidden;
+            transition: width 0.3s ease;
+        }
+        
+        .history-panel.active {
+            width: 320px;
+        }
+        
+        .history-header {
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .history-close {
+            cursor: pointer;
+            color: #94a3b8;
+        }
+        
+        .history-close:hover {
+            color: #e2e8f0;
+        }
+        
+        .history-search {
+            padding: 15px 20px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .history-search input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        .history-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .history-item:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .history-item.active {
+            background: rgba(99, 102, 241, 0.2);
+        }
+        
+        .history-item-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .history-item-content {
+            font-size: 13px;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .history-item-time {
+            font-size: 12px;
+            color: #6366f1;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #334155;
+            }
+            
+            .nav-sections {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            
+            .nav-section {
+                min-width: 200px;
+                padding: 15px 0;
+            }
+            
+            .history-panel.active {
+                width: 100%;
+                height: 300px;
+                border-left: none;
+                border-top: 1px solid #334155;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧导航 -->
+        <div class="sidebar">
+            <div class="logo-section">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="logo-text">AI智能平台</div>
+                </div>
+                <div class="user-logout" title="退出登录">
+                    <i class="fas fa-sign-out-alt"></i>
+                </div>
+            </div>
+            
+            <div class="nav-sections">
+                <div class="nav-section">
+                    <div class="nav-section-title">主要功能</div>
+                    <ul class="nav-items">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link active">
+                                <i class="fas fa-comments"></i>
+                                <span>智能问答</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>智能问数</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-file-alt"></i>
+                                <span>智能创作</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-robot"></i>
+                                <span>智能体市场</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">管理功能</div>
+                    <ul class="nav-items">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-database"></i>
+                                <span>知识库</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-project-diagram"></i>
+                                <span>工作流编排</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-cogs"></i>
+                                <span>智能体管理</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>系统管理</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <div class="content-header">
+                <h1 class="content-title">智能问答</h1>
+                <p class="content-description">基于AI技术，为您提供精准的问题解答和知识检索服务</p>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-area">
+                    <div class="chat-tabs">
+                        <div class="chat-tab active">
+                            <i class="fas fa-comment"></i> 自由对话
+                        </div>
+                        <div class="chat-tab">
+                            <i class="fas fa-database"></i> RAG对话
+                        </div>
+                        <div class="chat-tab">
+                            <i class="fas fa-robot"></i> 智能体对话
+                        </div>
+                        <div class="history-toggle" id="historyToggle">
+                            <i class="fas fa-history"></i> 历史对话
+                        </div>
+                    </div>
+                    
+                    <div class="messages-container">
+                        <div class="message bot">
+                            <div class="message-content">
+                                您好！我是AI助手，可以为您提供多种对话模式：自由对话、RAG对话和智能体对话。请问有什么可以帮您？
+                            </div>
+                            <div class="message-time">10:20</div>
+                        </div>
+                        
+                        <div class="message user">
+                            <div class="message-content">
+                                请介绍一下RAG对话和智能体对话的区别
+                            </div>
+                            <div class="message-time">10:21</div>
+                        </div>
+                        
+                        <div class="message bot">
+                            <div class="message-content">
+                                RAG对话基于检索增强生成技术，从知识库中检索相关信息来生成回答。而智能体对话使用工作流编排，通过多个智能体协作处理复杂任务，每个智能体有特定功能。
+                            </div>
+                            <div class="message-time">10:22</div>
+                        </div>
+                        
+                        <div class="message user">
+                            <div class="message-content">
+                                我想了解如何设计一个推荐系统
+                            </div>
+                            <div class="message-time">10:23</div>
+                        </div>
+                        
+                        <div class="message bot">
+                            <div class="message-content">
+                                设计推荐系统通常需要考虑以下几个关键组成部分：<br><br>
+                                1. 数据收集：用户行为数据、物品元数据、上下文信息等<br>
+                                2. 特征工程：用户特征、物品特征、上下文特征等<br>
+                                3. 算法选择：协同过滤、内容-based、深度学习等<br>
+                                4. 评估指标：准确率、召回率、多样性、新颖性等<br>
+                                5. 系统架构：离线处理、近实时处理、在线服务等<br><br>
+                                您对哪个方面特别感兴趣？
+                            </div>
+                            <div class="message-time">10:24</div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-area">
+                        <textarea class="message-input" placeholder="输入您的问题..."></textarea>
+                        <button class="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 历史对话面板 -->
+                <div class="history-panel" id="historyPanel">
+                    <div class="history-header">
+                        <span>历史对话</span>
+                        <i class="fas fa-times history-close" id="historyClose"></i>
+                    </div>
+                    
+                    <div class="history-search">
+                        <input type="text" placeholder="搜索历史对话...">
+                    </div>
+                    
+                    <div class="history-list">
+                        <div class="history-item active">
+                            <div class="history-item-title">
+                                <span>推荐系统设计</span>
+                                <span class="history-item-time">今天</span>
+                            </div>
+                            <div class="history-item-content">我想了解如何设计一个推荐系统</div>
+                        </div>
+                        
+                        <div class="history-item">
+                            <div class="history-item-title">
+                                <span>RAG技术探讨</span>
+                                <span class="history-item-time">昨天</span>
+                            </div>
+                            <div class="history-item-content">请介绍一下RAG对话和智能体对话的区别</div>
+                        </div>
+                        
+                        <div class="history-item">
+                            <div class="history-item-title">
+                                <span>机器学习问题</span>
+                                <span class="history-item-time">10月22日</span>
+                            </div>
+                            <div class="history-item-content">如何解决过拟合问题？</div>
+                        </div>
+                        
+                        <div class="history-item">
+                            <div class="history-item-title">
+                                <span>产品需求讨论</span>
+                                <span class="history-item-time">10月20日</span>
+                            </div>
+                            <div class="history-item-content">我们需要设计一个用户友好的界面</div>
+                        </div>
+                        
+                        <div class="history-item">
+                            <div class="history-item-title">
+                                <span>技术架构咨询</span>
+                                <span class="history-item-time">10月18日</span>
+                            </div>
+                            <div class="history-item-content">微服务架构有哪些最佳实践？</div>
+                        </div>
+                        
+                        <div class="history-item">
+                            <div class="history-item-title">
+                                <span>数据分析方法</span>
+                                <span class="history-item-time">10月15日</span>
+                            </div>
+                            <div class="history-item-content">如何对用户行为数据进行分析？</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 历史对话面板切换
+        document.getElementById('historyToggle').addEventListener('click', function() {
+            document.getElementById('historyPanel').classList.toggle('active');
+        });
+        
+        document.getElementById('historyClose').addEventListener('click', function() {
+            document.getElementById('historyPanel').classList.remove('active');
+        });
+        
+        // 对话标签切换
+        document.querySelectorAll('.chat-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.chat-tab').forEach(t => {
+                    t.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+        
+        // 导航项点击
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-link').forEach(l => {
+                    l.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // 更新内容标题
+                const title = this.querySelector('span').textContent;
+                document.querySelector('.content-title').textContent = title;
+                document.querySelector('.content-description').textContent = 
+                    `切换到${title}功能，为您提供专业服务`;
+            });
+        });
+        
+        // 发送消息功能
+        document.querySelector('.send-button').addEventListener('click', function() {
+            const input = document.querySelector('.message-input');
+            const message = input.value.trim();
+            
+            if (message) {
+                // 添加用户消息
+                addMessage(message, 'user');
+                input.value = '';
+                
+                // 模拟AI回复
+                setTimeout(() => {
+                    const activeTab = document.querySelector('.chat-tab.active').textContent.trim();
+                    let reply = '';
+                    
+                    if (activeTab === '自由对话') {
+                        reply = '这是自由对话模式的回复。在此模式下，我直接基于我的训练数据回答您的问题。';
+                    } else if (activeTab === 'RAG对话') {
+                        reply = '这是RAG对话模式的回复。我会从知识库中检索相关信息，并基于这些信息生成回答。';
+                    } else {
+                        reply = '这是智能体对话模式的回复。我会协调多个专业智能体共同处理您的问题，提供更专业的解答。';
+                    }
+                    
+                    addMessage(reply, 'bot');
+                }, 1000);
+            }
+        });
+        
+        // 支持按Enter发送消息
+        document.querySelector('.message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.querySelector('.send-button').click();
+            }
+        });
+        
+        // 添加消息函数
+        function addMessage(content, type) {
+            const messagesContainer = document.querySelector('.messages-container');
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('message', type);
+            
+            const now = new Date();
+            const timeString = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+            
+            messageEl.innerHTML = `
+                <div class="message-content">${content}</div>
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            messagesContainer.appendChild(messageEl);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // 历史对话项点击
+        document.querySelectorAll('.history-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.history-item').forEach(i => {
+                    i.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // 清空消息
+                const messagesContainer = document.querySelector('.messages-container');
+                messagesContainer.innerHTML = '';
+                
+                // 添加示例消息
+                const title = this.querySelector('.history-item-title span:first-child').textContent;
+                
+                addMessage('这是从历史记录加载的对话：' + title, 'bot');
+                addMessage(this.querySelector('.history-item-content').textContent, 'user');
+                addMessage('这是之前的回答内容...', 'bot');
+            });
+        });
+    </script>
+</body>
+</html>

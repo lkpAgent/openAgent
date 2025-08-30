@@ -6,31 +6,59 @@
         <!-- 主导航 -->
         <div class="main-nav">
           <div class="nav-header">
-            <h1 class="app-title">智能对话平台</h1>
-            <p class="app-subtitle">多模态对话与工作流平台</p>
+            <div class="header-content">
+              <h1 class="app-title">智能对话平台</h1>
+              <p class="app-subtitle">多模态对话与工作流平台</p>
+            </div>
+            <div class="user-actions">
+              <el-button size="small" text type="danger" @click="logout">
+                <el-icon><SwitchButton /></el-icon>
+                <span>注销</span>
+              </el-button>
+            </div>
           </div>
           
           <nav class="nav-menu">
-            <div 
-              v-for="item in navItems" 
-              :key="item.key"
-              :class="['nav-item', { active: activeModule === item.key }]"
-              @click="setActiveModule(item.key)"
-            >
-              <el-icon class="nav-icon">
-                <component :is="item.icon" />
-              </el-icon>
-              <span class="nav-label">{{ item.label }}</span>
+            <!-- 上部分导航 -->
+            <div class="nav-group">
+              <div class="nav-group-title">核心功能</div>
+              <div 
+                v-for="item in upperNavItems" 
+                :key="item.key"
+                :class="['nav-item', { active: activeModule === item.key }]"
+                @click="setActiveModule(item.key)"
+              >
+                <el-icon class="nav-icon">
+                  <component :is="item.icon" />
+                </el-icon>
+                <span class="nav-label">{{ item.label }}</span>
+              </div>
+            </div>
+            
+            <!-- 下部分导航 -->
+            <div class="nav-group">
+              <div class="nav-group-title">管理功能</div>
+              <div 
+                v-for="item in lowerNavItems" 
+                :key="item.key"
+                :class="['nav-item', { active: activeModule === item.key }]"
+                @click="setActiveModule(item.key)"
+              >
+                <el-icon class="nav-icon">
+                  <component :is="item.icon" />
+                </el-icon>
+                <span class="nav-label">{{ item.label }}</span>
+              </div>
             </div>
           </nav>
         </div>
         
-        <!-- 历史对话列表 -->
-        <div class="history-section">
+        <!-- 历史对话面板（浮动显示） -->
+        <div v-if="showHistoryPanel" class="history-panel">
           <div class="history-header">
             <h3>历史对话</h3>
             <el-button size="small" text @click="toggleHistoryPanel">
-              <el-icon><Plus /></el-icon>
+              <el-icon><Close /></el-icon>
             </el-button>
           </div>
           
@@ -75,20 +103,8 @@
       
       <!-- 主内容区域 -->
       <div class="main-area">
-        <!-- 中间内容区域 -->
-        <div class="main-content">
-          <!-- 路由视图 -->
-          <router-view />
-        </div>
-        
-        <!-- 右侧智能体工作流面板 -->
-        <div v-if="showWorkflowPanel" class="workflow-panel">
-          <AgentWorkflow 
-            :agent-name="currentAgentName" 
-            :is-active="activeModule === 'chat' && chatMode === 'agent'"
-            ref="agentWorkflowRef"
-          />
-        </div>
+        <!-- 路由视图 -->
+        <router-view />
       </div>
     </div>
   </div>
@@ -106,7 +122,13 @@ import {
   Plus,
   Search,
   Edit,
-  Delete
+  Delete,
+  SwitchButton,
+  DataAnalysis,
+  EditPen,
+  Shop,
+  Setting,
+  Close
 } from '@element-plus/icons-vue'
 import AgentWorkflow from './AgentWorkflow.vue'
 
@@ -121,9 +143,10 @@ const currentAgentName = ref('客服小助手')
 const selectedConversation = ref(null)
 const historySearchQuery = ref('')
 const agentWorkflowRef = ref()
+const showHistoryPanel = ref(false)
 
-// 导航项配置
-const navItems = [
+// 上部分导航项配置
+const upperNavItems = [
   {
     key: 'chat',
     label: '智能问答',
@@ -131,8 +154,30 @@ const navItems = [
     route: '/chat'
   },
   {
+    key: 'analytics',
+    label: '智能问数',
+    icon: 'DataAnalysis',
+    route: '/analytics'
+  },
+  {
+    key: 'creation',
+    label: '智能创作',
+    icon: 'EditPen',
+    route: '/creation'
+  },
+  {
+    key: 'market',
+    label: '智能体市场',
+    icon: 'Shop',
+    route: '/market'
+  }
+]
+
+// 下部分导航项配置
+const lowerNavItems = [
+  {
     key: 'knowledge',
-    label: '知识库管理',
+    label: '知识库',
     icon: 'Collection',
     route: '/knowledge'
   },
@@ -147,6 +192,12 @@ const navItems = [
     label: '智能体管理',
     icon: 'User',
     route: '/agent'
+  },
+  {
+    key: 'system',
+    label: '系统管理',
+    icon: 'Setting',
+    route: '/system'
   }
 ]
 
@@ -190,14 +241,21 @@ const filteredConversations = computed(() => {
 // 方法
 const setActiveModule = (moduleKey: string) => {
   activeModule.value = moduleKey
-  const navItem = navItems.find(item => item.key === moduleKey)
+  const allNavItems = [...upperNavItems, ...lowerNavItems]
+  const navItem = allNavItems.find(item => item.key === moduleKey)
   if (navItem && navItem.route) {
     router.push(navItem.route)
   }
 }
 
+const logout = () => {
+  ElMessage.success('注销成功')
+  // 这里可以添加实际的注销逻辑，比如清除token、跳转到登录页等
+  router.push('/login')
+}
+
 const toggleHistoryPanel = () => {
-  ElMessage.info('新建对话功能开发中...')
+  showHistoryPanel.value = !showHistoryPanel.value
 }
 
 const selectConversation = (conversation: any) => {
@@ -279,27 +337,55 @@ onMounted(() => {
 }
 
 .nav-header {
-  padding: 24px 20px;
+  padding: 20px;
   border-bottom: 1px solid #34495e;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-content {
+  flex: 1;
 }
 
 .app-title {
-  margin: 0 0 8px 0;
-  font-size: 20px;
+  margin: 0 0 4px 0;
+  font-size: 18px;
   font-weight: 600;
   color: #ecf0f1;
 }
 
 .app-subtitle {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: #95a5a6;
   opacity: 0.8;
 }
 
+.user-actions {
+  flex-shrink: 0;
+}
+
 .nav-menu {
   padding: 16px 0;
+}
+
+.nav-group {
+  margin-bottom: 24px;
+}
+
+.nav-group:last-child {
+  margin-bottom: 0;
+}
+
+.nav-group-title {
+  padding: 8px 20px;
+  font-size: 12px;
+  color: #95a5a6;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
 .nav-item {
@@ -332,12 +418,18 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 历史对话区域 */
-.history-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid #34495e;
+/* 历史对话面板（浮动显示） */
+.history-panel {
+  position: fixed;
+  top: 80px;
+  left: 300px;
+  width: 350px;
+  max-height: 70vh;
+  background: #2c3e50;
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
   overflow: hidden;
 }
 

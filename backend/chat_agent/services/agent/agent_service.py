@@ -243,20 +243,139 @@ class AgentService:
     
     async def chat_stream(self, message: str, chat_history: Optional[List[Dict[str, str]]] = None) -> AsyncGenerator[Dict[str, Any], None]:
         """Process chat message with agent (streaming)."""
+        tool_calls = []  # Initialize tool_calls at the beginning
         try:
             logger.info(f"Processing agent chat stream: {message[:100]}...")
             
-            # For now, we'll use the non-streaming version and yield the result
-            # LangChain agent streaming is more complex and would require custom implementation
-            result = await self.chat(message, chat_history)
+            # Create agent executor if not exists
+            if not self.agent_executor:
+                self.agent_executor = self._create_agent_executor()
             
-            # Yield the complete response
+            # Convert chat history to LangChain format
+            langchain_history = []
+            if chat_history:
+                for msg in chat_history:
+                    if msg["role"] == "user":
+                        langchain_history.append(HumanMessage(content=msg["content"]))
+                    elif msg["role"] == "assistant":
+                        langchain_history.append(AIMessage(content=msg["content"]))
+            
+            # Yield initial status
             yield {
-                "type": "response",
-                "content": result["response"],
-                "tool_calls": result["tool_calls"],
-                "done": True
+                "type": "status",
+                "content": "🤖 开始分析您的请求...",
+                "done": False
             }
+            await asyncio.sleep(0.2)
+            
+            # Use astream_events for real streaming (if available) or fallback to simulation
+            try:
+                # Try to use streaming events if available
+                async for event in self.agent_executor.astream_events(
+                    {"input": message, "chat_history": langchain_history},
+                    version="v1"
+                ):
+                    if event["event"] == "on_tool_start":
+                        tool_name = event["name"]
+                        yield {
+                            "type": "tool_start",
+                            "content": f"🔧 正在使用工具: {tool_name}",
+                            "tool_name": tool_name,
+                            "done": False
+                        }
+                        await asyncio.sleep(0.1)
+                    
+                    elif event["event"] == "on_tool_end":
+                        tool_name = event["name"]
+                        yield {
+                            "type": "tool_end",
+                            "content": f"✅ 工具 {tool_name} 执行完成",
+                            "tool_name": tool_name,
+                            "done": False
+                        }
+                        await asyncio.sleep(0.1)
+                    
+                    elif event["event"] == "on_chat_model_stream":
+                        chunk = event["data"]["chunk"]
+                        if hasattr(chunk, 'content') and chunk.content:
+                            yield {
+                                "type": "content",
+                                "content": chunk.content,
+                                "done": False
+                            }
+                            await asyncio.sleep(0.05)
+                            
+            except Exception as stream_error:
+                logger.warning(f"Streaming events not available, falling back to simulation: {stream_error}")
+                
+                # Fallback: Execute agent and simulate streaming
+                result = await self.agent_executor.ainvoke({
+                    "input": message,
+                    "chat_history": langchain_history
+                })
+                
+                # Extract response and intermediate steps
+                response = result["output"]
+                intermediate_steps = result.get("intermediate_steps", [])
+                
+                # Yield tool execution steps
+                tool_calls = []
+                for i, step in enumerate(intermediate_steps):
+                    if len(step) >= 2:
+                        action, observation = step[0], step[1]
+                        tool_calls.append({
+                            "tool": action.tool,
+                            "input": action.tool_input,
+                            "output": observation
+                        })
+                        
+                        # Yield tool execution status
+                        yield {
+                            "type": "tool",
+                            "content": f"🔧 使用工具 {action.tool}: {str(action.tool_input)[:100]}...",
+                            "tool_name": action.tool,
+                            "tool_input": action.tool_input,
+                            "done": False
+                        }
+                        await asyncio.sleep(0.3)
+                        
+                        yield {
+                            "type": "tool_result",
+                            "content": f"✅ 工具结果: {str(observation)[:200]}...",
+                            "tool_name": action.tool,
+                            "done": False
+                        }
+                        await asyncio.sleep(0.2)
+                
+                # Yield thinking status
+                yield {
+                    "type": "thinking",
+                    "content": "🤔 正在整理回答...",
+                    "done": False
+                }
+                await asyncio.sleep(0.3)
+                
+                # Yield the final response in chunks to simulate streaming
+                words = response.split()
+                current_content = ""
+                
+                for i, word in enumerate(words):
+                    current_content += word + " "
+                    
+                    # Yield every 2-3 words or at the end
+                    if (i + 1) % 2 == 0 or i == len(words) - 1:
+                        yield {
+                            "type": "response",
+                            "content": current_content.strip(),
+                            "tool_calls": tool_calls if i == len(words) - 1 else [],
+                            "done": i == len(words) - 1
+                        }
+                        
+                        # Small delay to simulate typing
+                        if i < len(words) - 1:
+                            await asyncio.sleep(0.05)
+            
+            logger.info(f"Agent stream response completed with {len(tool_calls)} tool calls")
             
         except Exception as e:
             logger.error(f"Agent chat stream error: {str(e)}", exc_info=True)

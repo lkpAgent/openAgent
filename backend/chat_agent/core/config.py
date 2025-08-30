@@ -17,7 +17,7 @@ class DatabaseSettings(BaseSettings):
     max_overflow: int = Field(default=10)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -28,10 +28,10 @@ class SecuritySettings(BaseSettings):
     """Security configuration."""
     secret_key: str = Field(default="your-secret-key-here-change-in-production")
     algorithm: str = Field(default="HS256")
-    access_token_expire_minutes: int = Field(default=30)
+    access_token_expire_minutes: int = Field(default=300)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -72,7 +72,7 @@ class LLMSettings(BaseSettings):
     temperature: float = Field(default=0.7)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -125,7 +125,7 @@ class VectorDBSettings(BaseSettings):
     embedding_dimension: int = Field(default=384)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -141,7 +141,7 @@ class FileSettings(BaseSettings):
     chunk_overlap: int = Field(default=200)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -157,7 +157,7 @@ class LoggingSettings(BaseSettings):
     backup_count: int = Field(default=5)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -171,7 +171,7 @@ class CORSSettings(BaseSettings):
     allowed_headers: List[str] = Field(default=["*"])
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"
@@ -209,7 +209,7 @@ class Settings(BaseSettings):
     chat: ChatSettings = Field(default_factory=ChatSettings)
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore"

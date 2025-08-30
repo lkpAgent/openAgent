@@ -104,6 +104,7 @@ export interface Message {
   total_tokens?: number
   created_at: string
   updated_at: string
+  status?: string // 用于显示流式状态，如"正在思考..."、"正在使用工具..."等
 }
 
 export interface MessageCreate {

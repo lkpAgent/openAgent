@@ -275,18 +275,62 @@ export const useChatStore = defineStore('chat', () => {
               
               try {
                 const parsed = JSON.parse(data)
-                if (parsed.content) {
-                  // 使用响应式更新确保UI实时刷新
+                
+                // 处理不同类型的流式消息
+                // 处理不同类型的流式响应
+                if (parsed.type === 'status' || parsed.type === 'thinking') {
+                  // 状态消息，显示在UI中但不累积到最终内容
+                  console.log('Agent status:', parsed.content)
+                  // 更新临时状态显示
                   const lastMessageIndex = messages.value.length - 1
                   if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                    // 可以在这里添加状态显示逻辑，比如显示"正在思考..."等
+                    messages.value[lastMessageIndex].status = parsed.content
+                  }
+                } else if (parsed.type === 'tool_start' || parsed.type === 'tool' || parsed.type === 'tool_end' || parsed.type === 'tool_result') {
+                  // 工具执行相关消息
+                  console.log('Tool execution:', parsed.content)
+                  const lastMessageIndex = messages.value.length - 1
+                  if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                    // 显示工具执行状态
+                    messages.value[lastMessageIndex].status = parsed.content
+                  }
+                } else if (parsed.type === 'content') {
+                  // 流式内容块，累积到消息内容
+                  const lastMessageIndex = messages.value.length - 1
+                  if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                    if (!messages.value[lastMessageIndex].content) {
+                      messages.value[lastMessageIndex].content = ''
+                    }
+                    messages.value[lastMessageIndex].content += parsed.content
+                    // 清除状态显示
+                    messages.value[lastMessageIndex].status = undefined
+                  }
+                  onChunk?.(parsed.content)
+                } else if (parsed.type === 'response' && parsed.content) {
+                  // 完整响应内容，直接设置
+                  const lastMessageIndex = messages.value.length - 1
+                  if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                    messages.value[lastMessageIndex].content = parsed.content
+                    // 清除状态显示
+                    messages.value[lastMessageIndex].status = undefined
+                  }
+                  onChunk?.(parsed.content)
+                } else if (parsed.content) {
+                  // 兼容旧格式的流式响应
+                  const lastMessageIndex = messages.value.length - 1
+                  if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                    if (!messages.value[lastMessageIndex].content) {
+                      messages.value[lastMessageIndex].content = ''
+                    }
                     messages.value[lastMessageIndex].content += parsed.content
                   }
                   onChunk?.(parsed.content)
                 }
+                
                 // 检查是否流式传输完成
-                if (parsed.finish_reason) {
-                  // 流式传输完成，不需要重新加载消息，避免UI重置
-                  // 后端已经保存了消息，前端显示的内容是正确的
+                if (parsed.done === true || parsed.finish_reason) {
+                  // 流式传输完成
                   break
                 }
               } catch (e) {

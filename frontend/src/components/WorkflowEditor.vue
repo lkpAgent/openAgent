@@ -23,66 +23,14 @@
     </div>
 
     <div class="editor-content">
-      <div class="toolbar">
-        <!-- 基础节点 -->
-        <div class="tool-group">
-          <h4>基础节点</h4>
-          <div class="node-types">
-            <div 
-              v-for="nodeType in basicNodeTypes" 
-              :key="nodeType.type"
-              class="node-type-item"
-              draggable="true"
-              @dragstart="onDragStart($event, nodeType)"
-            >
-              <el-icon><component :is="nodeType.icon" /></el-icon>
-              <span>{{ nodeType.label }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 处理节点 -->
-        <div class="tool-group">
-          <h4>处理节点</h4>
-          <div class="node-types">
-            <div 
-              v-for="nodeType in processNodeTypes" 
-              :key="nodeType.type"
-              class="node-type-item"
-              draggable="true"
-              @dragstart="onDragStart($event, nodeType)"
-            >
-              <el-icon><component :is="nodeType.icon" /></el-icon>
-              <span>{{ nodeType.label }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 工具节点 -->
-        <div class="tool-group">
-          <h4>工具节点</h4>
-          <div class="node-types">
-            <div 
-              v-for="nodeType in toolNodeTypes" 
-              :key="nodeType.type"
-              class="node-type-item"
-              draggable="true"
-              @dragstart="onDragStart($event, nodeType)"
-            >
-              <el-icon><component :is="nodeType.icon" /></el-icon>
-              <span>{{ nodeType.label }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="canvas-container">
+      <div class="canvas-container full-width">
         <div 
           ref="canvas"
           class="workflow-canvas"
           @drop="onDrop"
           @dragover="onDragOver"
           @click="onCanvasClick"
+          @contextmenu.prevent="showCanvasContextMenu"
         >
           <!-- 工作流节点 -->
           <div
@@ -93,24 +41,16 @@
               selected: selectedNode?.id === node.id,
               running: runningNodes.includes(node.id),
               completed: completedNodes.includes(node.id),
-              error: errorNodes.includes(node.id)
+              error: errorNodes.includes(node.id),
+              dragging: isDragging.value && draggedNode.value?.id === node.id
             }"
-            :style="{ left: node.x + 'px', top: node.y + 'px' }"
-            @click.stop="selectNode(node)"
-            @mousedown="startDrag(node, $event)"
+            :ref="el => setNodeRef(el, node.id)"
+            @dblclick.stop="selectNode(node)"
+            @contextmenu.prevent="showNodeContextMenu($event, node)"
           >
             <div class="node-header">
               <el-icon><component :is="getNodeIcon(node.type)" /></el-icon>
               <span>{{ node.name }}</span>
-              <el-button 
-                v-if="node.type !== 'start'"
-                type="danger" 
-                size="small" 
-                circle 
-                @click.stop="deleteNode(node.id)"
-              >
-                <el-icon><Close /></el-icon>
-              </el-button>
             </div>
             <div class="node-content">
               <p>{{ node.description }}</p>
@@ -133,6 +73,7 @@
               v-if="node.type !== 'end'"
               class="connection-point output-point"
               @mousedown.stop="(e) => startConnection(node, 'output', e)"
+              @click.stop="(e) => showConnectionPointMenu(node, 'output', e)"
             ></div>
           </div>
 
@@ -143,8 +84,9 @@
               :key="connection.id"
               :d="getConnectionPath(connection)"
               class="connection-line"
-              :class="{ selected: selectedConnection?.id === connection.id }"
+              :class="{ selected: selectedConnection?.from === connection.from && selectedConnection?.to === connection.to }"
               @click="selectConnection(connection)"
+              @contextmenu.prevent="showConnectionContextMenu($event, connection)"
             />
           </svg>
 
@@ -322,13 +264,132 @@
         </el-form>
       </div>
     </div>
+
+    <!-- 节点右键菜单 -->
+    <div 
+      v-if="nodeContextMenu.visible" 
+      class="context-menu"
+      :style="{ left: nodeContextMenu.x + 'px', top: nodeContextMenu.y + 'px' }"
+      @click.stop
+    >
+      <div class="menu-item" @click="copyNode">
+        <el-icon><DocumentCopy /></el-icon>
+        复制
+      </div>
+      <div class="menu-item" @click="deleteSelectedItem" v-if="nodeContextMenu.node?.type !== 'start'">
+        <el-icon><Delete /></el-icon>
+        删除
+      </div>
+    </div>
+
+    <!-- 画布右键菜单 -->
+    <div 
+      v-if="canvasContextMenu.visible"
+      class="context-menu"
+      :style="{ left: canvasContextMenu.x + 'px', top: canvasContextMenu.y + 'px' }"
+    >
+      <div class="context-menu-header">添加节点</div>
+      <div class="context-menu-group">
+        <div class="context-menu-group-title">基础节点</div>
+        <div 
+          v-for="nodeType in basicNodeTypes" 
+          :key="nodeType.type"
+          class="context-menu-item"
+          @click="addNodeFromContextMenu(nodeType)"
+        >
+          <el-icon><component :is="nodeType.icon" /></el-icon>
+          <span>{{ nodeType.label }}</span>
+        </div>
+      </div>
+      <div class="context-menu-group">
+        <div class="context-menu-group-title">处理节点</div>
+        <div 
+          v-for="nodeType in processNodeTypes" 
+          :key="nodeType.type"
+          class="context-menu-item"
+          @click="addNodeFromContextMenu(nodeType)"
+        >
+          <el-icon><component :is="nodeType.icon" /></el-icon>
+          <span>{{ nodeType.label }}</span>
+        </div>
+      </div>
+      <div class="context-menu-group">
+        <div class="context-menu-group-title">工具节点</div>
+        <div 
+          v-for="nodeType in toolNodeTypes" 
+          :key="nodeType.type"
+          class="context-menu-item"
+          @click="addNodeFromContextMenu(nodeType)"
+        >
+          <el-icon><component :is="nodeType.icon" /></el-icon>
+          <span>{{ nodeType.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 连接点菜单 -->
+    <div 
+      v-if="connectionPointMenu.visible"
+      class="context-menu"
+      :style="{ left: connectionPointMenu.x + 'px', top: connectionPointMenu.y + 'px' }"
+    >
+      <div class="context-menu-header">添加后续节点</div>
+      <div class="context-menu-group">
+        <div class="context-menu-group-title">基础节点</div>
+        <div 
+          v-for="nodeType in basicNodeTypes" 
+          :key="nodeType.type"
+          class="context-menu-item"
+          @click="addNodeFromConnectionPoint(nodeType)"
+        >
+          <el-icon><component :is="nodeType.icon" /></el-icon>
+          <span>{{ nodeType.label }}</span>
+        </div>
+      </div>
+      <div class="context-menu-group">
+        <div class="context-menu-group-title">处理节点</div>
+        <div 
+          v-for="nodeType in processNodeTypes" 
+          :key="nodeType.type"
+          class="context-menu-item"
+          @click="addNodeFromConnectionPoint(nodeType)"
+        >
+          <el-icon><component :is="nodeType.icon" /></el-icon>
+          <span>{{ nodeType.label }}</span>
+        </div>
+      </div>
+      <div class="context-menu-group">
+        <div class="context-menu-group-title">工具节点</div>
+        <div 
+          v-for="nodeType in toolNodeTypes" 
+          :key="nodeType.type"
+          class="context-menu-item"
+          @click="addNodeFromConnectionPoint(nodeType)"
+        >
+          <el-icon><component :is="nodeType.icon" /></el-icon>
+          <span>{{ nodeType.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 连接线右键菜单 -->
+    <div 
+      v-if="connectionContextMenu.visible"
+      class="context-menu"
+      :style="{ left: connectionContextMenu.x + 'px', top: connectionContextMenu.y + 'px' }"
+    >
+      <div class="menu-item" @click="deleteConnection">
+        <el-icon><Delete /></el-icon>
+        <span>删除连接</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { DocumentAdd, FolderOpened, Close, VideoPlay, VideoPause, Cpu, Share, Refresh, Document, Link, Cloudy, DataAnalysis, Search, Picture, Operation } from '@element-plus/icons-vue'
+import { DocumentAdd, FolderOpened, Close, VideoPlay, VideoPause, Cpu, Share, Refresh, Document, Link, Cloudy, DataAnalysis, Search, Picture, Operation, DocumentCopy, Delete, Plus, ArrowRight, ChatDotRound, Switch } from '@element-plus/icons-vue'
 
 // 节点类型定义
 interface NodeType {
@@ -374,6 +435,64 @@ const errorNodes = ref<string[]>([])
 const tempConnection = ref<any>(null)
 const isConnecting = ref(false)
 const connectingFrom = ref<{ nodeId: string; type: string } | null>(null)
+const nodeRefs = ref<Map<string, HTMLElement>>(new Map())
+
+// 节点引用管理
+const setNodeRef = (el: HTMLElement | null, nodeId: string) => {
+  if (el) {
+    nodeRefs.value.set(nodeId, el)
+    // 设置初始位置
+    const node = nodes.value.find(n => n.id === nodeId)
+    if (node) {
+      el.style.left = node.x + 'px'
+      el.style.top = node.y + 'px'
+    }
+    
+    // 添加原生拖拽事件监听器
+    el.addEventListener('mousedown', (event: MouseEvent) => {
+      if (node) {
+        startDragNative(node, event)
+      }
+    })
+  } else {
+    nodeRefs.value.delete(nodeId)
+  }
+}
+
+// 画布右键菜单状态
+const canvasContextMenu = reactive({
+  visible: false,
+  x: 0,
+  y: 0
+})
+
+// 连接点菜单状态
+const connectionPointMenu = reactive({
+  visible: false,
+  x: 0,
+  y: 0,
+  sourceNode: null as WorkflowNode | null,
+  sourcePoint: '' // 'output' 或具体的输出点名称
+})
+
+// 节点右键菜单状态
+const nodeContextMenu = reactive({
+  visible: false,
+  x: 0,
+  y: 0,
+  node: null as WorkflowNode | null
+})
+
+// 连接线右键菜单状态
+const connectionContextMenu = reactive({
+  visible: false,
+  x: 0,
+  y: 0,
+  connection: null as WorkflowConnection | null
+})
+
+// 子菜单状态
+const showSubmenu = ref(false)
 
 // 节点类型定义
 const basicNodeTypes: NodeType[] = [
@@ -489,6 +608,7 @@ const addNode = (nodeType: NodeType, x: number, y: number) => {
     config: getDefaultConfig(nodeType.type)
   }
   nodes.value.push(newNode)
+  return newNode
 }
 
 const getDefaultConfig = (nodeType: string) => {
@@ -562,19 +682,70 @@ const startDrag = (node: WorkflowNode, event: MouseEvent) => {
   dragOffset.x = event.offsetX
   dragOffset.y = event.offsetY
   
+  // 获取节点DOM元素
+  const nodeElement = nodeRefs.value.get(node.id)
+  if (!nodeElement) return
+  
   const onMouseMove = (e: MouseEvent) => {
-    if (isDragging.value && draggedNode.value) {
-      const rect = canvas.value?.getBoundingClientRect()
-      if (rect) {
-        draggedNode.value.x = e.clientX - rect.left - dragOffset.x
-        draggedNode.value.y = e.clientY - rect.top - dragOffset.y
-      }
+    const rect = canvas.value?.getBoundingClientRect()
+    if (rect && draggedNode.value && nodeElement) {
+      const newX = e.clientX - rect.left - dragOffset.x
+      const newY = e.clientY - rect.top - dragOffset.y
+      
+      // 直接更新DOM位置，获得最佳性能
+      nodeElement.style.left = newX + 'px'
+      nodeElement.style.top = newY + 'px'
+      
+      // 同时更新数据，用于连接线计算
+      draggedNode.value.x = newX
+      draggedNode.value.y = newY
     }
   }
   
   const onMouseUp = () => {
     isDragging.value = false
     draggedNode.value = null
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
+  
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+
+// 原生拖拽实现（完全绕过Vue）
+const startDragNative = (node: WorkflowNode, event: MouseEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  const nodeElement = nodeRefs.value.get(node.id)
+  if (!nodeElement) return
+  
+  const rect = nodeElement.getBoundingClientRect()
+  const canvasRect = canvas.value?.getBoundingClientRect()
+  if (!canvasRect) return
+  
+  const offsetX = event.clientX - rect.left
+  const offsetY = event.clientY - rect.top
+  
+  // 添加拖拽样式
+  nodeElement.classList.add('dragging')
+  
+  const onMouseMove = (e: MouseEvent) => {
+    const newX = e.clientX - canvasRect.left - offsetX
+    const newY = e.clientY - canvasRect.top - offsetY
+    
+    // 直接更新DOM位置
+    nodeElement.style.left = newX + 'px'
+    nodeElement.style.top = newY + 'px'
+    
+    // 更新Vue数据（用于连接线）
+    node.x = newX
+    node.y = newY
+  }
+  
+  const onMouseUp = () => {
+    nodeElement.classList.remove('dragging')
     document.removeEventListener('mousemove', onMouseMove)
     document.removeEventListener('mouseup', onMouseUp)
   }
@@ -837,6 +1008,78 @@ const getConnectionPath = (connection: Connection) => {
 const onCanvasClick = () => {
   selectedNode.value = null
   selectedConnection.value = null
+  // 隐藏所有菜单
+  hideAllMenus()
+}
+
+// 显示画布右键菜单
+const showCanvasContextMenu = (event: MouseEvent) => {
+  hideAllMenus()
+  canvasContextMenu.x = event.clientX
+  canvasContextMenu.y = event.clientY
+  canvasContextMenu.visible = true
+}
+
+// 隐藏所有菜单
+const hideAllMenus = () => {
+  canvasContextMenu.visible = false
+  connectionPointMenu.visible = false
+  nodeContextMenu.visible = false
+  connectionContextMenu.visible = false
+}
+
+// 显示连接线右键菜单
+const showConnectionContextMenu = (event: MouseEvent, connection: WorkflowConnection) => {
+  event.stopPropagation()
+  hideAllMenus()
+  connectionContextMenu.visible = true
+  connectionContextMenu.x = event.clientX
+  connectionContextMenu.y = event.clientY
+  connectionContextMenu.connection = connection
+}
+
+// 从画布右键菜单添加节点
+const addNodeFromContextMenu = (nodeType: NodeType) => {
+  const rect = canvas.value?.getBoundingClientRect()
+  if (rect) {
+    const x = canvasContextMenu.x - rect.left
+    const y = canvasContextMenu.y - rect.top
+    addNode(nodeType, x, y)
+  }
+  hideAllMenus()
+}
+
+// 显示连接点菜单
+const showConnectionPointMenu = (node: WorkflowNode, pointType: string, event: MouseEvent) => {
+  hideAllMenus()
+  connectionPointMenu.x = event.clientX
+  connectionPointMenu.y = event.clientY
+  connectionPointMenu.sourceNode = node
+  connectionPointMenu.sourcePoint = pointType
+  connectionPointMenu.visible = true
+}
+
+// 从连接点菜单添加节点
+const addNodeFromConnectionPoint = (nodeType: NodeType) => {
+  if (connectionPointMenu.sourceNode) {
+    const sourceNode = connectionPointMenu.sourceNode
+    const newX = sourceNode.x + 250 // 在源节点右侧250px处添加新节点
+    const newY = sourceNode.y
+    
+    const newNode = addNode(nodeType, newX, newY)
+    
+    // 自动创建连接
+    if (newNode) {
+      connections.value.push({
+        id: `${sourceNode.id}-${newNode.id}`,
+        from: sourceNode.id,
+        to: newNode.id,
+        fromPoint: connectionPointMenu.sourcePoint,
+        toPoint: 'input'
+      })
+    }
+  }
+  hideAllMenus()
 }
 
 const saveWorkflow = () => {
@@ -889,8 +1132,85 @@ const loadWorkflow = () => {
   input.click()
 }
 
+// 右键菜单相关方法
+const showNodeContextMenu = (event: MouseEvent, node: WorkflowNode) => {
+  event.preventDefault()
+  hideAllMenus()
+  nodeContextMenu.visible = true
+  nodeContextMenu.x = event.clientX
+  nodeContextMenu.y = event.clientY
+  nodeContextMenu.node = node
+}
+
+
+
+
+
+const copyNode = () => {
+  if (nodeContextMenu.node) {
+    const newNode: WorkflowNode = {
+      ...nodeContextMenu.node,
+      id: `node_${Date.now()}`,
+      x: nodeContextMenu.node.x + 50,
+      y: nodeContextMenu.node.y + 50,
+      name: nodeContextMenu.node.name + ' (副本)'
+    }
+    nodes.value.push(newNode)
+    ElMessage.success('节点已复制')
+  }
+  hideAllMenus()
+}
+
+const deleteSelectedItem = () => {
+  if (nodeContextMenu.node) {
+    deleteNode(nodeContextMenu.node.id)
+  }
+  hideAllMenus()
+}
+
+// 删除连接线
+const deleteConnection = () => {
+  if (connectionContextMenu.connection) {
+    const connection = connectionContextMenu.connection
+    const index = connections.value.findIndex(c => 
+      c.from === connection.from && c.to === connection.to
+    )
+    if (index > -1) {
+      connections.value.splice(index, 1)
+      ElMessage.success('连接已删除')
+    }
+  }
+  hideAllMenus()
+}
+
+
+
+// 键盘事件处理
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Delete' && selectedConnection.value) {
+    const connection = selectedConnection.value
+    const index = connections.value.findIndex(c => 
+      c.from === connection.from && c.to === connection.to
+    )
+    if (index > -1) {
+      connections.value.splice(index, 1)
+      ElMessage.success('连接已删除')
+    }
+    selectedConnection.value = null
+  }
+}
+
+
+
 onMounted(() => {
   // 初始化
+  document.addEventListener('click', hideAllMenus)
+  document.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', hideAllMenus)
+  document.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -1006,6 +1326,10 @@ onMounted(() => {
   user-select: none;
 }
 
+.workflow-node.dragging {
+  transition: none;
+}
+
 .workflow-node:hover {
   border-color: #409eff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1113,8 +1437,9 @@ onMounted(() => {
   stroke: #409eff;
   stroke-width: 2;
   fill: none;
-  pointer-events: stroke;
+  pointer-events: all;
   cursor: pointer;
+  stroke-linecap: round;
 }
 
 .connection-line:hover {
@@ -1180,5 +1505,71 @@ onMounted(() => {
 .toolbar::-webkit-scrollbar-thumb:hover,
 .properties-panel::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  min-width: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.context-menu-header {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 4px;
+}
+
+.context-menu-group {
+  margin-bottom: 4px;
+}
+
+.context-menu-group:last-child {
+  margin-bottom: 0;
+}
+
+.context-menu-group-title {
+  padding: 4px 16px;
+  font-size: 12px;
+  color: #909399;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #303133;
+  transition: all 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f7fa;
+  color: #409eff;
+}
+
+.context-menu-item .el-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.context-menu-item span {
+  flex: 1;
 }
 </style>
