@@ -57,7 +57,12 @@ class AuthService:
                 algorithms=[settings.security.algorithm]
             )
             return payload
-        except jwt.PyJWTError:
+        except jwt.PyJWTError as e:
+            import logging
+            logging.error(f"Token verification failed: {e}")
+            logging.error(f"Token: {token[:50]}...")
+            logging.error(f"Secret key: {settings.security.secret_key[:20]}...")
+            logging.error(f"Algorithm: {settings.security.algorithm}")
             return None
     
     @staticmethod
@@ -86,6 +91,7 @@ class AuthService:
         db: Session = Depends(get_db)
     ) -> User:
         """Get current authenticated user."""
+        import logging
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -93,16 +99,22 @@ class AuthService:
         )
         
         token = credentials.credentials
+        logging.info(f"Received token: {token[:50]}...")
         payload = AuthService.verify_token(token)
         if payload is None:
+            logging.error("Token verification failed")
             raise credentials_exception
         
+        logging.info(f"Token payload: {payload}")
         username: str = payload.get("sub")
         if username is None:
+            logging.error("No username in token payload")
             raise credentials_exception
         
+        logging.info(f"Looking for user with username: {username}")
         user = db.query(User).filter(User.username == username).first()
         if user is None:
+            logging.error(f"User not found with username: {username}")
             raise credentials_exception
         
         return user

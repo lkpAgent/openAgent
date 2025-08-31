@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -6,7 +6,11 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // 从backend目录加载环境变量
+  const env = loadEnv(mode, resolve(__dirname, '../backend'), '')
+  
+  return {
   plugins: [
     vue(),
     AutoImport({
@@ -59,8 +63,13 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@import "@/styles/variables.scss";`
+        additionalData: `@import "@/styles/variables.scss";"`
       }
     }
+  },
+  // 定义环境变量
+  define: {
+    __VITE_ENV__: JSON.stringify(env)
+  }
   }
 })

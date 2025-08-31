@@ -2,12 +2,12 @@
 
 from typing import Optional
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
 
 from ..models.user import User
 from ..utils.schemas import UserCreate, UserUpdate
 from ..utils.exceptions import DatabaseError, ValidationError
 from ..utils.logger import get_logger
+from .auth import AuthService
 
 logger = get_logger(__name__)
 
@@ -17,15 +17,14 @@ class UserService:
     
     def __init__(self, db: Session):
         self.db = db
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
     def get_password_hash(self, password: str) -> str:
         """Hash a password."""
-        return self.pwd_context.hash(password)
+        return AuthService.get_password_hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash."""
-        return self.pwd_context.verify(plain_password, hashed_password)
+        return AuthService.verify_password(plain_password, hashed_password)
     
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID."""

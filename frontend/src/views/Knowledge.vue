@@ -96,8 +96,17 @@
                 {{ formatTime(row.created_at) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="120">
+            <el-table-column label="操作" width="180">
               <template #default="{ row }">
+                <el-button
+                  type="primary"
+                  size="small"
+                  text
+                  @click="viewDocumentDetails(row)"
+                  :disabled="row.status !== 'processed'"
+                >
+                  查看详情
+                </el-button>
                 <el-button
                   type="danger"
                   size="small"
@@ -217,6 +226,65 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 文档详情对话框 -->
+    <el-dialog
+      v-model="showDocumentDialog"
+      title="文档详情"
+      width="80%"
+      top="5vh"
+    >
+      <div v-if="currentDocument" class="document-details">
+        <div class="document-info">
+          <h3>{{ currentDocument.filename }}</h3>
+          <div class="document-meta">
+            <el-tag>{{ formatFileSize(currentDocument.size) }}</el-tag>
+            <el-tag :type="getDocumentStatusType(currentDocument.status)">
+              {{ getDocumentStatusText(currentDocument.status) }}
+            </el-tag>
+            <span class="upload-time">上传时间：{{ formatTime(currentDocument.created_at) }}</span>
+          </div>
+        </div>
+        
+        <el-divider />
+        
+        <div class="document-chunks">
+          <h4>文档分段内容</h4>
+          <div v-if="documentChunks.length === 0 && !loadingChunks" class="empty-chunks">
+            <el-empty description="暂无分段内容" />
+          </div>
+          <div v-else-if="loadingChunks" class="loading-chunks">
+            <el-skeleton :rows="3" animated />
+          </div>
+          <div v-else class="chunks-list">
+            <el-card
+              v-for="(chunk, index) in documentChunks"
+              :key="chunk.id"
+              class="chunk-card"
+              shadow="hover"
+            >
+              <template #header>
+                <div class="chunk-header">
+                  <span class="chunk-title">分段 {{ index + 1 }}</span>
+                  <el-tag size="small">{{ chunk.content.length }} 字符</el-tag>
+                </div>
+              </template>
+              <div class="chunk-content">
+                {{ chunk.content }}
+              </div>
+              <div v-if="chunk.metadata" class="chunk-metadata">
+                <el-divider content-position="left">元数据</el-divider>
+                <pre class="metadata-content">{{ JSON.stringify(chunk.metadata, null, 2) }}</pre>
+              </div>
+            </el-card>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="showDocumentDialog = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -233,11 +301,15 @@ const knowledgeStore = useKnowledgeStore()
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
 const showUploadDialog = ref(false)
+const showDocumentDialog = ref(false)
 const creating = ref(false)
 const updating = ref(false)
 const uploading = ref(false)
+const loadingChunks = ref(false)
 const selectedKnowledgeBase = ref<KnowledgeBase | null>(null)
 const currentEditingKB = ref<KnowledgeBase | null>(null)
+const currentDocument = ref<Document | null>(null)
+const documentChunks = ref<any[]>([])
 const fileList = ref<UploadFile[]>([])
 
 const createFormRef = ref<FormInstance>()
@@ -403,6 +475,24 @@ const handleUpload = async () => {
   }
 }
 
+const viewDocumentDetails = async (document: Document) => {
+  currentDocument.value = document
+  showDocumentDialog.value = true
+  loadingChunks.value = true
+  documentChunks.value = []
+  
+  try {
+    // 调用API获取文档分段内容
+    const chunks = await knowledgeStore.getDocumentChunks(document.id)
+    documentChunks.value = chunks
+  } catch (error) {
+    console.error('获取文档分段失败:', error)
+    ElMessage.error('获取文档分段内容失败')
+  } finally {
+    loadingChunks.value = false
+  }
+}
+
 const deleteDocument = async (document: Document) => {
   try {
     await ElMessageBox.confirm(
@@ -549,5 +639,86 @@ const getDocumentStatusType = (status: string) => {
 
 .upload-demo {
   width: 100%;
+}
+
+/* 文档详情弹窗样式 */
+.document-details {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.document-info h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.document-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.upload-time {
+  color: #666;
+  font-size: 14px;
+}
+
+.document-chunks h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.chunks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.chunk-card {
+  border: 1px solid #e0e0e0;
+}
+
+.chunk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chunk-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.chunk-content {
+  line-height: 1.6;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 10px;
+}
+
+.chunk-metadata {
+  margin-top: 10px;
+}
+
+.metadata-content {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.empty-chunks,
+.loading-chunks {
+  text-align: center;
+  padding: 40px 20px;
 }
 </style>

@@ -145,6 +145,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=10000)
     stream: bool = Field(default=False)
     use_knowledge_base: bool = Field(default=False)
+    knowledge_base_id: Optional[int] = Field(None, description="Knowledge base ID for RAG mode")
     use_agent: bool = Field(default=True, description="Enable agent mode with tool calling capabilities")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(None, ge=1, le=8192)
@@ -181,6 +182,16 @@ class KnowledgeBaseCreate(KnowledgeBaseBase):
     pass
 
 
+class KnowledgeBaseUpdate(BaseModel):
+    """Knowledge base update schema."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    embedding_model: Optional[str] = None
+    chunk_size: Optional[int] = Field(None, ge=100, le=5000)
+    chunk_overlap: Optional[int] = Field(None, ge=0, le=1000)
+    is_active: Optional[bool] = None
+
+
 class KnowledgeBaseResponse(BaseResponse, KnowledgeBaseBase):
     """Knowledge base response schema."""
     is_active: bool
@@ -199,6 +210,12 @@ class DocumentBase(BaseModel):
     file_size: int
 
 
+class DocumentUpload(BaseModel):
+    """Document upload schema."""
+    knowledge_base_id: int
+    process_immediately: bool = Field(default=True)
+
+
 class DocumentResponse(BaseResponse, DocumentBase):
     """Document response schema."""
     knowledge_base_id: int
@@ -211,7 +228,45 @@ class DocumentResponse(BaseResponse, DocumentBase):
     file_size_mb: float
 
 
+class DocumentListResponse(BaseModel):
+    """Document list response schema."""
+    documents: List[DocumentResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class DocumentProcessingStatus(BaseModel):
+    """Document processing status schema."""
+    document_id: int
+    status: str  # 'pending', 'processing', 'completed', 'failed'
+    progress: float = Field(default=0.0, ge=0.0, le=100.0)
+    error_message: Optional[str] = None
+    chunks_created: int = 0
+    estimated_time_remaining: Optional[int] = None  # seconds
+
+
 # Error schemas
+# Document chunk schemas
+class DocumentChunk(BaseModel):
+    """Document chunk schema."""
+    id: str
+    content: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    page_number: Optional[int] = None
+    chunk_index: int
+    start_char: Optional[int] = None
+    end_char: Optional[int] = None
+
+
+class DocumentChunksResponse(BaseModel):
+    """Document chunks response schema."""
+    document_id: int
+    document_name: str
+    total_chunks: int
+    chunks: List[DocumentChunk]
+
+
 class ErrorResponse(BaseModel):
     """Error response schema."""
     error: str

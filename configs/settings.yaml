@@ -25,16 +25,6 @@ security:
   algorithm: "HS256"
   access_token_expire_minutes: 30
 
-# AI模型配置
-ai:
-  default_provider: "openai"
-  openai:
-    api_key: "${OPENAI_API_KEY}"
-    base_url: "https://api.openai.com/v1"
-    default_model: "gpt-3.5-turbo"
-    max_tokens: 2048
-    temperature: 0.7
-  
 # 向量数据库配置
 vector_db:
   type: "chroma"  # chroma, faiss
@@ -42,8 +32,9 @@ vector_db:
     persist_directory: "./data/chroma"
     collection_name: "documents"
   embedding:
-    model: "sentence-transformers/all-MiniLM-L6-v2"
-    dimension: 384
+    provider: "zhipu"  # openai, zhipu, sentence-transformers
+    model: "embedding-3"
+    dimension: 1024
 
 # 文件处理配置
 file:

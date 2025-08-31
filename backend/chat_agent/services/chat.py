@@ -13,6 +13,7 @@ from ..utils.exceptions import ChatServiceError, OpenAIError
 from ..utils.logger import get_logger
 from .conversation import ConversationService
 from .langchain_chat import LangChainChatService
+from .knowledge_chat import KnowledgeChatService
 from .agent.agent_service import get_agent_service
 
 logger = get_logger("chat_service")
@@ -28,6 +29,9 @@ class ChatService:
         # Initialize LangChain chat service
         self.langchain_service = LangChainChatService(db)
         
+        # Initialize Knowledge chat service
+        self.knowledge_service = KnowledgeChatService(db)
+        
         # Initialize Agent service with database session
         self.agent_service = get_agent_service(db)
         
@@ -42,10 +46,24 @@ class ChatService:
         stream: bool = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        use_agent: bool = False
+        use_agent: bool = False,
+        use_knowledge_base: bool = False,
+        knowledge_base_id: Optional[int] = None
     ) -> ChatResponse:
-        """Send a message and get AI response using LangChain or Agent."""
-        if use_agent:
+        """Send a message and get AI response using LangChain, Agent, or Knowledge Base."""
+        if use_knowledge_base and knowledge_base_id:
+            logger.info(f"Processing chat request for conversation {conversation_id} via Knowledge Base {knowledge_base_id}")
+            
+            # Use knowledge base chat service
+            return await self.knowledge_service.chat_with_knowledge_base(
+                conversation_id=conversation_id,
+                message=message,
+                knowledge_base_id=knowledge_base_id,
+                stream=stream,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+        elif use_agent:
             logger.info(f"Processing chat request for conversation {conversation_id} via Agent")
             
             # Get conversation history for agent
@@ -108,10 +126,29 @@ class ChatService:
         message: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        use_agent: bool = False
+        use_agent: bool = False,
+        use_knowledge_base: bool = False,
+        knowledge_base_id: Optional[int] = None
     ) -> AsyncGenerator[str, None]:
-        """Send a message and get streaming AI response using LangChain or Agent."""
-        if use_agent:
+        """Send a message and get streaming AI response using LangChain, Agent, or Knowledge Base."""
+        if use_knowledge_base and knowledge_base_id:
+            logger.info(f"Processing streaming chat request for conversation {conversation_id} via Knowledge Base {knowledge_base_id}")
+            
+            # Use knowledge base chat service streaming
+            async for content in self.knowledge_service.chat_stream_with_knowledge_base(
+                conversation_id=conversation_id,
+                message=message,
+                knowledge_base_id=knowledge_base_id,
+                temperature=temperature,
+                max_tokens=max_tokens
+            ):
+                # Create stream chunk for compatibility with existing API
+                stream_chunk = StreamChunk(
+                    content=content,
+                    role=MessageRole.ASSISTANT
+                )
+                yield json.dumps(stream_chunk.dict(), ensure_ascii=False)
+        elif use_agent:
             logger.info(f"Processing streaming chat request for conversation {conversation_id} via Agent")
             
             # Get conversation history for agent

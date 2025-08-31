@@ -94,6 +94,11 @@
           <router-view />
         </div>
         
+        <!-- 知识库管理模块 -->
+        <div v-else-if="activeModule === 'knowledge'" style="flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%;">
+          <KnowledgeManagement />
+        </div>
+        
         <!-- 其他模块的占位内容 -->
         <div v-else class="module-placeholder">
           <div class="placeholder-content">

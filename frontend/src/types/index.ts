@@ -118,6 +118,10 @@ export interface ChatRequest {
   conversation_id?: number
   stream?: boolean
   use_knowledge_base?: boolean
+  knowledge_base_id?: number
+  use_agent?: boolean
+  temperature?: number
+  max_tokens?: number
 }
 
 export interface ChatResponse {
@@ -185,6 +189,31 @@ export interface Document {
 export interface DocumentUpload {
   file: File
   knowledge_base_id: number
+}
+
+export interface DocumentListResponse {
+  documents: Document[]
+  total: number
+  page: number
+  page_size: number
+}
+
+// Document Chunk Types
+export interface DocumentChunk {
+  id: string
+  content: string
+  metadata: Record<string, any>
+  page_number?: number
+  chunk_index: number
+  start_char?: number
+  end_char?: number
+}
+
+export interface DocumentChunksResponse {
+  document_id: number
+  document_name: string
+  total_chunks: number
+  chunks: DocumentChunk[]
 }
 
 export interface SearchRequest {

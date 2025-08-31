@@ -530,6 +530,7 @@ const sendMessage = async () => {
     
     // 如果是RAG模式，添加知识库参数
     if (currentMode.value === 'rag' && selectedKnowledgeBase.value) {
+      messageData.use_knowledge_base = true
       messageData.knowledge_base_id = selectedKnowledgeBase.value
     }
     

@@ -52,13 +52,20 @@ class LangChainChatService:
         
         # 添加调试日志
         logger.info(f"LLM Provider: {settings.llm.provider}")
-        logger.info(f"LLM Config: model={llm_config['model']}, base_url={llm_config['base_url']}, api_key={llm_config['api_key'][:10]}...")
+        logger.info(f"LLM Config type: {type(llm_config)}")
+        logger.info(f"LLM Config: {llm_config}")
+        
+        if llm_config is None:
+            logger.error("LLM config is None, check environment variables")
+            raise ValueError("LLM configuration is not properly loaded")
+        
+        logger.info(f"LLM Config: model={llm_config['model']}, base_url={llm_config['base_url']}, api_key={llm_config['api_key'][:10] if llm_config['api_key'] else 'None'}...")
         
         # Initialize LangChain ChatOpenAI
         self.llm = ChatOpenAI(
             model=llm_config["model"],
-            openai_api_key=llm_config["api_key"],
-            openai_api_base=llm_config["base_url"],
+            api_key=llm_config["api_key"],
+            base_url=llm_config["base_url"],
             temperature=llm_config["temperature"],
             max_tokens=llm_config["max_tokens"],
             streaming=False
@@ -67,8 +74,8 @@ class LangChainChatService:
         # Streaming LLM for stream responses
         self.streaming_llm = ChatOpenAI(
             model=llm_config["model"],
-            openai_api_key=llm_config["api_key"],
-            openai_api_base=llm_config["base_url"],
+            api_key=llm_config["api_key"],
+            base_url=llm_config["base_url"],
             temperature=llm_config["temperature"],
             max_tokens=llm_config["max_tokens"],
             streaming=True

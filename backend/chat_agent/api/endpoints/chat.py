@@ -167,7 +167,9 @@ async def chat(
         stream=False,
         temperature=chat_request.temperature,
         max_tokens=chat_request.max_tokens,
-        use_agent=chat_request.use_agent
+        use_agent=chat_request.use_agent,
+        use_knowledge_base=chat_request.use_knowledge_base,
+        knowledge_base_id=chat_request.knowledge_base_id
     )
     
     return response
@@ -198,7 +200,9 @@ async def chat_stream(
             message=chat_request.message,
             temperature=chat_request.temperature,
             max_tokens=chat_request.max_tokens,
-            use_agent=chat_request.use_agent
+            use_agent=chat_request.use_agent,
+            use_knowledge_base=chat_request.use_knowledge_base,
+            knowledge_base_id=chat_request.knowledge_base_id
         ):
             yield f"data: {chunk}\n\n"
     

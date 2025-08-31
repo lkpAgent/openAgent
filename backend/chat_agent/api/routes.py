@@ -15,6 +15,7 @@ router.include_router(
 
 # TODO: Add other routers when implemented
 from .endpoints import auth
+from . import knowledge_base
 
 router.include_router(
     auth.router,
@@ -22,16 +23,16 @@ router.include_router(
     tags=["authentication"]
 )
 
+router.include_router(
+    knowledge_base.router,
+    prefix="/knowledge-bases",
+    tags=["knowledge-bases"]
+)
+
 # router.include_router(
 #     users.router,
 #     prefix="/users",
 #     tags=["users"]
-# )
-
-# router.include_router(
-#     knowledge_base.router,
-#     prefix="/knowledge-base",
-#     tags=["knowledge-base"]
 # )
 
 # Basic test endpoint

@@ -55,7 +55,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     try {
       isLoading.value = true
       const response = await knowledgeApi.getKnowledgeBases()
-      knowledgeBases.value = response.data.data || []
+      knowledgeBases.value = response.data || []
     } catch (error: any) {
       console.error('Load knowledge bases failed:', error)
       ElMessage.error('加载知识库列表失败')
@@ -68,7 +68,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     try {
       isLoading.value = true
       const response = await knowledgeApi.createKnowledgeBase(data)
-      const newKnowledgeBase = response.data.data!
+      const newKnowledgeBase = response.data
       
       knowledgeBases.value.unshift(newKnowledgeBase)
       currentKnowledgeBase.value = newKnowledgeBase
@@ -88,10 +88,10 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     try {
       isLoading.value = true
       const response = await knowledgeApi.getKnowledgeBase(knowledgeBaseId)
-      currentKnowledgeBase.value = response.data.data!
+      currentKnowledgeBase.value = response.data
       
       // Update in list if exists
-      const index = knowledgeBases.value.findIndex(kb => kb.id === knowledgeBaseId)
+      const index = knowledgeBases.value.findIndex(kb => kb.id.toString() === knowledgeBaseId)
       if (index !== -1) {
         knowledgeBases.value[index] = currentKnowledgeBase.value
       }
@@ -109,16 +109,16 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
   const updateKnowledgeBase = async (knowledgeBaseId: string, data: KnowledgeBaseUpdate) => {
     try {
       const response = await knowledgeApi.updateKnowledgeBase(knowledgeBaseId, data)
-      const updatedKnowledgeBase = response.data.data!
+      const updatedKnowledgeBase = response.data
       
       // Update in list
-      const index = knowledgeBases.value.findIndex(kb => kb.id === knowledgeBaseId)
+      const index = knowledgeBases.value.findIndex(kb => kb.id.toString() === knowledgeBaseId)
       if (index !== -1) {
         knowledgeBases.value[index] = updatedKnowledgeBase
       }
       
       // Update current if it's the same
-      if (currentKnowledgeBase.value?.id === knowledgeBaseId) {
+      if (currentKnowledgeBase.value?.id.toString() === knowledgeBaseId) {
         currentKnowledgeBase.value = updatedKnowledgeBase
       }
       
@@ -136,10 +136,10 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
       await knowledgeApi.deleteKnowledgeBase(knowledgeBaseId)
       
       // Remove from list
-      knowledgeBases.value = knowledgeBases.value.filter(kb => kb.id !== knowledgeBaseId)
+      knowledgeBases.value = knowledgeBases.value.filter(kb => kb.id.toString() !== knowledgeBaseId)
       
       // Clear current if it's the same
-      if (currentKnowledgeBase.value?.id === knowledgeBaseId) {
+      if (currentKnowledgeBase.value?.id.toString() === knowledgeBaseId) {
         currentKnowledgeBase.value = null
         documents.value = []
       }
@@ -157,7 +157,9 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     try {
       isLoadingDocuments.value = true
       const response = await knowledgeApi.getDocuments(knowledgeBaseId)
-      documents.value = response.data.data || []
+      // 后端返回的是 DocumentListResponse 格式: {documents: [], total, page, page_size}
+      const documentList = response.data?.documents || response.data || []
+      documents.value = documentList
       return documents.value
     } catch (error: any) {
       console.error('Load documents failed:', error)
@@ -172,7 +174,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     try {
       isUploading.value = true
       const response = await knowledgeApi.uploadDocument(knowledgeBaseId, file)
-      const newDocument = response.data.data!
+      const newDocument = response.data
       
       documents.value.unshift(newDocument)
       
@@ -192,7 +194,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
       await knowledgeApi.deleteDocument(knowledgeBaseId, documentId)
       
       // Remove from list
-      documents.value = documents.value.filter(doc => doc.id !== documentId)
+      documents.value = documents.value.filter(doc => doc.id.toString() !== documentId)
       
       ElMessage.success('文档删除成功')
       return true
@@ -206,10 +208,10 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
   const processDocument = async (knowledgeBaseId: string, documentId: string) => {
     try {
       const response = await knowledgeApi.processDocument(knowledgeBaseId, documentId)
-      const updatedDocument = response.data.data!
+      const updatedDocument = response.data
       
       // Update in list
-      const index = documents.value.findIndex(doc => doc.id === documentId)
+      const index = documents.value.findIndex(doc => doc.id.toString() === documentId)
       if (index !== -1) {
         documents.value[index] = updatedDocument
       }
@@ -227,7 +229,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     try {
       isSearching.value = true
       const response = await knowledgeApi.searchKnowledgeBase(data)
-      searchResults.value = response.data.data || []
+      searchResults.value = response.data || []
       return searchResults.value
     } catch (error: any) {
       console.error('Search knowledge base failed:', error)
@@ -248,12 +250,29 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     searchResults.value = []
   }
   
-  const updateDocumentStatus = (documentId: string, status: Document['status'], error?: string) => {
-    const index = documents.value.findIndex(doc => doc.id === documentId)
+  const getDocumentChunks = async (documentId: string) => {
+    try {
+      // 从当前文档列表中找到对应的知识库ID
+      const document = documents.value.find(doc => doc.id.toString() === documentId)
+      if (!document || !document.knowledge_base_id) {
+        throw new Error('Document not found or missing knowledge base ID')
+      }
+      
+      const response = await knowledgeApi.getDocumentChunks(document.knowledge_base_id.toString(), documentId)
+      return response.data?.chunks || response.data || []
+    } catch (error: any) {
+      console.error('Get document chunks failed:', error)
+      ElMessage.error('获取文档分段失败')
+      return []
+    }
+  }
+
+  const updateDocumentStatus = (documentId: string, status: Document['status'], chunks?: number) => {
+    const index = documents.value.findIndex(doc => doc.id.toString() === documentId)
     if (index !== -1) {
       documents.value[index].status = status
-      if (error) {
-        documents.value[index].processing_error = error
+      if (chunks !== undefined) {
+        documents.value[index].chunks = chunks
       }
     }
   }
@@ -284,6 +303,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     uploadDocument,
     deleteDocument,
     processDocument,
+    getDocumentChunks,
     searchKnowledgeBase,
     clearSearchResults,
     clearCurrentKnowledgeBase,
