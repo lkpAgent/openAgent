@@ -11,7 +11,7 @@ from functools import lru_cache
 
 class DatabaseSettings(BaseSettings):
     """Database configuration."""
-    url: str = Field(default="sqlite:///./data/chat_agent.db")
+    url: str = Field(default="sqlite:///" + str(Path(__file__).parent.parent.parent / "data" / "chat_agent.db"))
     echo: bool = Field(default=False)
     pool_size: int = Field(default=5)
     max_overflow: int = Field(default=10)

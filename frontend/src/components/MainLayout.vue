@@ -154,10 +154,10 @@ const upperNavItems = [
     route: '/chat'
   },
   {
-    key: 'analytics',
+    key: 'smart-query',
     label: '智能问数',
     icon: 'DataAnalysis',
-    route: '/analytics'
+    route: '/smart-query'
   },
   {
     key: 'creation',
@@ -295,12 +295,20 @@ const updateActiveModuleFromRoute = () => {
   const path = route.path
   if (path.includes('/chat')) {
     activeModule.value = 'chat'
+  } else if (path.includes('/smart-query')) {
+    activeModule.value = 'smart-query'
+  } else if (path.includes('/creation')) {
+    activeModule.value = 'creation'
   } else if (path.includes('/knowledge')) {
     activeModule.value = 'knowledge'
   } else if (path.includes('/workflow')) {
     activeModule.value = 'workflow'
   } else if (path.includes('/agent')) {
     activeModule.value = 'agent'
+  } else if (path.includes('/market')) {
+    activeModule.value = 'market'
+  } else if (path.includes('/system')) {
+    activeModule.value = 'system'
   }
 }
 

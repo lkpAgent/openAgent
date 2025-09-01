@@ -1216,7 +1216,8 @@ onUnmounted(() => {
 
 <style scoped>
 .workflow-editor {
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #f5f5f5;

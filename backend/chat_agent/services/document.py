@@ -104,7 +104,7 @@ class DocumentService:
         
         return documents, total
     
-    async def delete_document(self, doc_id: int, kb_id: int = None) -> bool:
+    def delete_document(self, doc_id: int, kb_id: int = None) -> bool:
         """Delete document."""
         try:
             document = self.get_document(doc_id, kb_id)
@@ -113,7 +113,7 @@ class DocumentService:
             
             # Delete file from storage
             try:
-                await storage_service.delete_file(document.file_path)
+                storage_service.delete_file(document.file_path)
                 logger.info(f"Deleted file: {document.file_path}")
             except Exception as e:
                 logger.warning(f"Failed to delete file {document.file_path}: {e}")

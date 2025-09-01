@@ -15,7 +15,8 @@ router.include_router(
 
 # TODO: Add other routers when implemented
 from .endpoints import auth
-from . import knowledge_base
+from .endpoints import knowledge_base
+from .endpoints import smart_query
 
 router.include_router(
     auth.router,
@@ -27,6 +28,12 @@ router.include_router(
     knowledge_base.router,
     prefix="/knowledge-bases",
     tags=["knowledge-bases"]
+)
+
+router.include_router(
+    smart_query.router,
+    prefix="/api",
+    tags=["smart-query"]
 )
 
 # router.include_router(

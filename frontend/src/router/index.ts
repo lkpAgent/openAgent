@@ -48,6 +48,18 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'smart-query',
+        name: 'SmartQuery',
+        component: () => import('../components/SmartQuery.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'creation',
+        name: 'Creation',
+        component: () => import('../components/CreativeStudio.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/Profile.vue'),

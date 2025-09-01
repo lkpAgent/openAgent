@@ -135,3 +135,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 }
             }
         )
+
+
+# Create the app instance
+app = create_app()

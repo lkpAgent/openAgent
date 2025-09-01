@@ -45,6 +45,15 @@
           <el-icon class="nav-icon"><Robot /></el-icon>
           <span>智能体管理</span>
         </div>
+        
+        <div 
+          class="nav-item"
+          :class="{ active: activeModule === 'smart-query' }"
+          @click="setActiveModule('smart-query')"
+        >
+          <el-icon class="nav-icon"><DataAnalysis /></el-icon>
+          <span>智能问数</span>
+        </div>
       </div>
       
       <!-- 历史对话列表 -->
@@ -99,14 +108,26 @@
           <KnowledgeManagement />
         </div>
         
+        <!-- 工作流编排模块 -->
+        <div v-else-if="activeModule === 'workflow'" style="flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%;">
+          <WorkflowEditor />
+        </div>
+        
+        <!-- 智能体管理模块 -->
+        <div v-else-if="activeModule === 'agent'" style="flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%;">
+          <AgentManagement />
+        </div>
+        
+        <!-- 智能问数模块 -->
+        <div v-else-if="activeModule === 'smart-query'" style="flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%;">
+          <SmartQuery />
+        </div>
+        
         <!-- 其他模块的占位内容 -->
         <div v-else class="module-placeholder">
           <div class="placeholder-content">
-            <h2>{{ getModuleTitle(activeModule) }}</h2>
-            <p>{{ getModuleDescription(activeModule) }}</p>
-            <el-button type="primary" @click="handleModuleAction(activeModule)">
-              开始使用
-            </el-button>
+            <h2>功能开发中</h2>
+            <p>该功能正在开发中，敬请期待</p>
           </div>
         </div>
       </div>
@@ -165,19 +186,23 @@ import {
   Search,
   User,
   InfoFilled,
-  Document
+  Document,
+  DataAnalysis
 } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useKnowledgeStore } from '@/stores/knowledge'
+import { useRouter } from 'vue-router'
 import type { Conversation, Message } from '@/types/chat'
 import type { KnowledgeBase } from '@/types/knowledge'
 import KnowledgeManagement from '@/components/KnowledgeManagement.vue'
 import WorkflowEditor from '@/components/WorkflowEditor.vue'
 import AgentManagement from '@/components/AgentManagement.vue'
+import SmartQuery from '@/views/SmartQuery.vue'
 
 // Store
 const chatStore = useChatStore()
 const knowledgeStore = useKnowledgeStore()
+const router = useRouter()
 
 // 响应式数据
 const activeModule = ref('chat') // 当前激活的模块
@@ -239,6 +264,18 @@ const filteredConversations = computed(() => {
 // 方法
 const setActiveModule = (module: string) => {
   activeModule.value = module
+  // 根据模块进行路由跳转
+  if (module === 'chat') {
+    router.push('/chat')
+  } else if (module === 'knowledge') {
+    router.push('/knowledge')
+  } else if (module === 'workflow') {
+    router.push('/workflow')
+  } else if (module === 'agent') {
+    router.push('/agent')
+  } else if (module === 'smart-query') {
+    router.push('/smart-query')
+  }
 }
 
 const setChatMode = (mode: string) => {
