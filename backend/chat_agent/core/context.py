@@ -1,4 +1,6 @@
-"""Request context management."""
+"""
+HTTP请求上下文管理，如：获取当前登录用户信息及Token信息
+"""
 
 from contextvars import ContextVar
 from typing import Optional

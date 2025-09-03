@@ -1,4 +1,6 @@
-"""Custom middleware for the application."""
+"""
+中间件管理，如上下文中间件：校验Token等
+"""
 
 from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
