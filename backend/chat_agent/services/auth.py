@@ -92,6 +92,8 @@ class AuthService:
     ) -> User:
         """Get current authenticated user."""
         import logging
+        from ..core.context import UserContext
+        
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -116,6 +118,10 @@ class AuthService:
         if user is None:
             logging.error(f"User not found with username: {username}")
             raise credentials_exception
+        
+        # Set user in context for global access
+        UserContext.set_current_user(user)
+        logging.info(f"User {user.username} (ID: {user.id}) set in UserContext")
         
         return user
     

@@ -2,13 +2,14 @@
 
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func, or_
 
 from ..models.conversation import Conversation
 from ..models.message import Message, MessageRole
 from ..utils.schemas import ConversationCreate, ConversationUpdate
 from ..utils.exceptions import ConversationNotFoundError, DatabaseError
 from ..utils.logger import get_logger
+from ..core.context import UserContext
 
 logger = get_logger("conversation_service")
 
@@ -21,7 +22,7 @@ class ConversationService:
     
     def create_conversation(
         self, 
-        user_id: int, 
+        user_id: int,
         conversation_data: ConversationCreate
     ) -> Conversation:
         """Create a new conversation."""
@@ -29,14 +30,18 @@ class ConversationService:
         
         try:
             conversation = Conversation(
-                user_id=user_id,
-                **conversation_data.dict()
+                **conversation_data.dict(),
+                user_id=user_id
             )
+            
+            # Set audit fields
+            conversation.set_audit_fields(user_id=user_id, is_update=False)
+            
             self.db.add(conversation)
             self.db.commit()
             self.db.refresh(conversation)
             
-            logger.info(f"Successfully created conversation {conversation.id}")
+            logger.info(f"Successfully created conversation {conversation.id} for user {user_id}")
             return conversation
             
         except Exception as e:
@@ -47,8 +52,10 @@ class ConversationService:
     def get_conversation(self, conversation_id: int) -> Optional[Conversation]:
         """Get a conversation by ID."""
         try:
+            user_id = UserContext.get_current_user_id()
             conversation = self.db.query(Conversation).filter(
-                Conversation.id == conversation_id
+                Conversation.id == conversation_id,
+                Conversation.user_id == user_id
             ).first()
             
             if not conversation:
@@ -62,15 +69,41 @@ class ConversationService:
     
     def get_user_conversations(
         self, 
-        user_id: int, 
         skip: int = 0, 
-        limit: int = 50
+        limit: int = 50,
+        search_query: Optional[str] = None,
+        include_archived: bool = False,
+        order_by: str = "updated_at",
+        order_desc: bool = True
     ) -> List[Conversation]:
-        """Get user's conversations."""
-        return self.db.query(Conversation).filter(
-            Conversation.user_id == user_id,
-            Conversation.is_archived == False
-        ).order_by(desc(Conversation.updated_at)).offset(skip).limit(limit).all()
+        """Get user's conversations with search and filtering."""
+        user_id = UserContext.get_current_user_id()
+        query = self.db.query(Conversation).filter(
+            Conversation.user_id == user_id
+        )
+        
+        # Filter archived conversations
+        if not include_archived:
+            query = query.filter(Conversation.is_archived == False)
+        
+        # Search functionality
+        if search_query and search_query.strip():
+            search_term = f"%{search_query.strip()}%"
+            query = query.filter(
+                or_(
+                    Conversation.title.ilike(search_term),
+                    Conversation.system_prompt.ilike(search_term)
+                )
+            )
+        
+        # Ordering
+        order_column = getattr(Conversation, order_by, Conversation.updated_at)
+        if order_desc:
+            query = query.order_by(desc(order_column))
+        else:
+            query = query.order_by(order_column)
+        
+        return query.offset(skip).limit(limit).all()
     
     def update_conversation(
         self, 
@@ -133,6 +166,10 @@ class ConversationService:
             completion_tokens=completion_tokens,
             total_tokens=total_tokens
         )
+        
+        # Set audit fields
+        message.set_audit_fields()
+        
         self.db.add(message)
         self.db.commit()
         self.db.refresh(message)
@@ -154,3 +191,48 @@ class ConversationService:
         if conversation:
             # SQLAlchemy will automatically update the updated_at field
             self.db.commit()
+    
+    def get_user_conversations_count(
+        self,
+        search_query: Optional[str] = None,
+        include_archived: bool = False
+    ) -> int:
+        """Get total count of user's conversations."""
+        user_id = UserContext.get_current_user_id()
+        query = self.db.query(func.count(Conversation.id)).filter(
+            Conversation.user_id == user_id
+        )
+        
+        if not include_archived:
+            query = query.filter(Conversation.is_archived == False)
+        
+        if search_query and search_query.strip():
+            search_term = f"%{search_query.strip()}%"
+            query = query.filter(
+                or_(
+                    Conversation.title.ilike(search_term),
+                    Conversation.system_prompt.ilike(search_term)
+                )
+            )
+        
+        return query.scalar() or 0
+    
+    def archive_conversation(self, conversation_id: int) -> bool:
+        """Archive a conversation."""
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            return False
+        
+        conversation.is_archived = True
+        self.db.commit()
+        return True
+    
+    def unarchive_conversation(self, conversation_id: int) -> bool:
+        """Unarchive a conversation."""
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            return False
+        
+        conversation.is_archived = False
+        self.db.commit()
+        return True

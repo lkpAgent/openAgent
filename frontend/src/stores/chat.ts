@@ -18,6 +18,11 @@ export const useChatStore = defineStore('chat', () => {
   const isLoading = ref(false)
   const isStreaming = ref(false)
   const isLoadingMessages = ref(false)
+  const searchQuery = ref('')
+  const includeArchived = ref(false)
+  const totalCount = ref(0)
+  const currentPage = ref(1)
+  const pageSize = ref(20)
   
   // Getters
   const sortedConversations = computed(() => {
@@ -35,11 +40,34 @@ export const useChatStore = defineStore('chat', () => {
   })
   
   // Actions
-  const loadConversations = async () => {
+  const loadConversations = async (params?: {
+    search?: string
+    include_archived?: boolean
+    page?: number
+    limit?: number
+    order_by?: string
+    order_desc?: boolean
+  }) => {
     try {
       isLoading.value = true
-      const response = await chatApi.getConversations()
-      conversations.value = response.data.data || []
+      const queryParams = {
+        search: params?.search || searchQuery.value,
+        include_archived: params?.include_archived ?? includeArchived.value,
+        skip: ((params?.page || currentPage.value) - 1) * pageSize.value,
+        limit: params?.limit || pageSize.value,
+        order_by: params?.order_by || 'updated_at',
+        order_desc: params?.order_desc ?? true
+      }
+      
+      const response = await chatApi.getConversations(queryParams)
+      conversations.value = response.data.data || response.data || []
+      
+      // Load total count
+      const countResponse = await chatApi.getConversationsCount({
+        search: queryParams.search,
+        include_archived: queryParams.include_archived
+      })
+      totalCount.value = countResponse.data.count || countResponse.data.data?.count || 0
     } catch (error: any) {
       console.error('Load conversations failed:', error)
       ElMessage.error('加载对话列表失败')
@@ -79,10 +107,10 @@ export const useChatStore = defineStore('chat', () => {
     try {
       isLoading.value = true
       const response = await chatApi.getConversation(conversationId)
-      currentConversation.value = response.data.data!
+      currentConversation.value = response.data.data || response.data
       
       // Update conversation in list if exists
-      const index = conversations.value.findIndex(conv => conv.id === conversationId)
+      const index = conversations.value.findIndex(conv => conv.id.toString() === conversationId)
       if (index !== -1) {
         conversations.value[index] = currentConversation.value
       }
@@ -100,7 +128,7 @@ export const useChatStore = defineStore('chat', () => {
   const updateConversation = async (conversationId: string, data: ConversationUpdate) => {
     try {
       const response = await chatApi.updateConversation(conversationId, data)
-      const updatedConversation = response.data.data!
+      const updatedConversation = response.data.data || response.data
       
       // Update in list
       const index = conversations.value.findIndex(conv => conv.id.toString() === conversationId)
@@ -127,10 +155,10 @@ export const useChatStore = defineStore('chat', () => {
       await chatApi.deleteConversation(conversationId)
       
       // Remove from list
-      conversations.value = conversations.value.filter(conv => conv.id !== conversationId)
+      conversations.value = conversations.value.filter(conv => conv.id.toString() !== conversationId)
       
       // Clear current if it's the same
-      if (currentConversation.value?.id === conversationId) {
+      if (currentConversation.value?.id.toString() === conversationId) {
         currentConversation.value = null
         messages.value = []
       }
@@ -148,13 +176,14 @@ export const useChatStore = defineStore('chat', () => {
     try {
       isLoadingMessages.value = true
       const response = await chatApi.getMessages(conversationId)
-      const loadedMessages = response.data.data || []
+      const loadedMessages = response.data.data || response.data || []
       
       // 只有在强制重新加载或消息为空时才替换消息数组
+      console.log(forceReload)
       if (forceReload || messages.value.length === 0) {
         messages.value = loadedMessages
       }
-      
+      // messages.value = loadedMessages
       return loadedMessages
     } catch (error: any) {
       console.error('Load messages failed:', error)
@@ -387,6 +416,46 @@ export const useChatStore = defineStore('chat', () => {
     messages.value.push(message)
   }
   
+  const archiveConversation = async (conversationId: string) => {
+    try {
+      await chatApi.archiveConversation(conversationId)
+      const conversation = conversations.value.find(c => c.id.toString() === conversationId)
+      if (conversation) {
+        conversation.is_archived = true
+      }
+      ElMessage.success('对话已归档')
+    } catch (error: any) {
+      console.error('Archive conversation failed:', error)
+      ElMessage.error('归档对话失败')
+    }
+  }
+  
+  const unarchiveConversation = async (conversationId: string) => {
+    try {
+      await chatApi.unarchiveConversation(conversationId)
+      const conversation = conversations.value.find(c => c.id.toString() === conversationId)
+      if (conversation) {
+        conversation.is_archived = false
+      }
+      ElMessage.success('对话已取消归档')
+    } catch (error: any) {
+      console.error('Unarchive conversation failed:', error)
+      ElMessage.error('取消归档对话失败')
+    }
+  }
+  
+  const setSearchQuery = (query: string) => {
+    searchQuery.value = query
+  }
+  
+  const setIncludeArchived = (include: boolean) => {
+    includeArchived.value = include
+  }
+  
+  const setCurrentPage = (page: number) => {
+    currentPage.value = page
+  }
+  
   return {
     // State
     conversations,
@@ -395,6 +464,11 @@ export const useChatStore = defineStore('chat', () => {
     isLoading,
     isStreaming,
     isLoadingMessages,
+    searchQuery,
+    includeArchived,
+    totalCount,
+    currentPage,
+    pageSize,
     
     // Getters
     sortedConversations,
@@ -413,6 +487,11 @@ export const useChatStore = defineStore('chat', () => {
     setCurrentConversation,
     clearCurrentConversation,
     clearMessages,
-    addMessage
+    addMessage,
+    archiveConversation,
+    unarchiveConversation,
+    setSearchQuery,
+    setIncludeArchived,
+    setCurrentPage
   }
 })

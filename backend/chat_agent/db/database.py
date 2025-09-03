@@ -1,10 +1,8 @@
 """Database connection and session management."""
 
 import logging
-from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
 from typing import Generator
 
 from ..core.config import get_settings
@@ -23,38 +21,23 @@ def create_database_engine():
     settings = get_settings()
     database_url = settings.database.url
     
-    # Create data directory if using SQLite
-    if database_url.startswith("sqlite"):
-        db_path = database_url.replace("sqlite:///", "")
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    # Validate that we're using PostgreSQL
+    if not database_url.startswith("postgresql"):
+        raise ValueError("Only PostgreSQL databases are supported. Please update your DATABASE_URL.")
     
-    # Engine configuration
+    # Engine configuration for PostgreSQL
     engine_kwargs = {
         "echo": settings.database.echo,
+        "pool_size": settings.database.pool_size,
+        "max_overflow": settings.database.max_overflow,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
     }
-    
-    # SQLite specific configuration
-    if database_url.startswith("sqlite"):
-        engine_kwargs.update({
-            "poolclass": StaticPool,
-            "connect_args": {
-                "check_same_thread": False,
-                "timeout": 20
-            }
-        })
-    else:
-        # PostgreSQL/MySQL configuration
-        engine_kwargs.update({
-            "pool_size": settings.database.pool_size,
-            "max_overflow": settings.database.max_overflow,
-            "pool_pre_ping": True,
-            "pool_recycle": 3600,
-        })
     
     engine = create_engine(database_url, **engine_kwargs)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     
-    logging.info(f"Database engine created: {database_url}")
+    logging.info(f"PostgreSQL database engine created: {database_url}")
 
 
 async def init_db():

@@ -11,7 +11,7 @@ from functools import lru_cache
 
 class DatabaseSettings(BaseSettings):
     """Database configuration."""
-    url: str = Field(default="sqlite:///" + str(Path(__file__).parent.parent.parent / "data" / "chat_agent.db"))
+    url: str = Field(..., alias="database_url")  # Must be provided via environment variable
     echo: bool = Field(default=False)
     pool_size: int = Field(default=5)
     max_overflow: int = Field(default=10)
@@ -43,30 +43,30 @@ class LLMSettings(BaseSettings):
     provider: str = Field(default="openai", alias="llm_provider")  # openai, deepseek, doubao, zhipu, moonshot
     
     # OpenAI配置
-    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
-    openai_base_url: str = Field(default="https://api.openai.com/v1", alias="OPENAI_BASE_URL")
-    openai_model: str = Field(default="gpt-3.5-turbo", alias="OPENAI_MODEL")
+    openai_api_key: Optional[str] = Field(default=None)
+    openai_base_url: str = Field(default="https://api.openai.com/v1")
+    openai_model: str = Field(default="gpt-3.5-turbo")
     
     # DeepSeek配置
-    deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
-    deepseek_base_url: str = Field(default="https://api.deepseek.com/v1", alias="DEEPSEEK_BASE_URL")
-    deepseek_model: str = Field(default="deepseek-chat", alias="DEEPSEEK_MODEL")
+    deepseek_api_key: Optional[str] = Field(default=None)
+    deepseek_base_url: str = Field(default="https://api.deepseek.com/v1")
+    deepseek_model: str = Field(default="deepseek-chat")
     
     # 豆包配置
-    doubao_api_key: Optional[str] = Field(default=None, alias="DOUBAO_API_KEY")
-    doubao_base_url: str = Field(default="https://ark.cn-beijing.volces.com/api/v3", alias="DOUBAO_BASE_URL")
-    doubao_model: str = Field(default="doubao-lite-4k", alias="DOUBAO_MODEL")
+    doubao_api_key: Optional[str] = Field(default=None)
+    doubao_base_url: str = Field(default="https://ark.cn-beijing.volces.com/api/v3")
+    doubao_model: str = Field(default="doubao-lite-4k")
     
     # 智谱AI配置
-    zhipu_api_key: Optional[str] = Field(default=None, alias="ZHIPU_API_KEY")
-    zhipu_base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4", alias="ZHIPU_BASE_URL")
-    zhipu_model: str = Field(default="glm-4", alias="ZHIPU_MODEL")
-    zhipu_embedding_model: str = Field(default="embedding-3", alias="ZHIPU_EMBEDDING_MODEL")
+    zhipu_api_key: Optional[str] = Field(default=None)
+    zhipu_base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4")
+    zhipu_model: str = Field(default="glm-4")
+    zhipu_embedding_model: str = Field(default="embedding-3")
     
     # 月之暗面配置
-    moonshot_api_key: Optional[str] = Field(default=None, alias="MOONSHOT_API_KEY")
-    moonshot_base_url: str = Field(default="https://api.moonshot.cn/v1", alias="MOONSHOT_BASE_URL")
-    moonshot_model: str = Field(default="moonshot-v1-8k", alias="MOONSHOT_MODEL")
+    moonshot_api_key: Optional[str] = Field(default=None)
+    moonshot_base_url: str = Field(default="https://api.moonshot.cn/v1")
+    moonshot_model: str = Field(default="moonshot-v1-8k")
     
     # 通用配置
     max_tokens: int = Field(default=2048)
@@ -122,29 +122,29 @@ class EmbeddingSettings(BaseSettings):
     provider: str = Field(default="zhipu", alias="embedding_provider")  # openai, deepseek, doubao, zhipu, moonshot
     
     # OpenAI配置
-    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
-    openai_base_url: str = Field(default="https://api.openai.com/v1", alias="OPENAI_BASE_URL")
-    openai_embedding_model: str = Field(default="text-embedding-ada-002", alias="OPENAI_EMBEDDING_MODEL")
+    openai_api_key: Optional[str] = Field(default=None)
+    openai_base_url: str = Field(default="https://api.openai.com/v1")
+    openai_embedding_model: str = Field(default="text-embedding-ada-002")
     
     # DeepSeek配置
-    deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
-    deepseek_base_url: str = Field(default="https://api.deepseek.com/v1", alias="DEEPSEEK_BASE_URL")
-    deepseek_embedding_model: str = Field(default="deepseek-embedding", alias="DEEPSEEK_EMBEDDING_MODEL")
+    deepseek_api_key: Optional[str] = Field(default=None)
+    deepseek_base_url: str = Field(default="https://api.deepseek.com/v1")
+    deepseek_embedding_model: str = Field(default="deepseek-embedding")
     
     # 豆包配置
-    doubao_api_key: Optional[str] = Field(default=None, alias="DOUBAO_API_KEY")
-    doubao_base_url: str = Field(default="https://ark.cn-beijing.volces.com/api/v3", alias="DOUBAO_BASE_URL")
-    doubao_embedding_model: str = Field(default="doubao-embedding", alias="DOUBAO_EMBEDDING_MODEL")
+    doubao_api_key: Optional[str] = Field(default=None)
+    doubao_base_url: str = Field(default="https://ark.cn-beijing.volces.com/api/v3")
+    doubao_embedding_model: str = Field(default="doubao-embedding")
     
     # 智谱AI配置
-    zhipu_api_key: Optional[str] = Field(default=None, alias="ZHIPU_API_KEY")
-    zhipu_base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4", alias="ZHIPU_BASE_URL")
-    zhipu_embedding_model: str = Field(default="embedding-3", alias="ZHIPU_EMBEDDING_MODEL")
+    zhipu_api_key: Optional[str] = Field(default=None)
+    zhipu_base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4")
+    zhipu_embedding_model: str = Field(default="embedding-3")
     
     # 月之暗面配置
-    moonshot_api_key: Optional[str] = Field(default=None, alias="MOONSHOT_API_KEY")
-    moonshot_base_url: str = Field(default="https://api.moonshot.cn/v1", alias="MOONSHOT_BASE_URL")
-    moonshot_embedding_model: str = Field(default="moonshot-embedding", alias="MOONSHOT_EMBEDDING_MODEL")
+    moonshot_api_key: Optional[str] = Field(default=None)
+    moonshot_base_url: str = Field(default="https://api.moonshot.cn/v1")
+    moonshot_embedding_model: str = Field(default="moonshot-embedding")
     
     model_config = {
         "env_file": ".env",
@@ -192,6 +192,15 @@ class VectorDBSettings(BaseSettings):
     persist_directory: str = Field(default="./data/chroma")
     collection_name: str = Field(default="documents")
     embedding_dimension: int = Field(default=2048)  # 智谱AI embedding-3模型的维度
+    
+    # PostgreSQL pgvector configuration
+    pgvector_host: str = Field(default="localhost")
+    pgvector_port: int = Field(default=5432)
+    pgvector_database: str = Field(default="vectordb")
+    pgvector_user: str = Field(default="postgres")
+    pgvector_password: str = Field(default="")
+    pgvector_table_name: str = Field(default="embeddings")
+    pgvector_vector_dimension: int = Field(default=1024)
     
     model_config = {
         "env_file": ".env",
@@ -307,22 +316,29 @@ class Settings(BaseSettings):
     }
         
     @classmethod
-    def load_from_yaml(cls, config_path: str = "configs/settings.yaml") -> "Settings":
+    def load_from_yaml(cls, config_path: str = "../configs/settings.yaml") -> "Settings":
         """Load settings from YAML file."""
         config_file = Path(config_path)
+        
+        # 如果配置文件不存在，尝试从backend目录查找
         if not config_file.exists():
-            return cls()
+            # 获取当前文件所在目录（backend/chat_agent/core）
+            current_dir = Path(__file__).parent
+            # 向上两级到backend目录，然后找configs/settings.yaml
+            backend_config_path = current_dir.parent.parent / "configs" / "settings.yaml"
+            if backend_config_path.exists():
+                config_file = backend_config_path
+            else:
+                return cls()
             
         with open(config_file, "r", encoding="utf-8") as f:
             config_data = yaml.safe_load(f)
             
-        # 展平嵌套配置
-        flat_config = cls._flatten_config(config_data)
-        
         # 处理环境变量替换
-        flat_config = cls._resolve_env_vars(flat_config)
+        config_data = cls._resolve_env_vars_nested(config_data)
         
-        return cls(**flat_config)
+        # 直接使用嵌套配置创建Settings实例
+        return cls(**config_data)
     
     @staticmethod
     def _flatten_config(config: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
@@ -335,6 +351,17 @@ class Settings(BaseSettings):
             else:
                 flat[new_key] = value
         return flat
+    
+    @staticmethod
+    def _resolve_env_vars_nested(config: Dict[str, Any]) -> Dict[str, Any]:
+        """Resolve environment variables in nested configuration."""
+        if isinstance(config, dict):
+            return {key: Settings._resolve_env_vars_nested(value) for key, value in config.items()}
+        elif isinstance(config, str) and config.startswith("${") and config.endswith("}"):
+            env_var = config[2:-1]
+            return os.getenv(env_var, config)
+        else:
+            return config
     
     @staticmethod
     def _resolve_env_vars(config: Dict[str, Any]) -> Dict[str, Any]:

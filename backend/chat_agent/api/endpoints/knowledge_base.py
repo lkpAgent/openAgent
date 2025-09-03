@@ -181,7 +181,7 @@ async def update_knowledge_base(
     """Update knowledge base."""
     try:
         service = KnowledgeBaseService(db)
-        kb = service.update_knowledge_base(kb_id, kb_data, current_user.id)
+        kb = service.update_knowledge_base(kb_id, kb_data)
         if not kb:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -231,7 +231,7 @@ async def delete_knowledge_base(
     """Delete knowledge base."""
     try:
         service = KnowledgeBaseService(db)
-        success = service.delete_knowledge_base(kb_id, current_user.id)
+        success = service.delete_knowledge_base(kb_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -286,7 +286,7 @@ async def upload_document(
         # Upload document
         doc_service = DocumentService(db)
         document = await doc_service.upload_document(
-            kb_id, file
+            file, kb_id
         )
         
         # Process document immediately if requested

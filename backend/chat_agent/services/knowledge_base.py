@@ -8,8 +8,8 @@ from sqlalchemy import and_, or_
 from ..models.knowledge_base import KnowledgeBase
 from ..utils.schemas import KnowledgeBaseCreate, KnowledgeBaseUpdate
 from ..core.config import get_settings
-from .document_processor import document_processor
-
+from .document_processor import get_document_processor
+from ..core.context import UserContext
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -36,6 +36,9 @@ class KnowledgeBaseService:
                 collection_name=collection_name
             )
             
+            # Set audit fields
+            kb.set_audit_fields()
+            
             self.db.add(kb)
             self.db.commit()
             self.db.refresh(kb)
@@ -54,16 +57,17 @@ class KnowledgeBaseService:
     
     def get_knowledge_base_by_name(self, name: str) -> Optional[KnowledgeBase]:
         """Get knowledge base by name."""
-        return self.db.query(KnowledgeBase).filter(KnowledgeBase.name == name).first()
+        return self.db.query(KnowledgeBase).filter(and_(
+            KnowledgeBase.name == name,
+            KnowledgeBase.created_by == UserContext.get_current_user().id
+        )).first()
     
     def get_knowledge_bases(self, skip: int = 0, limit: int = 50, active_only: bool = True) -> List[KnowledgeBase]:
         """Get list of knowledge bases."""
-        query = self.db.query(KnowledgeBase)
-        
-        if active_only:
-            query = query.filter(KnowledgeBase.is_active == True)
-        
-        return query.offset(skip).limit(limit).all()
+
+        return self.db.query(KnowledgeBase).filter(KnowledgeBase.created_by == UserContext.get_current_user().id) \
+            .offset(skip).limit(limit).all()
+
     
     def update_knowledge_base(self, kb_id: int, kb_update: KnowledgeBaseUpdate) -> Optional[KnowledgeBase]:
         """Update knowledge base."""
@@ -76,6 +80,9 @@ class KnowledgeBaseService:
             update_data = kb_update.model_dump(exclude_unset=True)
             for field, value in update_data.items():
                 setattr(kb, field, value)
+            
+            # Set audit fields
+            kb.set_audit_fields(is_update=True)
             
             self.db.commit()
             self.db.refresh(kb)
@@ -130,7 +137,7 @@ class KnowledgeBaseService:
             logger.info(f"Searching in knowledge base {kb_id} for: {query}")
             
             # 使用document_processor进行向量搜索
-            search_results = document_processor.search_similar_documents(
+            search_results = get_document_processor().search_similar_documents(
                 knowledge_base_id=kb_id,
                 query=query,
                 k=top_k

@@ -12,8 +12,20 @@ import type {
 // Chat API
 export const chatApi = {
   // Conversations
-  getConversations(params?: PaginationParams) {
+  getConversations(params?: PaginationParams & {
+    search?: string
+    include_archived?: boolean
+    order_by?: string
+    order_desc?: boolean
+  }) {
     return api.get<Conversation[]>('/chat/conversations', { params })
+  },
+  
+  getConversationsCount(params?: {
+    search?: string
+    include_archived?: boolean
+  }) {
+    return api.get<{ count: number }>('/chat/conversations/count', { params })
   },
   
   createConversation(data: ConversationCreate) {
@@ -30,6 +42,14 @@ export const chatApi = {
   
   deleteConversation(conversationId: string) {
     return api.delete(`/chat/conversations/${conversationId}`)
+  },
+  
+  archiveConversation(conversationId: string) {
+    return api.put(`/chat/conversations/${conversationId}/archive`)
+  },
+  
+  unarchiveConversation(conversationId: string) {
+    return api.put(`/chat/conversations/${conversationId}/unarchive`)
   },
   
   // Messages

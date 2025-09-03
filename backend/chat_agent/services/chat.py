@@ -42,7 +42,7 @@ class ChatService:
     async def chat(
         self, 
         conversation_id: int, 
-        message: str, 
+        message: str,
         stream: bool = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
@@ -93,7 +93,7 @@ class ChatService:
                     conversation_id=conversation_id,
                     content=agent_result["response"],
                     role=MessageRole.ASSISTANT,
-                    metadata={"tool_calls": agent_result["tool_calls"]}
+                    message_metadata={"tool_calls": agent_result["tool_calls"]}
                 )
                 
                 return ChatResponse(
@@ -122,7 +122,7 @@ class ChatService:
     
     async def chat_stream(
         self, 
-        conversation_id: int, 
+        conversation_id: int,
         message: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,

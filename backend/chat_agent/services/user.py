@@ -69,6 +69,9 @@ class UserService:
                 is_active=True
             )
             
+            # Set audit fields
+            db_user.set_audit_fields()
+            
             self.db.add(db_user)
             self.db.commit()
             self.db.refresh(db_user)
@@ -98,6 +101,9 @@ class UserService:
             
             for field, value in update_data.items():
                 setattr(user, field, value)
+            
+            # Set audit fields
+            user.set_audit_fields(is_update=True)
             
             self.db.commit()
             self.db.refresh(user)

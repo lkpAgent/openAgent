@@ -2,26 +2,36 @@
   <div class="main-layout">
     <div class="layout-container">
       <!-- 左侧导航栏 -->
-      <div class="sidebar">
+      <div :class="['sidebar', { collapsed: isCollapsed }]">
         <!-- 主导航 -->
         <div class="main-nav">
           <div class="nav-header">
-            <div class="header-content">
+            <div class="logo-section">
               <h1 class="app-title">智能对话平台</h1>
-              <p class="app-subtitle">多模态对话与工作流平台</p>
             </div>
-            <div class="user-actions">
-              <el-button size="small" text type="danger" @click="logout">
-                <el-icon><SwitchButton /></el-icon>
-                <span>注销</span>
-              </el-button>
-            </div>
+            <div v-if="!isCollapsed" class="user-actions">
+            <span class="username">{{ userStore.user?.username }}</span>
+            <a href="#" @click.prevent="logout" class="logout-link">
+              <el-icon><SwitchButton /></el-icon>
+              注销
+            </a>
+          </div>
           </div>
           
           <nav class="nav-menu">
             <!-- 上部分导航 -->
             <div class="nav-group">
-              <div class="nav-group-title">核心功能</div>
+              <div class="nav-group-header">
+                <div v-if="!isCollapsed" class="nav-group-title">核心功能</div>
+                <el-button 
+                  class="collapse-btn" 
+                  @click="toggleSidebar" 
+                  text 
+                  size="small"
+                >
+                  <el-icon><Expand v-if="isCollapsed" /><Fold v-else /></el-icon>
+                </el-button>
+              </div>
               <div 
                 v-for="item in upperNavItems" 
                 :key="item.key"
@@ -31,13 +41,15 @@
                 <el-icon class="nav-icon">
                   <component :is="item.icon" />
                 </el-icon>
-                <span class="nav-label">{{ item.label }}</span>
+                <span v-if="!isCollapsed" class="nav-label">{{ item.label }}</span>
               </div>
             </div>
             
             <!-- 下部分导航 -->
             <div class="nav-group">
-              <div class="nav-group-title">管理功能</div>
+              <div class="nav-group-header">
+                <div v-if="!isCollapsed" class="nav-group-title">管理功能</div>
+              </div>
               <div 
                 v-for="item in lowerNavItems" 
                 :key="item.key"
@@ -56,16 +68,22 @@
         <!-- 历史对话面板（浮动显示） -->
         <div v-if="showHistoryPanel" class="history-panel">
           <div class="history-header">
-            <h3>历史对话</h3>
-            <el-button size="small" text @click="toggleHistoryPanel">
-              <el-icon><Close /></el-icon>
-            </el-button>
+            <h3>{{ showArchivedConversations ? '已归档对话' : '历史对话' }}</h3>
+            <div class="header-actions">
+              <el-button size="small" text @click="toggleArchivedView">
+                {{ showArchivedConversations ? '查看活跃' : '查看归档' }}
+              </el-button>
+              <el-button size="small" text @click="toggleHistoryPanel">
+                <el-icon><Close /></el-icon>
+              </el-button>
+            </div>
           </div>
           
           <!-- 搜索框 -->
           <div class="history-search">
             <el-input
-              v-model="historySearchQuery"
+              :model-value="chatStore.searchQuery"
+              @input="handleSearch"
               placeholder="搜索对话..."
               size="small"
               clearable
@@ -77,11 +95,11 @@
           </div>
           
           <!-- 对话列表 -->
-          <div class="history-list">
+          <div class="history-list" v-loading="isLoading">
             <div 
               v-for="conversation in filteredConversations" 
               :key="conversation.id"
-              :class="['history-item', { active: selectedConversation?.id === conversation.id }]"
+              :class="['history-item', { active: currentConversation?.id === conversation.id }]"
               @click="selectConversation(conversation)"
             >
               <div class="conversation-info">
@@ -92,10 +110,33 @@
                 <el-button size="small" text @click.stop="editConversationTitle(conversation)">
                   <el-icon><Edit /></el-icon>
                 </el-button>
+                <el-button 
+                  v-if="!showArchivedConversations" 
+                  size="small" 
+                  text 
+                  @click.stop="archiveConversation(conversation)"
+                  title="归档对话"
+                >
+                  <el-icon><Connection /></el-icon>
+                </el-button>
+                <el-button 
+                  v-else 
+                  size="small" 
+                  text 
+                  @click.stop="unarchiveConversation(conversation)"
+                  title="取消归档"
+                >
+                  <el-icon><SwitchButton /></el-icon>
+                </el-button>
                 <el-button size="small" text type="danger" @click.stop="deleteConversationConfirm(conversation)">
                   <el-icon><Delete /></el-icon>
                 </el-button>
               </div>
+            </div>
+            
+            <!-- 空状态 -->
+            <div v-if="!isLoading && filteredConversations.length === 0" class="empty-state">
+              <p>{{ showArchivedConversations ? '暂无归档对话' : '暂无对话记录' }}</p>
             </div>
           </div>
         </div>
@@ -111,9 +152,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
   Collection,
@@ -128,22 +169,30 @@ import {
   EditPen,
   Shop,
   Setting,
-  Close
+  Close,
+  Expand,
+  Fold
 } from '@element-plus/icons-vue'
 import AgentWorkflow from './AgentWorkflow.vue'
+import { useChatStore } from '@/stores/chat'
+import { useUserStore } from '@/stores/user'
 
 // 路由
 const router = useRouter()
 const route = useRoute()
 
+// Stores
+const chatStore = useChatStore()
+const userStore = useUserStore()
+
 // 响应式数据
 const activeModule = ref('chat')
 const chatMode = ref('free')
 const currentAgentName = ref('客服小助手')
-const selectedConversation = ref(null)
-const historySearchQuery = ref('')
 const agentWorkflowRef = ref()
 const showHistoryPanel = ref(false)
+const showArchivedConversations = ref(false)
+const isCollapsed = ref(false)
 
 // 上部分导航项配置
 const upperNavItems = [
@@ -201,27 +250,15 @@ const lowerNavItems = [
   }
 ]
 
-// 模拟历史对话数据
-const conversations = ref([
-  {
-    id: '1',
-    title: '产品咨询对话',
-    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    message_count: 15
-  },
-  {
-    id: '2',
-    title: '技术支持对话',
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    message_count: 8
-  },
-  {
-    id: '3',
-    title: '售后服务咨询',
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    message_count: 12
-  }
-])
+// 计算属性 - 使用chat store的数据
+const conversations = computed(() => {
+  return showArchivedConversations.value 
+    ? chatStore.archivedConversations 
+    : chatStore.activeConversations
+})
+
+const currentConversation = computed(() => chatStore.currentConversation)
+const isLoading = computed(() => chatStore.isLoading)
 
 // 计算属性
 const showWorkflowPanel = computed(() => {
@@ -229,10 +266,10 @@ const showWorkflowPanel = computed(() => {
 })
 
 const filteredConversations = computed(() => {
-  if (!historySearchQuery.value.trim()) {
+  if (!chatStore.searchQuery.trim()) {
     return conversations.value
   }
-  const query = historySearchQuery.value.toLowerCase()
+  const query = chatStore.searchQuery.toLowerCase()
   return conversations.value.filter(conv => 
     conv.title.toLowerCase().includes(query)
   )
@@ -248,27 +285,107 @@ const setActiveModule = (moduleKey: string) => {
   }
 }
 
-const logout = () => {
-  ElMessage.success('注销成功')
-  // 这里可以添加实际的注销逻辑，比如清除token、跳转到登录页等
-  router.push('/login')
+// 注销方法
+const logout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出登录吗？',
+      '确认退出',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    await userStore.logout()
+    router.push('/login')
+  } catch (error) {
+    // 用户取消操作
+  }
 }
 
-const toggleHistoryPanel = () => {
+const toggleHistoryPanel = async () => {
   showHistoryPanel.value = !showHistoryPanel.value
+  
+  // 当打开历史面板时，加载对话列表
+  if (showHistoryPanel.value) {
+    await loadConversations()
+  }
 }
 
-const selectConversation = (conversation: any) => {
-  selectedConversation.value = conversation
-  ElMessage.success(`已选择对话: ${conversation.title}`)
+const toggleSidebar = () => {
+  isCollapsed.value = !isCollapsed.value
+  // 收起时自动关闭历史面板
+  if (isCollapsed.value) {
+    showHistoryPanel.value = false
+  }
+}
+
+const selectConversation = async (conversation: any) => {
+  try {
+    // 设置当前对话
+    await chatStore.setCurrentConversation(conversation.id)
+    
+    // 加载对话消息
+    await chatStore.loadMessages(conversation.id)
+    
+    // 关闭历史面板（可选）
+    showHistoryPanel.value = false
+    
+    ElMessage.success(`已切换到对话: ${conversation.title}`)
+  } catch (error) {
+    console.error('Switch conversation failed:', error)
+    ElMessage.error('切换对话失败')
+  }
 }
 
 const editConversationTitle = (conversation: any) => {
   ElMessage.info('编辑对话标题功能开发中...')
 }
 
-const deleteConversationConfirm = (conversation: any) => {
-  ElMessage.info('删除对话功能开发中...')
+const deleteConversationConfirm = async (conversation: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除对话 "${conversation.title}" 吗？`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    await chatStore.deleteConversation(conversation.id)
+    await loadConversations()
+  } catch (error) {
+    // 用户取消删除
+  }
+}
+
+const archiveConversation = async (conversation: any) => {
+  await chatStore.archiveConversation(conversation.id)
+  await loadConversations()
+}
+
+const unarchiveConversation = async (conversation: any) => {
+  await chatStore.unarchiveConversation(conversation.id)
+  await loadConversations()
+}
+
+const toggleArchivedView = () => {
+  showArchivedConversations.value = !showArchivedConversations.value
+  loadConversations()
+}
+
+const handleSearch = (query: string) => {
+  chatStore.setSearchQuery(query)
+  loadConversations()
+}
+
+const loadConversations = async () => {
+  await chatStore.loadConversations({
+    include_archived: showArchivedConversations.value
+  })
 }
 
 const formatConversationTime = (timestamp: string) => {
@@ -310,10 +427,20 @@ const updateActiveModuleFromRoute = () => {
   } else if (path.includes('/system')) {
     activeModule.value = 'system'
   }
-}
-
-onMounted(() => {
+}// 生命周期
+onMounted(async () => {
   updateActiveModuleFromRoute()
+  
+  // 初始化用户信息
+  if (!userStore.user && localStorage.getItem('access_token')) {
+    try {
+      await userStore.initializeUser()
+    } catch (error) {
+      console.log('Failed to initialize user')
+    }
+  }
+  
+  await loadConversations()
 })
 </script>
 
@@ -337,6 +464,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: 60px;
 }
 
 /* 主导航 */
@@ -350,6 +482,40 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.nav-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+}
+
+.nav-group-title {
+  font-size: 12px;
+  color: #95a5a6;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.collapse-btn {
+  color: #95a5a6 !important;
+  padding: 4px !important;
+  min-width: auto !important;
+}
+
+.collapse-btn:hover {
+  color: #3498db !important;
+  background: rgba(52, 73, 94, 0.5) !important;
 }
 
 .header-content {
@@ -371,7 +537,35 @@ onMounted(() => {
 }
 
 .user-actions {
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.username {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ecf0f1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.logout-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #bdc3c7;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.logout-link:hover {
+  color: #409eff;
 }
 
 .nav-menu {
@@ -386,15 +580,7 @@ onMounted(() => {
   margin-bottom: 0;
 }
 
-.nav-group-title {
-  padding: 8px 20px;
-  font-size: 12px;
-  color: #95a5a6;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
+
 
 .nav-item {
   display: flex;
@@ -403,6 +589,16 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s ease;
   border-left: 3px solid transparent;
+  justify-content: flex-start;
+}
+
+.sidebar.collapsed .nav-item {
+  padding: 12px;
+  justify-content: center;
+}
+
+.sidebar.collapsed .nav-item .nav-icon {
+  margin-right: 0;
 }
 
 .nav-item:hover {
@@ -453,6 +649,12 @@ onMounted(() => {
   margin: 0;
   font-size: 14px;
   color: #ecf0f1;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .history-search {
@@ -513,6 +715,17 @@ onMounted(() => {
 
 .history-item:hover .conversation-actions {
   opacity: 1;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #95a5a6;
+  font-size: 14px;
+}
+
+.empty-state p {
+  margin: 0;
 }
 
 /* 主内容区域 */

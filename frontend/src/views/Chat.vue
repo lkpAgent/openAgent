@@ -79,9 +79,24 @@
           </el-button>
         </div>
         
+        <!-- 搜索框 -->
+        <div class="history-search">
+          <el-input
+            :model-value="chatStore.searchQuery"
+            @input="handleSearch"
+            placeholder="搜索对话..."
+            size="small"
+            clearable
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+        
         <div class="history-list">
           <div 
-            v-for="conversation in conversations" 
+            v-for="conversation in filteredConversations" 
             :key="conversation.id"
             class="history-item"
             @click="selectConversation(conversation)"
@@ -281,7 +296,8 @@ import {
   Loading,
   Clock,
   User,
-  Close
+  Close,
+  Search
 } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useKnowledgeStore } from '@/stores/knowledge'
@@ -315,27 +331,17 @@ const renderMarkdown = (content: string) => {
   return md.render(content)
 }
 
-// 历史对话相关
-const conversations = ref([
-  {
-    id: '1',
-    title: '产品咨询对话',
-    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    message_count: 15
-  },
-  {
-    id: '2',
-    title: '技术支持对话',
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    message_count: 8
-  },
-  {
-    id: '3',
-    title: '售后服务咨询',
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    message_count: 12
+// 历史对话相关 - 使用chatStore中的真实数据
+const conversations = computed(() => chatStore.conversations)
+const filteredConversations = computed(() => {
+  if (!chatStore.searchQuery.trim()) {
+    return conversations.value
   }
-])
+  const query = chatStore.searchQuery.toLowerCase()
+  return conversations.value.filter(conv => 
+    conv.title.toLowerCase().includes(query)
+  )
+})
 
 // 对话模式相关
 const currentMode = ref('free')
@@ -551,14 +557,31 @@ const scrollToBottom = () => {
   }
 }
 
-const toggleHistoryPanel = () => {
+const toggleHistoryPanel = async () => {
   showHistoryPanel.value = !showHistoryPanel.value
+  
+  // 当打开历史面板时，加载对话列表
+  if (showHistoryPanel.value) {
+    await chatStore.loadConversations()
+  }
 }
 
-const selectConversation = (conversation: any) => {
-  // 选择历史对话的逻辑
-  ElMessage.info(`加载对话: ${conversation.title}`)
-  showHistoryPanel.value = false
+const selectConversation = async (conversation: any) => {
+  try {
+    // 设置当前对话并加载消息
+    await chatStore.setCurrentConversation(conversation.id)
+    await chatStore.loadMessages(conversation.id, true)
+    console.log("conversation::", conversation.id)
+    showHistoryPanel.value = false
+    ElMessage.success(`已切换到对话: ${conversation.title}`)
+  } catch (error) {
+    console.error('切换对话失败:', error)
+    ElMessage.error('切换对话失败')
+  }
+}
+
+const handleSearch = (query: string) => {
+  chatStore.setSearchQuery(query)
 }
 
 const formatConversationTime = (timeStr: string) => {

@@ -13,7 +13,7 @@ from ..models.knowledge_base import Document, KnowledgeBase
 from ..core.config import get_settings
 from ..utils.file_utils import FileUtils
 from .storage import storage_service
-from .document_processor import document_processor
+from .document_processor import get_document_processor
 from ..utils.schemas import DocumentChunk
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class DocumentService:
         self.db = db
         self.file_utils = FileUtils()
     
-    async def upload_document(self, kb_id: int, file: UploadFile) -> Document:
+    async def upload_document(self, file: UploadFile, kb_id: int) -> Document:
         """Upload a document to knowledge base."""
         try:
             # Validate knowledge base exists
@@ -58,6 +58,9 @@ class DocumentService:
                 mime_type=storage_info["mime_type"],
                 is_processed=False
             )
+            
+            # Set audit fields
+            document.set_audit_fields()
             
             self.db.add(document)
             self.db.commit()
@@ -120,7 +123,7 @@ class DocumentService:
             
             # TODO: Remove from vector database
             # This should be implemented when vector database service is ready
-            
+            get_document_processor().delete_document_from_vector_store(kb_id,doc_id)
             # Delete database record
             self.db.delete(document)
             self.db.commit()
@@ -153,7 +156,7 @@ class DocumentService:
             self.db.commit()
             
             # 调用文档处理器进行处理
-            result = document_processor.process_document(
+            result = get_document_processor().process_document(
                 document_id=doc_id,
                 file_path=document.file_path,
                 knowledge_base_id=document.knowledge_base_id
@@ -236,7 +239,7 @@ class DocumentService:
         """Search documents in knowledge base using vector similarity."""
         try:
             # 使用文档处理器进行相似性搜索
-            results = document_processor.search_similar_documents(kb_id, query, limit)
+            results = get_document_processor().search_similar_documents(kb_id, query, limit)
             return results
         except Exception as e:
             logger.error(f"Failed to search documents in KB {kb_id}: {e}")
@@ -274,7 +277,7 @@ class DocumentService:
                 return []
             
             # Get chunks from document processor
-            chunks_data = document_processor.get_document_chunks(document.knowledge_base_id, doc_id)
+            chunks_data = get_document_processor().get_document_chunks(document.knowledge_base_id, doc_id)
             
             # Convert to DocumentChunk objects
             chunks = []

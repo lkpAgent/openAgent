@@ -12,6 +12,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores import Chroma
+from langchain_postgres import PGVector
 from .embedding_factory import EmbeddingFactory
 
 from ..core.config import settings
@@ -20,7 +21,7 @@ from ..utils.schemas import ChatResponse, MessageResponse
 from ..utils.exceptions import ChatServiceError
 from ..utils.logger import get_logger
 from .conversation import ConversationService
-from .document_processor import document_processor
+from .document_processor import get_document_processor
 
 logger = get_logger("knowledge_chat_service")
 
@@ -60,28 +61,43 @@ class KnowledgeChatService:
         
         logger.info(f"Knowledge Chat Service initialized with model: {self.llm.model_name}")
     
-    def _get_vector_store(self, knowledge_base_id: int) -> Optional[Chroma]:
+    def _get_vector_store(self, knowledge_base_id: int) -> Optional[PGVector]:
         """Get vector store for knowledge base."""
         try:
-            import os
-            kb_vector_path = os.path.join(document_processor.vector_db_path, f"kb_{knowledge_base_id}")
-            
-            if not os.path.exists(kb_vector_path):
-                logger.warning(f"Vector store not found for knowledge base {knowledge_base_id}")
-                return None
-            
-            vector_store = Chroma(
-                persist_directory=kb_vector_path,
-                embedding_function=self.embeddings
-            )
-            
-            return vector_store
+            if settings.vector_db.type == "pgvector":
+                # 使用PGVector
+                doc_processor = get_document_processor()
+                collection_name = f"{settings.vector_db.pgvector_table_name}_kb_{knowledge_base_id}"
+                
+                vector_store = PGVector(
+                    connection=doc_processor.connection_string,
+                    embeddings=self.embeddings,
+                    collection_name=collection_name,
+                    use_jsonb=True
+                )
+                
+                return vector_store
+            else:
+                # 兼容Chroma模式
+                import os
+                kb_vector_path = os.path.join(get_document_processor().vector_db_path, f"kb_{knowledge_base_id}")
+                
+                if not os.path.exists(kb_vector_path):
+                    logger.warning(f"Vector store not found for knowledge base {knowledge_base_id}")
+                    return None
+                
+                vector_store = Chroma(
+                    persist_directory=kb_vector_path,
+                    embedding_function=self.embeddings
+                )
+                
+                return vector_store
             
         except Exception as e:
             logger.error(f"Failed to load vector store for KB {knowledge_base_id}: {str(e)}")
             return None
     
-    def _create_rag_chain(self, vector_store: Chroma, conversation_history: List[Dict[str, str]]):
+    def _create_rag_chain(self, vector_store, conversation_history: List[Dict[str, str]]):
         """Create RAG chain with conversation history."""
         
         # Create retriever
@@ -232,11 +248,7 @@ class KnowledgeChatService:
         """Chat with knowledge base using RAG with streaming response."""
         
         try:
-            # Get conversation and validate
-            conversation = self.conversation_service.get_conversation(conversation_id)
-            if not conversation:
-                raise ChatServiceError("Conversation not found")
-            
+
             # Get vector store
             vector_store = self._get_vector_store(knowledge_base_id)
             if not vector_store:

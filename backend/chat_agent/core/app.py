@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import Settings
 from .logging import setup_logging
+from .middleware import UserContextMiddleware
 from ..api.routes import router
 from ..db.database import init_db
 
@@ -77,6 +78,9 @@ def create_app(settings: Settings = None) -> FastAPI:
 def setup_middleware(app: FastAPI, settings: Settings) -> None:
     """Setup application middleware."""
     
+    # User context middleware (should be first to set context for all requests)
+    app.add_middleware(UserContextMiddleware)
+    
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -112,13 +116,24 @@ def setup_exception_handlers(app: FastAPI) -> None:
     
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request, exc):
+        # Convert any bytes objects to strings in error details
+        errors = []
+        for error in exc.errors():
+            clean_error = {}
+            for key, value in error.items():
+                if isinstance(value, bytes):
+                    clean_error[key] = value.decode('utf-8')
+                else:
+                    clean_error[key] = value
+            errors.append(clean_error)
+        
         return JSONResponse(
             status_code=422,
             content={
                 "error": {
                     "type": "validation_error",
                     "message": "Request validation failed",
-                    "details": exc.errors()
+                    "details": errors
                 }
             }
         )

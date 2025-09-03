@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...db.database import get_db
+from ...models.user import User
 from ...services.auth import AuthService
 from ...services.chat import ChatService
 from ...services.conversation import ConversationService
@@ -26,7 +27,7 @@ router = APIRouter()
 @router.post("/conversations", response_model=ConversationResponse)
 async def create_conversation(
     conversation_data: ConversationCreate,
-    current_user = Depends(AuthService.get_current_user),
+    current_user: User = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new conversation."""
@@ -42,17 +43,40 @@ async def create_conversation(
 async def list_conversations(
     skip: int = 0,
     limit: int = 50,
+    search: str = None,
+    include_archived: bool = False,
+    order_by: str = "updated_at",
+    order_desc: bool = True,
     current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List user's conversations."""
+    """List user's conversations with search and filtering."""
     conversation_service = ConversationService(db)
     conversations = conversation_service.get_user_conversations(
-        user_id=current_user.id,
         skip=skip,
-        limit=limit
+        limit=limit,
+        search_query=search,
+        include_archived=include_archived,
+        order_by=order_by,
+        order_desc=order_desc
     )
     return [ConversationResponse.from_orm(conv) for conv in conversations]
+
+
+@router.get("/conversations/count")
+async def get_conversations_count(
+    search: str = None,
+    include_archived: bool = False,
+    current_user = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get total count of conversations."""
+    conversation_service = ConversationService(db)
+    count = conversation_service.get_user_conversations_count(
+        search_query=search,
+        include_archived=include_archived
+    )
+    return {"count": count}
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
@@ -63,14 +87,14 @@ async def get_conversation(
 ):
     """Get a specific conversation."""
     conversation_service = ConversationService(db)
-    conversation = conversation_service.get_conversation(conversation_id)
-    
-    if not conversation or conversation.user_id != current_user.id:
+    conversation = conversation_service.get_conversation(
+        conversation_id=conversation_id
+    )
+    if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found"
         )
-    
     return ConversationResponse.from_orm(conversation)
 
 
@@ -83,14 +107,6 @@ async def update_conversation(
 ):
     """Update a conversation."""
     conversation_service = ConversationService(db)
-    conversation = conversation_service.get_conversation(conversation_id)
-    
-    if not conversation or conversation.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found"
-        )
-    
     updated_conversation = conversation_service.update_conversation(
         conversation_id, conversation_update
     )
@@ -105,16 +121,44 @@ async def delete_conversation(
 ):
     """Delete a conversation."""
     conversation_service = ConversationService(db)
-    conversation = conversation_service.get_conversation(conversation_id)
-    
-    if not conversation or conversation.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found"
-        )
-    
     conversation_service.delete_conversation(conversation_id)
     return {"message": "Conversation deleted successfully"}
+
+
+@router.put("/conversations/{conversation_id}/archive")
+async def archive_conversation(
+    conversation_id: int,
+    current_user = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Archive a conversation."""
+    conversation_service = ConversationService(db)
+    success = conversation_service.archive_conversation(conversation_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to archive conversation"
+        )
+    
+    return {"message": "Conversation archived successfully"}
+
+
+@router.put("/conversations/{conversation_id}/unarchive")
+async def unarchive_conversation(
+    conversation_id: int,
+    current_user = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Unarchive a conversation."""
+    conversation_service = ConversationService(db)
+    success = conversation_service.unarchive_conversation(conversation_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to unarchive conversation"
+        )
+    
+    return {"message": "Conversation unarchived successfully"}
 
 
 # Message management
@@ -128,14 +172,6 @@ async def get_conversation_messages(
 ):
     """Get messages from a conversation."""
     conversation_service = ConversationService(db)
-    conversation = conversation_service.get_conversation(conversation_id)
-    
-    if not conversation or conversation.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found"
-        )
-    
     messages = conversation_service.get_conversation_messages(
         conversation_id, skip=skip, limit=limit
     )
@@ -151,15 +187,6 @@ async def chat(
     db: Session = Depends(get_db)
 ):
     """Send a message and get AI response."""
-    conversation_service = ConversationService(db)
-    conversation = conversation_service.get_conversation(conversation_id)
-    
-    if not conversation or conversation.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found"
-        )
-    
     chat_service = ChatService(db)
     response = await chat_service.chat(
         conversation_id=conversation_id,
@@ -183,15 +210,6 @@ async def chat_stream(
     db: Session = Depends(get_db)
 ):
     """Send a message and get streaming AI response."""
-    conversation_service = ConversationService(db)
-    conversation = conversation_service.get_conversation(conversation_id)
-    
-    if not conversation or conversation.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found"
-        )
-    
     chat_service = ChatService(db)
     
     async def generate_response():
