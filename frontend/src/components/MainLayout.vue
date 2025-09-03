@@ -281,6 +281,10 @@ const setActiveModule = (moduleKey: string) => {
   const allNavItems = [...upperNavItems, ...lowerNavItems]
   const navItem = allNavItems.find(item => item.key === moduleKey)
   if (navItem && navItem.route) {
+    // 切换到智能问答时清空当前会话
+    if (moduleKey === 'chat') {
+      chatStore.clearCurrentConversation()
+    }
     router.push(navItem.route)
   }
 }

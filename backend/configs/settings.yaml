@@ -1,0 +1,52 @@
+# Chat Agent Configuration
+app:
+  name: "ChatAgent"
+  version: "0.1.0"
+  debug: true
+  environment: "development"
+  host: "0.0.0.0"
+  port: 8000
+
+
+
+
+
+# File Configuration
+file:
+  upload_dir: "./data/uploads"
+  max_size: 10485760  # 10MB
+  allowed_extensions: [".txt", ".pdf", ".docx", ".md"]
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# Storage Configuration
+storage:
+  storage_type: "local"  # local or s3
+  upload_directory: "./data/uploads"
+  
+  # S3 Configuration
+  s3_bucket_name: "chat-agent-files"
+  aws_access_key_id: null
+  aws_secret_access_key: null
+  aws_region: "us-east-1"
+  s3_endpoint_url: null
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "./data/logs/app.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# CORS Configuration
+cors:
+  allowed_origins: ["http://localhost:3000", "http://127.0.0.1:3000"]
+  allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  allowed_headers: ["*"]
+
+# Chat Configuration
+chat:
+  max_history_length: 10
+  system_prompt: "你是一个有用的AI助手，请根据提供的上下文信息回答用户的问题。"
+  max_response_tokens: 1000

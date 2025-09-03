@@ -146,7 +146,7 @@ class ChatRequest(BaseModel):
     stream: bool = Field(default=False)
     use_knowledge_base: bool = Field(default=False)
     knowledge_base_id: Optional[int] = Field(None, description="Knowledge base ID for RAG mode")
-    use_agent: bool = Field(default=True, description="Enable agent mode with tool calling capabilities")
+    use_agent: bool = Field(default=False, description="Enable agent mode with tool calling capabilities")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(None, ge=1, le=8192)
 

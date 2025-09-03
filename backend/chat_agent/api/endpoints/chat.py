@@ -47,7 +47,6 @@ async def list_conversations(
     include_archived: bool = False,
     order_by: str = "updated_at",
     order_desc: bool = True,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """List user's conversations with search and filtering."""
@@ -67,7 +66,6 @@ async def list_conversations(
 async def get_conversations_count(
     search: str = None,
     include_archived: bool = False,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get total count of conversations."""
@@ -82,7 +80,6 @@ async def get_conversations_count(
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: int,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get a specific conversation."""
@@ -102,7 +99,6 @@ async def get_conversation(
 async def update_conversation(
     conversation_id: int,
     conversation_update: ConversationUpdate,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update a conversation."""
@@ -116,7 +112,6 @@ async def update_conversation(
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(
     conversation_id: int,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Delete a conversation."""
@@ -128,7 +123,6 @@ async def delete_conversation(
 @router.put("/conversations/{conversation_id}/archive")
 async def archive_conversation(
     conversation_id: int,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Archive a conversation."""
@@ -146,7 +140,6 @@ async def archive_conversation(
 @router.put("/conversations/{conversation_id}/unarchive")
 async def unarchive_conversation(
     conversation_id: int,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Unarchive a conversation."""
@@ -167,7 +160,6 @@ async def get_conversation_messages(
     conversation_id: int,
     skip: int = 0,
     limit: int = 100,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get messages from a conversation."""
@@ -183,7 +175,6 @@ async def get_conversation_messages(
 async def chat(
     conversation_id: int,
     chat_request: ChatRequest,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send a message and get AI response."""
@@ -206,7 +197,6 @@ async def chat(
 async def chat_stream(
     conversation_id: int,
     chat_request: ChatRequest,
-    current_user = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send a message and get streaming AI response."""

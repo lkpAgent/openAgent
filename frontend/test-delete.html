@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试DELETE请求</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .danger {
+            background: #dc3545;
+        }
+        .danger:hover {
+            background: #c82333;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        input, select {
+            padding: 5px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>DELETE请求测试工具</h1>
+    
+    <div class="test-section">
+        <h3>1. 登录获取Token</h3>
+        <button onclick="login()">登录</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 获取知识库列表</h3>
+        <button onclick="getKnowledgeBases()">获取知识库</button>
+        <div id="kbResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 获取文档列表</h3>
+        <label>知识库ID: <input type="text" id="kbId" value="1" /></label>
+        <button onclick="getDocuments()">获取文档</button>
+        <div id="docsResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. 删除文档</h3>
+        <label>知识库ID: <input type="text" id="deleteKbId" value="1" /></label>
+        <label>文档ID: <input type="text" id="deleteDocId" value="" /></label>
+        <button class="danger" onclick="deleteDocument()">删除文档</button>
+        <div id="deleteResult" class="result"></div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8001/api';
+        let authToken = '';
+        
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        async function login() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'demo@example.com',
+                        password: '123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.access_token;
+                    showResult('loginResult', `登录成功！\nToken: ${authToken.substring(0, 50)}...`);
+                } else {
+                    showResult('loginResult', `登录失败: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                showResult('loginResult', `登录错误: ${error.message}`, true);
+            }
+        }
+        
+        async function getKnowledgeBases() {
+            if (!authToken) {
+                showResult('kbResult', '请先登录', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/knowledge-bases/`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('kbResult', `获取成功！\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult('kbResult', `获取失败: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                showResult('kbResult', `请求错误: ${error.message}`, true);
+            }
+        }
+        
+        async function getDocuments() {
+            if (!authToken) {
+                showResult('docsResult', '请先登录', true);
+                return;
+            }
+            
+            const kbId = document.getElementById('kbId').value;
+            if (!kbId) {
+                showResult('docsResult', '请输入知识库ID', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/knowledge-bases/${kbId}/documents`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('docsResult', `获取成功！\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult('docsResult', `获取失败: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                showResult('docsResult', `请求错误: ${error.message}`, true);
+            }
+        }
+        
+        async function deleteDocument() {
+            if (!authToken) {
+                showResult('deleteResult', '请先登录', true);
+                return;
+            }
+            
+            const kbId = document.getElementById('deleteKbId').value;
+            const docId = document.getElementById('deleteDocId').value;
+            
+            if (!kbId || !docId) {
+                showResult('deleteResult', '请输入知识库ID和文档ID', true);
+                return;
+            }
+            
+            if (!confirm(`确定要删除文档 ${docId} 吗？`)) {
+                return;
+            }
+            
+            try {
+                console.log(`发送DELETE请求到: ${API_BASE}/knowledge-bases/${kbId}/documents/${docId}`);
+                
+                const response = await fetch(`${API_BASE}/knowledge-bases/${kbId}/documents/${docId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('响应状态:', response.status);
+                console.log('响应头:', [...response.headers.entries()]);
+                
+                const responseText = await response.text();
+                console.log('响应内容:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch {
+                    data = responseText;
+                }
+                
+                if (response.ok) {
+                    showResult('deleteResult', `删除成功！\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult('deleteResult', `删除失败！\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`, true);
+                }
+            } catch (error) {
+                showResult('deleteResult', `请求错误: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# 现有依赖
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+sqlalchemy>=2.0.23
+alembic>=1.13.1
+python-multipart>=0.0.6
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-dotenv>=1.0.0
+
+# 智能问数功能依赖
+# Excel和数据分析
+pandas>=2.1.0
+numpy>=1.24.0
+openpyxl>=3.1.0  # Excel文件读写
+xlrd>=2.0.1      # 旧版Excel文件支持
+
+# 数据库连接
+pymysql>=1.1.0   # MySQL
+psycopg2-binary>=2.9.0  # PostgreSQL
+pyodbc>=4.0.39   # SQL Server
+pgvector>=0.2.4  # PostgreSQL pgvector extension
+
+# LangChain相关
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-experimental>=0.0.50  # pandas代理
+langchain-postgres>=0.0.6  # 新版本PGVector支持
+
+# 智谱AI
+zhipuai>=2.0.0
+
+# 其他工具
+aiofiles>=23.2.0  # 异步文件操作
+requests>=2.31.0
+httpx>=0.25.0
+pyyaml>=6.0  # YAML配置文件解析

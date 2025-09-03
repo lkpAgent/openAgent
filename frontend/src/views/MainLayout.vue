@@ -266,6 +266,8 @@ const setActiveModule = (module: string) => {
   activeModule.value = module
   // 根据模块进行路由跳转
   if (module === 'chat') {
+    // 切换到智能问答时清空当前会话
+    chatStore.clearCurrentConversation()
     router.push('/chat')
   } else if (module === 'knowledge') {
     router.push('/knowledge')

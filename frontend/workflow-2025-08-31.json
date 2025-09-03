@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    {
+      "id": "node_1756651362905",
+      "type": "start",
+      "name": "开始",
+      "description": "工作流开始节点",
+      "x": 282,
+      "y": 200.44444274902344,
+      "config": {}
+    },
+    {
+      "id": "node_1756651364914",
+      "type": "llm",
+      "name": "LLM",
+      "description": "大语言模型处理",
+      "x": 532,
+      "y": 200.44444274902344,
+      "config": {
+        "model": "gpt-4",
+        "temperature": 0.7,
+        "prompt": ""
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "node_1756651362905-node_1756651364914",
+      "from": "node_1756651362905",
+      "to": "node_1756651364914",
+      "fromPoint": "output",
+      "toPoint": "input"
+    }
+  ],
+  "timestamp": "2025-08-31T14:42:52.737Z"
+}
