@@ -17,6 +17,8 @@ router.include_router(
 from .endpoints import auth
 from .endpoints import knowledge_base
 from .endpoints import smart_query
+from .endpoints import smart_chat
+from .endpoints import smart_chat_stream
 
 router.include_router(
     auth.router,
@@ -32,8 +34,17 @@ router.include_router(
 
 router.include_router(
     smart_query.router,
-    prefix="/api",
     tags=["smart-query"]
+)
+
+router.include_router(
+    smart_chat.router,
+    tags=["smart-chat"]
+)
+
+router.include_router(
+    smart_chat_stream.router,
+    tags=["smart-chat-stream"]
 )
 
 # router.include_router(

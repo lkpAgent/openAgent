@@ -606,15 +606,16 @@ const formatConversationTime = (timeStr: string) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #0f172a;
+  color: #e2e8f0;
   flex: 1;
   min-height: 0;
 }
 
 /* 模式选择器样式 */
 .mode-selector {
-  background: white;
-  border-bottom: 1px solid #e4e7ed;
+  background: rgba(30, 41, 59, 0.7);
+  border-bottom: 1px solid #334155;
   padding: 12px 20px;
   display: flex;
   justify-content: space-between;
@@ -631,36 +632,49 @@ const formatConversationTime = (timeStr: string) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 12px 20px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #e4e7ed;
-  background: #fafbfc;
-  color: #606266;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #cbd5e1;
   font-size: 14px;
+  font-weight: 500;
+  position: relative;
 }
 
 .mode-tab:hover {
-  background: #ecf5ff;
-  border-color: #b3d8ff;
-  color: #409eff;
+  background: rgba(99, 102, 241, 0.1);
+  border-color: #6366f1;
+  color: #e2e8f0;
 }
 
 .mode-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: white;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #e2e8f0;
+}
+
+.mode-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #6366f1;
+  border-radius: 3px 3px 0 0;
 }
 
 .mode-tab.history-tab {
-  border: 1px solid #dcdfe6;
+  border: 1px solid #475569;
 }
 
 .mode-tab.history-tab.active {
-  background: #f0f9ff;
-  color: #409eff;
-  border-color: #409eff;
+  background: rgba(99, 102, 241, 0.1);
+  color: #e2e8f0;
+  border-color: #6366f1;
 }
 
 .mode-config {
@@ -689,7 +703,7 @@ const formatConversationTime = (timeStr: string) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: #1e293b;
   margin: 0;
   width: 100%;
   min-width: 0;
@@ -700,10 +714,11 @@ const formatConversationTime = (timeStr: string) => {
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 25px 30px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  background: #1e293b;
 }
 
 /* 欢迎消息样式 */
@@ -722,14 +737,14 @@ const formatConversationTime = (timeStr: string) => {
 
 .welcome-content h3 {
   margin: 0 0 12px 0;
-  color: #303133;
+  color: #e2e8f0;
   font-size: 24px;
   font-weight: 600;
 }
 
 .welcome-content p {
   margin: 0 0 32px 0;
-  color: #606266;
+  color: #94a3b8;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -740,7 +755,7 @@ const formatConversationTime = (timeStr: string) => {
 
 .quick-action-title {
   margin-bottom: 16px;
-  color: #303133;
+  color: #e2e8f0;
   font-size: 16px;
   font-weight: 600;
 }
@@ -784,12 +799,13 @@ const formatConversationTime = (timeStr: string) => {
 }
 
 .message-text {
-  background: #f0f2f5;
-  padding: 12px 16px;
+  background: #334155;
+  padding: 15px 20px;
   border-radius: 12px;
-  color: #303133;
-  line-height: 1.6;
+  color: #e2e8f0;
+  line-height: 1.5;
   word-wrap: break-word;
+  border-top-left-radius: 5px;
 }
 
 /* Markdown样式 */
@@ -823,8 +839,8 @@ const formatConversationTime = (timeStr: string) => {
 }
 
 .message-text pre {
-  background: #f6f8fa;
-  border: 1px solid #e1e4e8;
+  background: #0f172a;
+  border: 1px solid #475569;
   border-radius: 6px;
   padding: 12px;
   margin: 12px 0;
@@ -832,15 +848,17 @@ const formatConversationTime = (timeStr: string) => {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.4;
+  color: #e2e8f0;
 }
 
 .message-text code {
-  background: #f6f8fa;
-  border: 1px solid #e1e4e8;
+  background: #0f172a;
+  border: 1px solid #475569;
   border-radius: 3px;
   padding: 2px 4px;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 0.9em;
+  color: #e2e8f0;
 }
 
 .message-text pre code {
@@ -885,15 +903,18 @@ const formatConversationTime = (timeStr: string) => {
 }
 
 .message.user .message-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #6366f1;
   color: white;
+  border-top-right-radius: 5px;
+  border-top-left-radius: 12px;
 }
 
 .message-time {
   font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
+  color: #94a3b8;
+  margin-top: 8px;
   text-align: right;
+  opacity: 0.7;
 }
 
 .message.user .message-time {
@@ -928,16 +949,17 @@ const formatConversationTime = (timeStr: string) => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 12px 16px;
-  background: #f0f2f5;
+  padding: 15px 20px;
+  background: #334155;
   border-radius: 12px;
+  border-top-left-radius: 5px;
 }
 
 .typing-indicator span {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #909399;
+  background: #94a3b8;
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -962,9 +984,9 @@ const formatConversationTime = (timeStr: string) => {
 
 /* 输入区域样式 */
 .input-area {
-  border-top: 1px solid #e4e7ed;
-  padding: 16px 20px;
-  background: white;
+  border-top: 1px solid #334155;
+  padding: 20px 30px;
+  background: rgba(30, 41, 59, 0.7);
   flex-shrink: 0;
 }
 
@@ -982,7 +1004,200 @@ const formatConversationTime = (timeStr: string) => {
 
 .input-tips {
   font-size: 12px;
-  color: #909399;
+  color: #94a3b8;
+}
+
+/* 自定义按钮样式 */
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+:deep(.el-button--primary:hover) {
+  background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+:deep(.el-button--primary:active) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+:deep(.el-button--primary.is-loading) {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+/* 新对话按钮特殊样式 */
+.chat-header :deep(.el-button--primary) {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+.chat-header :deep(.el-button--primary:hover) {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+/* 知识库选择器样式 */
+.mode-config :deep(.el-select) {
+  --el-select-border-color-hover: #6366f1;
+  --el-select-input-focus-border-color: #6366f1;
+}
+
+.mode-config :deep(.el-select .el-input__wrapper) {
+  background-color: #1e293b !important;
+  border: 1px solid #475569 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  transition: all 0.3s ease;
+}
+
+.mode-config :deep(.el-select .el-input__wrapper:hover) {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2) !important;
+}
+
+.mode-config :deep(.el-select .el-input__wrapper.is-focus) {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+.mode-config :deep(.el-select .el-input__inner) {
+  color: #e2e8f0 !important;
+  background-color: transparent !important;
+}
+
+.mode-config :deep(.el-select .el-input__inner::placeholder) {
+  color: #94a3b8 !important;
+}
+
+.mode-config :deep(.el-select .el-select__caret) {
+  color: #94a3b8 !important;
+}
+
+.mode-config :deep(.el-select .el-select__caret:hover) {
+  color: #6366f1 !important;
+}
+
+.mode-config :deep(.el-select .el-select__suffix) {
+  color: #94a3b8 !important;
+}
+
+.mode-config :deep(.el-select .el-select__suffix:hover) {
+  color: #6366f1 !important;
+}
+
+/* 下拉菜单样式 */
+:deep(.el-select-dropdown) {
+  background-color: #1e293b !important;
+  border: 1px solid #475569 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+:deep(.el-select-dropdown .el-select-dropdown__item) {
+  color: #e2e8f0 !important;
+  background-color: transparent !important;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-select-dropdown .el-select-dropdown__item:hover) {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  color: #e2e8f0 !important;
+}
+
+:deep(.el-select-dropdown .el-select-dropdown__item.selected) {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  color: #6366f1 !important;
+  font-weight: 500;
+}
+
+:deep(.el-select-dropdown .el-popper__arrow::before) {
+  background-color: #1e293b !important;
+  border: 1px solid #475569 !important;
+}
+
+/* 全局 Element Plus 选择器样式覆盖 */
+:deep(.el-popper.is-light .el-popper__arrow::before) {
+  background-color: #1e293b !important;
+  border: 1px solid #475569 !important;
+}
+
+/* 快速开始按钮特殊样式优化 */
+.quick-buttons :deep(.el-button--primary.is-plain) {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+  color: #8b5cf6 !important;
+  border-radius: 20px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.quick-buttons :deep(.el-button--primary.is-plain:hover) {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  color: #a855f7 !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25), 0 2px 6px rgba(139, 92, 246, 0.15) !important;
+}
+
+.quick-buttons :deep(.el-button--primary.is-plain:active) {
+  transform: translateY(-1px) scale(1.01) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2) !important;
+}
+
+.quick-buttons :deep(.el-button--primary.is-plain:focus) {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* 快速按钮容器优化 */
+.quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* 快速按钮动画效果 */
+.quick-buttons :deep(.el-button--primary.is-plain) {
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-buttons :deep(.el-button--primary.is-plain::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.quick-buttons :deep(.el-button--primary.is-plain:hover::before) {
+  left: 100%;
+}
+
+:deep(.el-popper.is-light) {
+  background-color: #1e293b !important;
+  border: 1px solid #475569 !important;
 }
 
 /* 历史对话面板样式 */
@@ -992,7 +1207,7 @@ const formatConversationTime = (timeStr: string) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -1001,17 +1216,18 @@ const formatConversationTime = (timeStr: string) => {
 }
 
 .history-content {
-  background: white;
-  border-radius: 8px;
+  background: #1e293b;
+  border-radius: 16px;
   width: 500px;
   max-height: 70vh;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid #334155;
 }
 
 .history-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e4e7ed;
+  padding: 20px;
+  border-bottom: 1px solid #334155;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1019,8 +1235,9 @@ const formatConversationTime = (timeStr: string) => {
 
 .history-header h3 {
   margin: 0;
-  font-size: 16px;
-  color: #303133;
+  font-size: 18px;
+  color: #e2e8f0;
+  font-weight: 600;
 }
 
 .history-list {
@@ -1032,16 +1249,20 @@ const formatConversationTime = (timeStr: string) => {
 .history-item {
   padding: 12px 20px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  border-bottom: 1px solid #f5f7fa;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid #334155;
 }
 
 .history-item:hover {
-  background: #f5f7fa;
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .history-item:last-child {
   border-bottom: none;
+}
+
+.history-item.active {
+  background: rgba(99, 102, 241, 0.2);
 }
 
 .conversation-info {
@@ -1052,7 +1273,7 @@ const formatConversationTime = (timeStr: string) => {
 
 .conversation-title {
   font-size: 14px;
-  color: #303133;
+  color: #e2e8f0;
   font-weight: 500;
 }
 
@@ -1061,11 +1282,11 @@ const formatConversationTime = (timeStr: string) => {
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  color: #909399;
+  color: #94a3b8;
 }
 
 .conversation-time {
-  color: #909399;
+  color: #6366f1;
 }
 
 .conversation-count {
@@ -1075,18 +1296,18 @@ const formatConversationTime = (timeStr: string) => {
 /* 右侧工作流面板样式 */
 .workflow-panel {
   width: 350px;
-  background: white;
-  border-left: 1px solid #e4e7ed;
+  background: #1e293b;
+  border-left: 1px solid #334155;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 
 .workflow-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e4e7ed;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 20px;
+  border-bottom: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1104,11 +1325,12 @@ const formatConversationTime = (timeStr: string) => {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  background: #1e293b;
 }
 
 .current-workflow h4 {
   margin: 0 0 16px 0;
-  color: #303133;
+  color: #e2e8f0;
   font-size: 14px;
   font-weight: 600;
 }
@@ -1120,25 +1342,25 @@ const formatConversationTime = (timeStr: string) => {
   padding: 16px;
   margin-bottom: 12px;
   border-radius: 8px;
-  border: 1px solid #e4e7ed;
-  background: #fafbfc;
+  border: 1px solid #475569;
+  background: #334155;
   transition: all 0.3s ease;
 }
 
 .workflow-step.active {
-  background: #fff7e6;
+  background: rgba(255, 197, 61, 0.1);
   border-color: #ffc53d;
   box-shadow: 0 2px 8px rgba(255, 197, 61, 0.2);
 }
 
 .workflow-step.completed {
-  background: #f6ffed;
-  border-color: #b7eb8f;
+  background: rgba(82, 196, 26, 0.1);
+  border-color: #52c41a;
 }
 
 .workflow-step.pending {
-  background: #f0f2f5;
-  border-color: #d9d9d9;
+  background: #334155;
+  border-color: #475569;
 }
 
 .step-icon {
@@ -1175,13 +1397,13 @@ const formatConversationTime = (timeStr: string) => {
 .step-title {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: #e2e8f0;
   margin-bottom: 4px;
 }
 
 .step-description {
   font-size: 12px;
-  color: #606266;
+  color: #94a3b8;
   line-height: 1.4;
   margin-bottom: 8px;
 }

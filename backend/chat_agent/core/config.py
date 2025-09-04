@@ -264,7 +264,7 @@ class LoggingSettings(BaseSettings):
 
 class CORSSettings(BaseSettings):
     """CORS configuration."""
-    allowed_origins: List[str] = Field(default=["http://localhost:3000", "http://127.0.0.1:3000"])
+    allowed_origins: List[str] = Field(default=["*"])
     allowed_methods: List[str] = Field(default=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     allowed_headers: List[str] = Field(default=["*"])
     

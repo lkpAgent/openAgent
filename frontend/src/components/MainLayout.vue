@@ -152,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -446,29 +446,59 @@ onMounted(async () => {
   
   await loadConversations()
 })
+
+// 暴露给子组件使用
+defineExpose({
+  toggleSidebar,
+  isCollapsed
+})
+
+// 通过provide向子组件提供方法
+provide('toggleSidebar', toggleSidebar)
+provide('isCollapsed', isCollapsed)
 </script>
 
 <style scoped>
 .main-layout {
-  height: 100vh;
-  background: #f5f7fa;
-  overflow: hidden;
+  min-height: 100vh;
+  background: #0f172a;
+  display: flex;
+  justify-content: center;
 }
 
 .layout-container {
-  height: 100%;
   display: flex;
+  width: 100%;
+  height: 100vh;
+  background: rgba(30, 41, 59, 0.5);
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+/* 响应式设计 */
+@media (min-width: 1440px) {
+  .main-layout {
+    padding: 40px;
+  }
+  
+  .layout-container {
+    max-width: 1800px;
+    height: calc(100vh - 80px);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* 左侧边栏 */
 .sidebar {
   width: 280px;
-  background: #2c3e50;
-  color: white;
+  background: #1e293b;
+  color: #e2e8f0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: width 0.3s ease;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .sidebar.collapsed {
@@ -504,7 +534,7 @@ onMounted(async () => {
 
 .nav-group-title {
   font-size: 12px;
-  color: #95a5a6;
+  color: #cbd5e1;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -512,7 +542,7 @@ onMounted(async () => {
 }
 
 .collapse-btn {
-  color: #95a5a6 !important;
+  color: #cbd5e1 !important;
   padding: 4px !important;
   min-width: auto !important;
 }
@@ -594,6 +624,9 @@ onMounted(async () => {
   transition: all 0.3s ease;
   border-left: 3px solid transparent;
   justify-content: flex-start;
+  color: #cbd5e1;
+  margin: 2px 8px;
+  border-radius: 8px;
 }
 
 .sidebar.collapsed .nav-item {
@@ -606,14 +639,15 @@ onMounted(async () => {
 }
 
 .nav-item:hover {
-  background: #34495e;
-  border-left-color: #3498db;
+  background: rgba(99, 102, 241, 0.1);
+  color: #e2e8f0;
+  border-left-color: transparent;
 }
 
 .nav-item.active {
-  background: #34495e;
-  border-left-color: #3498db;
-  color: #3498db;
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  border-left-color: #6366f1;
 }
 
 .nav-icon {
@@ -633,8 +667,8 @@ onMounted(async () => {
   left: 300px;
   width: 350px;
   max-height: 70vh;
-  background: #2c3e50;
-  color: white;
+  background: #1e293b;
+  color: #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   z-index: 1000;
@@ -758,7 +792,7 @@ onMounted(async () => {
 }
 
 .history-list::-webkit-scrollbar-track {
-  background: #2c3e50;
+  background: #1e293b;
 }
 
 .history-list::-webkit-scrollbar-thumb {

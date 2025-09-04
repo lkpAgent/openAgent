@@ -76,7 +76,7 @@ class ExcelAnalysisService(SmartQueryService):
             if missing_cols:
                 quality_issues.append({
                     'type': 'missing_values',
-                    'description': f'以下列存在缺失值: {", ".join(missing_cols)}',
+                    'description': f'以下列存在缺失值: {", ".join(map(str, missing_cols))}',
                     'columns': missing_cols
                 })
             
@@ -93,7 +93,7 @@ class ExcelAnalysisService(SmartQueryService):
                 'filename': filename,
                 'rows': rows,
                 'columns': columns,
-                'column_names': df.columns.tolist(),
+                'column_names': [str(col) for col in df.columns.tolist()],
                 'column_info': column_info,
                 'preview': preview_data,
                 'quality_issues': quality_issues,
@@ -101,6 +101,7 @@ class ExcelAnalysisService(SmartQueryService):
             }
             
         except Exception as e:
+            print(e)
             raise Exception(f"DataFrame分析失败: {str(e)}")
     
     def _create_pandas_agent(self, df: pd.DataFrame):
@@ -121,7 +122,10 @@ class ExcelAnalysisService(SmartQueryService):
                 df=df,
                 verbose=True,
                 return_intermediate_steps=True,
-                handle_parsing_errors=True
+                handle_parsing_errors=True,
+                max_iterations=3,
+                early_stopping_method="force",
+                allow_dangerous_code=True  # 允许执行代码以支持数据分析
             )
             
             return agent
@@ -135,7 +139,10 @@ class ExcelAnalysisService(SmartQueryService):
         """
         try:
             # 执行查询
-            result = agent.run(query)
+            # 使用invoke方法来处理有多个输出键的情况
+            agent_result = agent.invoke({"input": query})
+            # 提取主要结果
+            result = agent_result.get('output', agent_result)
             
             # 解析结果
             if isinstance(result, pd.DataFrame):
@@ -247,7 +254,7 @@ class ExcelAnalysisService(SmartQueryService):
             数据集信息:
             - 总行数: {len(df)}
             - 总列数: {len(df.columns)}
-            - 列名: {', '.join(df.columns.tolist())}
+            - 列名: {', '.join(str(col) for col in df.columns.tolist())}
             
             查询结果:
             - 结果类型: {result['result_type']}

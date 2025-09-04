@@ -751,20 +751,21 @@ watch(selectedAgent, (newAgent) => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: #1e293b;
 }
 
 .agent-header {
   padding: 20px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #475569;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fafbfc;
+  background: #334155;
 }
 
 .agent-header h2 {
   margin: 0;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .header-actions {
@@ -776,6 +777,7 @@ watch(selectedAgent, (newAgent) => {
   flex: 1;
   display: flex;
   overflow: hidden;
+  background: #1e293b;
 }
 
 /* 智能体列表区域 */
@@ -783,16 +785,16 @@ watch(selectedAgent, (newAgent) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: #1e293b;
 }
 
 .list-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #475569;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fafbfc;
+  background: #334155;
 }
 
 .search-filters {
@@ -817,27 +819,28 @@ watch(selectedAgent, (newAgent) => {
 }
 
 .agent-card {
-  border: 1px solid #e4e7ed;
+  border: 1px solid #475569;
   border-radius: 12px;
-  background: white;
+  background: #334155;
   transition: all 0.3s ease;
   cursor: pointer;
   overflow: hidden;
 }
 
 .agent-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
   transform: translateY(-2px);
+  border-color: #8b5cf6;
 }
 
 .agent-card.selected {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
 }
 
 .card-header {
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #475569;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -848,7 +851,7 @@ watch(selectedAgent, (newAgent) => {
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-  background: #f0f0f0;
+  background: #475569;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -862,7 +865,7 @@ watch(selectedAgent, (newAgent) => {
 
 .default-avatar {
   font-size: 20px;
-  color: #c0c4cc;
+  color: #94a3b8;
 }
 
 .agent-info {
@@ -873,12 +876,12 @@ watch(selectedAgent, (newAgent) => {
   margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .agent-category {
   font-size: 12px;
-  color: #909399;
+  color: #94a3b8;
 }
 
 .card-content {
@@ -888,7 +891,7 @@ watch(selectedAgent, (newAgent) => {
 .agent-description {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #606266;
+  color: #cbd5e1;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -909,7 +912,7 @@ watch(selectedAgent, (newAgent) => {
 .stat-label {
   display: block;
   font-size: 11px;
-  color: #909399;
+  color: #94a3b8;
   margin-bottom: 2px;
 }
 
@@ -917,15 +920,15 @@ watch(selectedAgent, (newAgent) => {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .card-actions {
   padding: 12px 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #475569;
   display: flex;
   gap: 8px;
-  background: #fafbfc;
+  background: #2d3748;
 }
 
 /* 列表视图 */
@@ -955,25 +958,25 @@ watch(selectedAgent, (newAgent) => {
 /* 智能体详情面板 */
 .agent-detail {
   width: 400px;
-  border-left: 1px solid #e4e7ed;
-  background: #fafbfc;
+  border-left: 1px solid #475569;
+  background: #334155;
   display: flex;
   flex-direction: column;
 }
 
 .detail-header {
   padding: 20px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #475569;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: #2d3748;
 }
 
 .detail-header h3 {
   margin: 0;
   font-size: 18px;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .detail-actions {
@@ -997,11 +1000,11 @@ watch(selectedAgent, (newAgent) => {
   height: 60px;
   border-radius: 50%;
   overflow: hidden;
-  background: #f0f0f0;
+  background: #475569;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #64748b;
 }
 
 .avatar-preview img {
@@ -1028,7 +1031,7 @@ watch(selectedAgent, (newAgent) => {
 .section-header h4 {
   margin: 0;
   font-size: 16px;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .knowledge-list {
@@ -1039,9 +1042,9 @@ watch(selectedAgent, (newAgent) => {
 
 .knowledge-item {
   padding: 12px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #475569;
   border-radius: 8px;
-  background: white;
+  background: #2d3748;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1055,14 +1058,14 @@ watch(selectedAgent, (newAgent) => {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: #e2e8f0;
   margin-bottom: 4px;
 }
 
 .knowledge-desc {
   display: block;
   font-size: 12px;
-  color: #606266;
+  color: #cbd5e1;
 }
 
 .stats-section {
@@ -1077,9 +1080,9 @@ watch(selectedAgent, (newAgent) => {
 
 .stat-card {
   padding: 16px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #475569;
   border-radius: 8px;
-  background: white;
+  background: #2d3748;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1089,12 +1092,12 @@ watch(selectedAgent, (newAgent) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #f0f2f5;
+  background: #475569;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: #409eff;
+  color: #8b5cf6;
 }
 
 .stat-content {
@@ -1104,12 +1107,157 @@ watch(selectedAgent, (newAgent) => {
 .stat-number {
   font-size: 20px;
   font-weight: 600;
-  color: #303133;
+  color: #e2e8f0;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 12px;
-  color: #606266;
+  color: #cbd5e1;
+}
+
+/* Element Plus 深色主题适配 */
+:deep(.el-button) {
+  background: #475569;
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+:deep(.el-button:hover) {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #ffffff;
+}
+
+:deep(.el-button--primary) {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #ffffff;
+}
+
+:deep(.el-button--primary:hover) {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+:deep(.el-input__wrapper) {
+  background: #475569;
+  border: 1px solid #64748b;
+  box-shadow: none;
+}
+
+:deep(.el-input__wrapper:hover) {
+  border-color: #8b5cf6;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+:deep(.el-input__inner) {
+  color: #e2e8f0;
+  background: transparent;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: #94a3b8;
+}
+
+:deep(.el-select .el-input__wrapper) {
+  background: #475569;
+  border-color: #64748b;
+}
+
+:deep(.el-select-dropdown) {
+  background: #334155;
+  border: 1px solid #475569;
+}
+
+:deep(.el-select-dropdown__item) {
+  color: #e2e8f0;
+}
+
+:deep(.el-select-dropdown__item:hover) {
+  background: #475569;
+}
+
+:deep(.el-select-dropdown__item.selected) {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+:deep(.el-textarea__inner) {
+  background: #475569;
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+:deep(.el-textarea__inner:hover) {
+  border-color: #8b5cf6;
+}
+
+:deep(.el-textarea__inner:focus) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+:deep(.el-form-item__label) {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+:deep(.el-form-item__content) {
+  color: #e2e8f0;
+}
+
+:deep(.el-table) {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+:deep(.el-table th) {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-bottom: 1px solid #475569;
+}
+
+:deep(.el-table td) {
+  border-bottom: 1px solid #475569;
+}
+
+:deep(.el-table tr:hover > td) {
+  background: #475569;
+}
+
+:deep(.el-pagination) {
+  color: #e2e8f0;
+}
+
+:deep(.el-pagination .el-pager li) {
+  background: #475569;
+  color: #e2e8f0;
+  border: 1px solid #64748b;
+}
+
+:deep(.el-pagination .el-pager li:hover) {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+:deep(.el-pagination .el-pager li.active) {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+:deep(.el-pagination button) {
+  background: #475569;
+  color: #e2e8f0;
+  border: 1px solid #64748b;
+}
+
+:deep(.el-pagination button:hover) {
+  background: #8b5cf6;
+  color: #ffffff;
 }
 </style>

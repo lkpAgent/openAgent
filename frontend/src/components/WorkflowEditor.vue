@@ -1220,7 +1220,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  background: #1e293b;
 }
 
 .editor-header {
@@ -1228,13 +1228,13 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: white;
-  border-bottom: 1px solid #e4e7ed;
+  background: #334155;
+  border-bottom: 1px solid #475569;
 }
 
 .editor-header h2 {
   margin: 0;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .header-actions {
@@ -1250,8 +1250,8 @@ onUnmounted(() => {
 
 .toolbar {
   width: 280px;
-  background: white;
-  border-right: 1px solid #e4e7ed;
+  background: #334155;
+  border-right: 1px solid #475569;
   padding: 16px;
   overflow-y: auto;
 }
@@ -1262,11 +1262,11 @@ onUnmounted(() => {
 
 .tool-group h4 {
   margin: 0 0 12px 0;
-  color: #303133;
+  color: #e2e8f0;
   font-size: 14px;
   font-weight: 600;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #475569;
 }
 
 .node-types {
@@ -1280,19 +1280,20 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: #f8f9fa;
-  border: 1px solid #e4e7ed;
+  background: #475569;
+  border: 1px solid #64748b;
   border-radius: 6px;
   cursor: grab;
   transition: all 0.2s;
   user-select: none;
+  color: #e2e8f0;
 }
 
 .node-type-item:hover {
-  background: #ecf5ff;
-  border-color: #409eff;
+  background: #5b6b7a;
+  border-color: #8b5cf6;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
 }
 
 .node-type-item:active {
@@ -1310,20 +1311,21 @@ onUnmounted(() => {
   height: 100%;
   position: relative;
   background: 
-    radial-gradient(circle, #ddd 1px, transparent 1px);
+    radial-gradient(circle, #64748b 1px, transparent 1px);
   background-size: 20px 20px;
+  background-color: #1e293b;
   overflow: auto;
 }
 
 .workflow-node {
   position: absolute;
   width: 180px;
-  background: white;
-  border: 2px solid #e4e7ed;
+  background: #334155;
+  border: 2px solid #64748b;
   border-radius: 8px;
   cursor: move;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   user-select: none;
 }
 
@@ -1332,37 +1334,37 @@ onUnmounted(() => {
 }
 
 .workflow-node:hover {
-  border-color: #409eff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .workflow-node.selected {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
 }
 
 .workflow-node.running {
-  border-color: #E6A23C;
+  border-color: #f59e0b;
   animation: pulse 1.5s infinite;
 }
 
 .workflow-node.completed {
-  border-color: #67C23A;
+  border-color: #10b981;
 }
 
 .workflow-node.error {
-  border-color: #F56C6C;
+  border-color: #ef4444;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(230, 162, 60, 0.4);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(230, 162, 60, 0);
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(230, 162, 60, 0);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
   }
 }
 
@@ -1371,15 +1373,15 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e4e7ed;
+  background: #475569;
+  border-bottom: 1px solid #64748b;
   border-radius: 6px 6px 0 0;
 }
 
 .node-header span {
   flex: 1;
   font-weight: 500;
-  color: #303133;
+  color: #e2e8f0;
 }
 
 .node-content {
@@ -1389,7 +1391,7 @@ onUnmounted(() => {
 .node-content p {
   margin: 0;
   font-size: 12px;
-  color: #606266;
+  color: #cbd5e1;
   line-height: 1.4;
 }
 
@@ -1401,9 +1403,9 @@ onUnmounted(() => {
   position: absolute;
   width: 12px;
   height: 12px;
-  border: 2px solid #409EFF;
+  border: 2px solid #8b5cf6;
   border-radius: 50%;
-  background: white;
+  background: #334155;
   cursor: pointer;
   transition: all 0.2s;
   z-index: 10;
@@ -1412,7 +1414,7 @@ onUnmounted(() => {
 }
 
 .connection-point:hover {
-  background: #409EFF;
+  background: #8b5cf6;
   transform: translateY(-50%) scale(1.3);
 }
 
@@ -1435,7 +1437,7 @@ onUnmounted(() => {
 }
 
 .connection-line {
-  stroke: #409eff;
+  stroke: #8b5cf6;
   stroke-width: 2;
   fill: none;
   pointer-events: all;
@@ -1444,17 +1446,17 @@ onUnmounted(() => {
 }
 
 .connection-line:hover {
-  stroke: #66b1ff;
+  stroke: #a78bfa;
   stroke-width: 3;
 }
 
 .connection-line.selected {
-  stroke: #E6A23C;
+  stroke: #f59e0b;
   stroke-width: 3;
 }
 
 .temp-connection-line {
-  stroke: #E6A23C;
+  stroke: #f59e0b;
   stroke-width: 2;
   fill: none;
   stroke-dasharray: 5,5;
@@ -1469,20 +1471,110 @@ onUnmounted(() => {
 
 .properties-panel {
   width: 320px;
-  background: white;
-  border-left: 1px solid #e4e7ed;
+  background: #334155;
+  border-left: 1px solid #475569;
   padding: 16px;
   overflow-y: auto;
 }
 
 .properties-panel h4 {
   margin: 0 0 16px 0;
-  color: #303133;
+  color: #e2e8f0;
   font-weight: 600;
 }
 
 .tool-param {
   margin-bottom: 8px;
+}
+
+/* Element Plus 组件深色主题适配 */
+.workflow-editor :deep(.el-button) {
+  background: #475569;
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+.workflow-editor :deep(.el-button:hover) {
+  background: #5b6b7a;
+  border-color: #8b5cf6;
+  color: #e2e8f0;
+}
+
+.workflow-editor :deep(.el-button--primary) {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #ffffff;
+}
+
+.workflow-editor :deep(.el-button--primary:hover) {
+  background: #a78bfa;
+  border-color: #a78bfa;
+}
+
+.workflow-editor :deep(.el-button--success) {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.workflow-editor :deep(.el-button--success:hover) {
+  background: #34d399;
+  border-color: #34d399;
+}
+
+.workflow-editor :deep(.el-input__wrapper) {
+  background: #475569;
+  border: 1px solid #64748b;
+  box-shadow: none;
+}
+
+.workflow-editor :deep(.el-input__inner) {
+  color: #e2e8f0;
+  background: transparent;
+}
+
+.workflow-editor :deep(.el-input__wrapper:hover) {
+  border-color: #8b5cf6;
+}
+
+.workflow-editor :deep(.el-input__wrapper.is-focus) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2);
+}
+
+.workflow-editor :deep(.el-select) {
+  --el-select-input-color: #e2e8f0;
+  --el-select-input-focus-border-color: #8b5cf6;
+}
+
+.workflow-editor :deep(.el-select .el-input__wrapper) {
+  background: #475569;
+  border-color: #64748b;
+}
+
+.workflow-editor :deep(.el-textarea__inner) {
+  background: #475569;
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+.workflow-editor :deep(.el-textarea__inner:hover) {
+  border-color: #8b5cf6;
+}
+
+.workflow-editor :deep(.el-textarea__inner:focus) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2);
+}
+
+/* 表单标签深色主题样式 */
+.workflow-editor :deep(.el-form-item__label) {
+  color: #e2e8f0 !important;
+  font-weight: 500;
+}
+
+.workflow-editor :deep(.el-form-item__content) {
+  color: #e2e8f0;
 }
 
 /* 滚动条样式 */
@@ -1493,28 +1585,28 @@ onUnmounted(() => {
 
 .toolbar::-webkit-scrollbar-track,
 .properties-panel::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #475569;
   border-radius: 3px;
 }
 
 .toolbar::-webkit-scrollbar-thumb,
 .properties-panel::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #64748b;
   border-radius: 3px;
 }
 
 .toolbar::-webkit-scrollbar-thumb:hover,
 .properties-panel::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: #8b5cf6;
 }
 
 /* 右键菜单样式 */
 .context-menu {
   position: fixed;
-  background: white;
-  border: 1px solid #e4e7ed;
+  background: #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   min-width: 200px;
   max-height: 400px;
@@ -1526,8 +1618,8 @@ onUnmounted(() => {
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
-  border-bottom: 1px solid #f0f0f0;
+  color: #e2e8f0;
+  border-bottom: 1px solid #475569;
   margin-bottom: 4px;
 }
 
@@ -1542,7 +1634,7 @@ onUnmounted(() => {
 .context-menu-group-title {
   padding: 4px 16px;
   font-size: 12px;
-  color: #909399;
+  color: #94a3b8;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1555,13 +1647,13 @@ onUnmounted(() => {
   padding: 8px 16px;
   cursor: pointer;
   font-size: 14px;
-  color: #303133;
+  color: #e2e8f0;
   transition: all 0.2s;
 }
 
 .context-menu-item:hover {
-  background-color: #f5f7fa;
-  color: #409eff;
+  background-color: #475569;
+  color: #8b5cf6;
 }
 
 .context-menu-item .el-icon {
