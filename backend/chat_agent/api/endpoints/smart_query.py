@@ -20,6 +20,9 @@ from chat_agent.services.smart_query import (
 )
 from chat_agent.services.excel_metadata_service import ExcelMetadataService
 from pydantic import BaseModel
+import uuid
+from pathlib import Path
+from chat_agent.utils.file_utils import FileUtils
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +48,21 @@ class TableSchemaRequest(BaseModel):
     table_name: str
 
 class ExcelUploadResponse(BaseModel):
+    file_id: int
     success: bool
     message: str
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[Dict[str, Any]] = None  # 添加data字段
+
 
 class QueryResponse(BaseModel):
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
+
+# 通用返回结构
+class NormalResponse(BaseModel):
+    success: bool
+    message: str
 
 class ExcelPreviewRequest(BaseModel):
     file_id: str
@@ -93,19 +103,28 @@ async def upload_excel(
                 detail="文件大小不能超过 10MB"
             )
         
-        # 保存文件到临时目录
-        temp_dir = tempfile.gettempdir()
-        file_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        temp_filename = f"excel_{current_user.id}_{file_timestamp}{file_extension}"
-        temp_path = os.path.join(temp_dir, temp_filename)
+        # 创建持久化目录结构
+        backend_dir = Path(__file__).parent.parent.parent.parent  # 获取backend目录
+        data_dir = backend_dir / "data/uploads"
+        excel_user_dir = data_dir / f"excel_{current_user.id}"
         
-        with open(temp_path, 'wb') as f:
+        # 确保目录存在
+        excel_user_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 生成文件名：{uuid}_{原始文件名称}
+        file_id = str(uuid.uuid4())
+        safe_filename = FileUtils.sanitize_filename(file.filename)
+        new_filename = f"{file_id}_{safe_filename}"
+        file_path = excel_user_dir / new_filename
+        
+        # 保存文件
+        with open(file_path, 'wb') as f:
             f.write(content)
         
         # 使用Excel元信息服务提取并保存元信息
         metadata_service = ExcelMetadataService(db)
         excel_file = metadata_service.save_file_metadata(
-            file_path=temp_path,
+            file_path=str(file_path),
             original_filename=file.filename,
             user_id=current_user.id,
             file_size=file_size
@@ -114,12 +133,12 @@ async def upload_excel(
         # 为了兼容现有前端，仍然创建pickle文件
         try:
             if file_extension == '.csv':
-                df = pd.read_csv(temp_path, encoding='utf-8')
+                df = pd.read_csv(file_path, encoding='utf-8')
             else:
-                df = pd.read_excel(temp_path)
+                df = pd.read_excel(file_path)
         except UnicodeDecodeError:
             if file_extension == '.csv':
-                df = pd.read_csv(temp_path, encoding='gbk')
+                df = pd.read_csv(file_path, encoding='gbk')
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -131,9 +150,9 @@ async def upload_excel(
                 detail=f"文件读取失败: {str(e)}"
             )
         
-        # 保存pickle文件用于兼容
-        pickle_filename = f"excel_{current_user.id}_{file_timestamp}.pkl"
-        pickle_path = os.path.join(temp_dir, pickle_filename)
+        # 保存pickle文件到同一目录
+        pickle_filename = f"{file_id}_{safe_filename}.pkl"
+        pickle_path = excel_user_dir / pickle_filename
         df.to_pickle(pickle_path)
         
         # 数据预处理和分析（保持兼容性）
@@ -144,7 +163,7 @@ async def upload_excel(
         analysis_result.update({
             'file_id': str(excel_file.id),
             'database_id': excel_file.id,
-            'temp_file_path': pickle_path,
+            'temp_file_path': str(pickle_path),  # 更新为新的pickle路径
             'original_filename': file.filename,
             'file_size_mb': excel_file.file_size_mb,
             'sheet_names': excel_file.sheet_names,
@@ -152,6 +171,7 @@ async def upload_excel(
         })
         
         return ExcelUploadResponse(
+            file_id=excel_file.id,
             success=True,
             message="Excel文件上传成功",
             data=analysis_result
@@ -497,7 +517,7 @@ async def get_file_list(
             message=f"获取文件列表失败: {str(e)}"
         )
 
-@router.delete("/files/{file_id}", response_model=BaseResponse)
+@router.delete("/files/{file_id}", response_model=NormalResponse)
 async def delete_file(
     file_id: int,
     current_user = Depends(AuthService.get_current_user),
@@ -511,20 +531,20 @@ async def delete_file(
         success = metadata_service.delete_file(file_id, current_user.id)
         
         if success:
-            return BaseResponse(
+            return NormalResponse(
                 success=True,
                 message="文件删除成功"
             )
         else:
-            return BaseResponse(
+            return NormalResponse(
                 success=False,
                 message="文件不存在或删除失败"
             )
             
     except Exception as e:
-        return BaseResponse(
-            success=False,
-            message=f"删除文件失败: {str(e)}"
+        return NormalResponse(
+            success=True,
+            message=str(e)
         )
 
 @router.get("/files/{file_id}/info", response_model=QueryResponse)

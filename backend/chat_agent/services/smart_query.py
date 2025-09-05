@@ -56,6 +56,7 @@ class ExcelAnalysisService(SmartQueryService):
                 
                 # 如果是数值列，添加统计信息
                 if pd.api.types.is_numeric_dtype(df[col]):
+                    df.fillna({col:0})  #数值列，将空值补0
                     col_info.update({
                         'mean': float(df[col].mean()) if not df[col].isnull().all() else None,
                         'std': float(df[col].std()) if not df[col].isnull().all() else None,

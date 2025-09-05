@@ -261,16 +261,20 @@
       </div>
       
       <!-- 右侧智能问答区域 -->
-       <div class="chat-panel" :class="{ 'chat-panel-compact': isCollapsed }">
+       <div class="chat-panel" :class="{ 'chat-panel-compact': isCollapsed, 'chat-panel-expanded': isChatCollapsed }">
          <div class="chat-header">
-           <h3>智能数据问答</h3>
-           <div class="chat-actions">
-             <el-button size="small" @click="clearChat">
-               <el-icon><Delete /></el-icon>
-               清空对话
-             </el-button>
-           </div>
-         </div>
+  <h3>智能数据问答</h3>
+  <div class="chat-actions">
+    <el-button size="small" @click="clearChat">
+      <el-icon><Delete /></el-icon>
+      清空对话
+    </el-button>
+    <el-button size="small" @click.stop="toggleChatCollapse" :type="isChatCollapsed ? 'warning' : 'primary'">
+      <el-icon><FullScreen v-if="!isChatCollapsed" /><Aim v-else /></el-icon>
+      {{ isChatCollapsed ? '收起' : '展开' }}
+    </el-button>
+  </div>
+</div>
         
         <div class="chat-content">
           <div class="chat-messages" ref="chatMessagesContainer">
@@ -379,6 +383,21 @@
                       共 {{ message.tableData.total }} 行数据
                     </div>
                   </div>
+
+                  <!-- 引用数据显示区域 -->
+                  <div v-if="['text', 'scalar', 'other'].includes(message.resultType) && message.referenceData" class="reference-result">
+                    <h3>{{ getResultTypeLabel(message.resultType) }}</h3>
+                    <div class="reference-content">
+                      <div class="reference-header">
+                        <el-icon class="reference-icon"><Document /></el-icon>
+                        <span class="reference-type">{{ message.resultType.toUpperCase() }}</span>
+                      </div>
+                      <div class="reference-data">
+                        <pre v-if="typeof message.referenceData.data === 'object'">{{ JSON.stringify(message.referenceData.data, null, 2) }}</pre>
+                        <div v-else class="reference-text">{{ message.referenceData.data }}</div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div class="message-content bot-content">
                     <div class="message-text" v-html="formatMessage(message.content)"></div>
@@ -440,7 +459,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, inject } from 'vue'
+import { ref, reactive, computed, onMounted, inject, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Delete,
@@ -528,6 +547,7 @@ const workflowSteps = ref([])
 const queryResult = ref(null)
 const querySuggestions = ref([])
 const isCollapsed = ref(false)
+const isChatCollapsed = ref(false)
 
 // 注入父组件的方法
 const parentToggleSidebar = inject('toggleSidebar', null)
@@ -912,7 +932,7 @@ const handleExcelUploadSuccess = async (file: any) => {
       await loadFileList()
       
       // 自动选择刚上传的文件
-      const uploadedFile = excelFileList.value.find(f => f.id === result.data.file_id)
+      const uploadedFile = excelFileList.value.find(f => f.id === result.file_id)
       if (uploadedFile) {
         selectFile(uploadedFile)
       }
@@ -1163,6 +1183,23 @@ const executeSmartQuery = async () => {
                     formattedContent += '查询结果已在上方表格中展示。'
                     
                     chatMessages.value[botMessageIndex].content = formattedContent
+                  } else if (['text', 'scalar', 'other'].includes(data.data?.result_type)) {
+                    // 处理其他类型数据，按引用数据样式展示
+                    chatMessages.value[botMessageIndex].resultType = data.data.result_type
+                    chatMessages.value[botMessageIndex].referenceData = {
+                      type: data.data.result_type,
+                      data: data.data.data,
+                      summary: data.data.summary
+                    }
+                    
+                    // 设置显示内容
+                    let formattedContent = ''
+                    if (data.data.summary) {
+                      formattedContent += `## 分析摘要\n\n${data.data.summary}\n\n`
+                    }
+                    formattedContent += '查询结果已在上方引用区域中展示。'
+                    
+                    chatMessages.value[botMessageIndex].content = formattedContent
                   }
                   
                   // 添加摘要信息
@@ -1270,6 +1307,15 @@ const exportCurrentResult = () => {
   URL.revokeObjectURL(link.href)
 }
 
+const getResultTypeLabel = (type: string) => {
+  const labels = {
+    'text': '文本结果',
+    'scalar': '标量结果', 
+    'other': '其他结果'
+  }
+  return labels[type] || '查询结果'
+}
+
 const exportResults = () => {
   ElMessage.info('批量导出功能开发中')
 }
@@ -1284,7 +1330,29 @@ const toggleCollapse = () => {
   
   ElMessage.success(isCollapsed.value ? '已展开数据预览区域' : '已恢复默认布局')
 }
-
+const toggleChatCollapse = () => {
+  console.log('toggleChatCollapse 被调用，当前状态:', isChatCollapsed.value)
+  
+  isChatCollapsed.value = !isChatCollapsed.value
+  
+  console.log('新状态:', isChatCollapsed.value)
+  
+  // 如果展开聊天面板，同时折叠导航栏
+  if (isChatCollapsed.value && parentToggleSidebar) {
+    try {
+      parentToggleSidebar()
+    } catch (error) {
+      console.warn('调用 parentToggleSidebar 失败:', error)
+    }
+  }
+  
+  // 强制触发DOM更新
+  nextTick(() => {
+    console.log('DOM更新完成，当前状态:', isChatCollapsed.value)
+  })
+  
+  ElMessage.success(isChatCollapsed.value ? '已展开智能问答区域' : '已恢复默认布局')
+}
 const visualizeResult = () => {
   ElMessage.info('数据可视化功能开发中')
 }
@@ -1496,7 +1564,7 @@ onMounted(async () => {
 
 /* 右侧聊天面板 */
 .chat-panel {
-  width: 650px;
+  width: 450px;
   background: #1e293b;
   display: flex;
   flex-direction: column;
@@ -1504,9 +1572,31 @@ onMounted(async () => {
   transition: width 0.3s ease;
 }
 
-/* 折叠模式下的右侧面板 */
+/* 折叠模式下的右侧面板（数据预览展开时） */
 .chat-panel-compact {
   width: 400px !important;
+}
+
+/* 展开模式下的右侧面板（智能问答展开时） */
+.chat-panel-expanded {
+  width: 60% !important;
+  transition: width 0.3s ease;
+}
+
+/* 折叠模式下的左侧面板（数据预览展开时） */
+.query-content:has(.chat-panel-compact) .data-source-panel {
+  width: 240px;
+}
+
+/* 展开模式下缩小其他面板（智能问答展开时） */
+.query-content:has(.chat-panel-expanded) .data-source-panel {
+  width: 200px !important;
+  transition: width 0.3s ease;
+}
+
+.query-content:has(.chat-panel-expanded) .data-preview-panel {
+  width: 40% !important;
+  transition: width 0.3s ease;
 }
 
 /* 表格滚动条样式优化 - 强制覆盖所有可能的选择器 */
@@ -2452,6 +2542,78 @@ onMounted(async () => {
   color: #94a3b8;
   font-size: 12px;
   text-align: right;
+}
+
+/* 引用数据样式 */
+.reference-result {
+  margin: 16px 0;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+  padding: 16px;
+  width: 500px;
+  max-width: 500px;
+  border-left: 4px solid #3b82f6;
+}
+
+.reference-result h3 {
+  margin: 0 0 12px 0;
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.reference-content {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.reference-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.reference-icon {
+  color: #3b82f6;
+  font-size: 16px;
+}
+
+.reference-type {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.reference-data {
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.reference-data pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reference-text {
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-family: inherit;
 }
 
 /* 工作流步骤面板样式 */

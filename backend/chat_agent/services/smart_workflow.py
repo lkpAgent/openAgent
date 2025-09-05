@@ -7,18 +7,18 @@ import logging
 from datetime import datetime
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+from langchain_core.runnables import RunnableLambda
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_community.chat_models import ChatZhipuAI
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-
+from chat_agent.core.context import UserContext
 from .smart_query import ExcelAnalysisService
 from .excel_metadata_service import ExcelMetadataService
 from ..core.config import get_settings
-
+from pathlib import Path
 # 配置日志
 logger = logging.getLogger(__name__)
 
@@ -384,13 +384,12 @@ class SmartWorkflowManager:
                 
                 if not selected_files:
                     raise FileSelectionError('未找到与问题相关的Excel文件')
-                
+                selected_files_names = names_str = ", ".join([file["filename"] for file in selected_files])
                 step_completed = {
                     'type': 'workflow_step',
                     'step': 'file_selection',
                     'status': 'completed',
-                    'message': f'选择了{len(selected_files)}个相关文件',
-                    'selected_files': [f['filename'] for f in selected_files],
+                    'message': f'选择了{len(selected_files)}个相关文件:{selected_files_names}',
                     'details': {'selection_count': len(selected_files)},
                     'timestamp': datetime.now().isoformat()
                 }
@@ -721,14 +720,16 @@ class SmartWorkflowManager:
             else:
                 logger.warning("metadata_service未初始化，跳过数据库文件查询")
             
-            # 同时检查临时目录中的文件
-            temp_dir = tempfile.gettempdir()
-            temp_files = [f for f in os.listdir(temp_dir) 
-                         if f.startswith(f"excel_{user_id}_") and f.endswith('.pkl')]
+            # 检查持久化目录中的文件
+            persistent_dir = os.path.join("backend", "data", f"excel_{user_id}")
+            persistent_files = []
+            if os.path.exists(persistent_dir):
+                persistent_files = [f for f in os.listdir(persistent_dir) 
+                                 if f.endswith('.pkl')]
             
             file_list = []
             
-            # 合并数据库和临时文件信息
+            # 合并数据库和持久化文件信息
             for metadata in file_metadata:
                 # 获取默认sheet的信息
                 default_sheet = metadata.default_sheet or (metadata.sheet_names[0] if metadata.sheet_names else None)
@@ -795,27 +796,27 @@ class SmartWorkflowManager:
                 column_names = ', '.join(str(col) for col in columns)
                 
                 desc = f"""
-文件{i+1}: {file_info['filename']}
-- 行数: {row_count}
-- 列数: {column_count}
-- 列名: {column_names}
-- 描述: {file_info.get('description', '无描述')}
-"""
+                文件{i+1}: {file_info['filename']}
+                - 行数: {row_count}
+                - 列数: {column_count}
+                - 列名: {column_names}
+                - 描述: {file_info.get('description', '无描述')}
+                """
                 file_descriptions.append(desc)
-            
+            file_des_str = '  \n'.join(file_descriptions)
             prompt = f"""
-用户问题: {user_query}
-
-可用的Excel文件:
-{chr(10).join(file_descriptions)}
-
-请分析用户问题，选择最相关的Excel文件来回答问题。
-如果问题涉及多个文件的数据关联，可以选择多个文件。
-如果问题只涉及特定类型的数据，只选择相关的文件。
-
-请返回JSON格式的结果，包含选中文件的索引（从1开始）:
-{"selected_files": [1, 2, ...], "reason": "选择理由"}
-"""
+            用户问题: {user_query}
+            
+            可用的Excel文件:
+            {file_des_str}
+            
+            请分析用户问题，选择最相关的Excel文件来回答问题。
+            如果问题涉及多个文件的数据关联，可以选择多个文件。
+            如果问题只涉及特定类型的数据，只选择相关的文件。
+            
+            请返回JSON格式的结果，包含选中文件的索引（从1开始）:
+           {{"selected_files": [1, 2, ...], "reason": "选择理由"}}
+            """
             
             # 调用LLM进行文件选择
             response = await self._run_in_executor(
@@ -853,6 +854,7 @@ class SmartWorkflowManager:
                 return file_list
                 
         except Exception as e:
+            raise e
             logger.error(f"文件选择过程中发生错误: {str(e)}")
             # 出错时返回所有文件作为备选方案
             logger.info("回退到选择所有文件")
@@ -865,86 +867,168 @@ class SmartWorkflowManager:
     ) -> Dict[str, pd.DataFrame]:
         """
         加载选中的Excel文件为DataFrame
-        
-        Args:
-            selected_files: 选中的文件列表
-            user_id: 用户ID
-            
-        Returns:
-            文件名到DataFrame的映射
-            
-        Raises:
-            FileLoadError: 文件加载失败
+        使用新的持久化目录结构和文件匹配逻辑
         """
-        if not selected_files:
-            raise FileLoadError("没有选中的文件需要加载")
-        
         dataframes = {}
-        temp_dir = tempfile.gettempdir()
-        failed_files = []
         
-        logger.info(f"开始加载{len(selected_files)}个选中的文件")
+        # 构建用户专属目录路径
+        # base_dir = os.path.join("backend", "data", f"excel_{user_id}")
+        current_user_id = UserContext.get_current_user().id
+        backend_dir = Path(__file__).parent.parent.parent  # 获取backend目录
+        base_dir = backend_dir / "data/uploads" / f'excel_{current_user_id}'
+        if not os.path.exists(base_dir):
+            logger.warning(f"用户目录不存在: {base_dir}")
+            return dataframes
         
-        for file_info in selected_files:
-            filename = file_info['filename']
-            try:
-                logger.debug(f"正在加载文件: {filename}")
-                
-                # 查找对应的pickle文件
-                pickle_files = [f for f in os.listdir(temp_dir) 
-                               if f.startswith(f"excel_{user_id}_") and f.endswith('.pkl')]
-                
-                if pickle_files:
-                    # 使用最新的文件
-                    latest_file = sorted(pickle_files)[-1]
-                    pickle_path = os.path.join(temp_dir, latest_file)
-                    
-                    logger.debug(f"从pickle文件加载: {pickle_path}")
-                    df = pd.read_pickle(pickle_path)
-                else:
-                    # 如果没有pickle文件，尝试从原始文件路径加载
-                    file_path = file_info.get('file_path')
-                    if not file_path or not os.path.exists(file_path):
-                        logger.warning(f"文件路径不存在: {file_path}")
-                        failed_files.append(filename)
-                        continue
-                    
-                    logger.debug(f"从原始文件加载: {file_path}")
-                    if file_path.endswith('.csv'):
-                        df = pd.read_csv(file_path, encoding='utf-8')
-                    else:
-                        df = pd.read_excel(file_path)
-                
-                # 验证DataFrame
-                if df.empty:
-                    logger.warning(f"文件 {filename} 加载后为空")
-                    failed_files.append(filename)
+        try:
+            # 获取目录中所有文件
+            all_files = os.listdir(base_dir)
+            
+            for file_info in selected_files:
+                filename = file_info.get('filename', '')
+                if not filename:
+                    logger.warning(f"文件信息缺少filename: {file_info}")
                     continue
                 
-                dataframes[filename] = df
-                logger.info(f"成功加载文件 {filename}: {len(df)} 行, {len(df.columns)} 列")
+                # 查找匹配的文件（格式：{uuid}_{original_filename}）
+                matching_files = []
+                for file in all_files:
+                    if file.endswith(f"_{filename}") or file.endswith(f"_{filename}.pkl"):
+                        matching_files.append(file)
                 
-            except pd.errors.EmptyDataError:
-                logger.error(f"文件 {filename} 为空或格式错误")
-                failed_files.append(filename)
-            except pd.errors.ParserError as e:
-                logger.error(f"文件 {filename} 解析错误: {str(e)}")
-                failed_files.append(filename)
-            except Exception as e:
-                logger.error(f"加载文件 {filename} 失败: {str(e)}")
-                failed_files.append(filename)
+                if not matching_files:
+                    logger.warning(f"未找到匹配的文件: {filename}")
+                    continue
+                
+                # 如果有多个匹配文件，选择最新的
+                if len(matching_files) > 1:
+                    matching_files.sort(key=lambda x: os.path.getmtime(os.path.join(base_dir, x)), reverse=True)
+                    logger.info(f"找到多个匹配文件，选择最新的: {matching_files[0]}")
+                
+                selected_file = matching_files[0]
+                file_path = os.path.join(base_dir, selected_file)
+                
+                try:
+                    # 优先加载pickle文件
+                    if selected_file.endswith('.pkl'):
+                        df = await self._run_in_executor(pd.read_pickle, file_path)
+                        logger.info(f"成功从pickle加载文件: {selected_file}")
+                    else:
+                        # 如果没有pickle文件，尝试加载原始文件
+                        if selected_file.endswith(('.xlsx', '.xls')):
+                            df = await self._run_in_executor(pd.read_excel, file_path)
+                        elif selected_file.endswith('.csv'):
+                            df = await self._run_in_executor(pd.read_csv, file_path)
+                        else:
+                            logger.warning(f"不支持的文件格式: {selected_file}")
+                            continue
+                        logger.info(f"成功从原始文件加载: {selected_file}")
+                    
+                    # 使用原始文件名作为key
+                    dataframes[filename] = df
+                    logger.info(f"成功加载DataFrame: {filename}, 形状: {df.shape}")
+                    
+                except Exception as e:
+                    logger.error(f"加载文件失败 {selected_file}: {e}")
+                    continue
+        
+        except Exception as e:
+            logger.error(f"加载DataFrames时发生错误: {e}")
+            raise FileLoadError(f"无法加载选中的文件: {e}")
         
         if not dataframes:
-            error_msg = f"所有文件加载失败。失败文件: {', '.join(failed_files)}"
-            logger.error(error_msg)
-            raise FileLoadError(error_msg)
+            raise FileLoadError("没有成功加载任何文件")
         
-        if failed_files:
-            logger.warning(f"部分文件加载失败: {', '.join(failed_files)}")
-        
-        logger.info(f"成功加载{len(dataframes)}个文件，失败{len(failed_files)}个文件")
         return dataframes
     
+    def _parse_dataframe_string_to_table_data(self, df_string: str, subindex: int = -2) -> Dict[str, Any]:
+        """
+        将字符串格式的DataFrame转换为表格数据
+        
+        Args:
+            df_string: DataFrame的字符串表示
+            
+        Returns:
+            包含columns和data的字典
+        """
+        try:
+            # 按行分割字符串
+            lines = df_string.strip().split('\n')
+            
+            # 去掉最后两行（如因为最后两行可能是 "[12 rows x 11 columns]和空行"）
+
+            if len(lines) >= 2 and subindex == -2 :
+                lines = lines[:subindex]
+            
+            if len(lines) < 2:
+                # 如果行数不足，返回原始字符串
+                return {
+                    'columns': [{'prop': 'result', 'label': '结果', 'width': 'auto'}],
+                    'data': [{'result': df_string}],
+                    'total': 1
+                }
+            
+            # 第一行是列名
+            header_line = lines[0].strip()
+            # 解析列名（去掉索引列）
+            columns_raw = header_line.split()
+            if columns_raw and columns_raw[0].isdigit() == False:
+                # 如果第一列不是数字，说明包含了列名
+                column_names = columns_raw
+            else:
+                # 否则使用默认列名
+                column_names = [f'Column_{i}' for i in range(len(columns_raw))]
+            
+            # 构建列定义
+            columns = []
+            for i, col_name in enumerate(column_names):
+                columns.append({
+                    'prop': f'col_{i}',
+                    'label': str(col_name),
+                    'width': 'auto'
+                })
+            
+            # 解析数据行
+            data = []
+            for line in lines[1:]:
+                if line.strip():
+                    # 分割数据行
+                    row_values = line.strip().split()
+                    if row_values:
+                        row_data = {}
+                        # 第一个值通常是索引
+                        if len(row_values) > 0 and row_values[0].isdigit():
+                            row_data['_index'] = row_values[0]
+                            values = row_values[1:]
+                        else:
+                            values = row_values
+                        
+                        # 填充列数据
+                        for i, value in enumerate(values):
+                            if i < len(columns):
+                                col_prop = f'col_{i}'
+                                # 处理NaN值
+                                if value.lower() == 'nan':
+                                    row_data[col_prop] = ''
+                                else:
+                                    row_data[col_prop] = value
+                        
+                        data.append(row_data)
+            
+            return {
+                'columns': columns,
+                'data': data,
+                'total': len(data)
+            }
+            
+        except Exception as e:
+            logger.warning(f"解析DataFrame字符串失败: {str(e)}")
+            return {
+                'columns': [{'prop': 'result', 'label': '结果', 'width': 'auto'}],
+                'data': [{'result': df_string}],
+                'total': 1
+            }
+
     async def _execute_smart_query(
         self, 
         user_query: str, 
@@ -1014,24 +1098,25 @@ class SmartWorkflowManager:
             
             # 构建系统提示
             system_prompt = f"""
-你可以访问以下pandas数据框:
-{chr(10).join(dataset_info)}
-
-请根据用户提出的问题，编写Python代码来回答。要求：
-1. 只返回代码，不返回其他内容
-2. 只允许使用pandas和内置库
-3. 确保代码能够直接执行并返回结果
-4. 返回的结果应该是详细的、完整的数据，而不仅仅是简单答案
-5. 当用户询问最高、最低、排名等问题时，除了返回答案本身，还要返回相关的详细数据
-6. 结果应该包含足够的上下文信息，让用户能够验证和理解答案
-7. 优先返回DataFrame格式的结果，便于展示为表格
-8. 如果是统计分析，要包含相关的数值、百分比、排名等详细信息
-
-示例：
-- 如果问"哪个项目类型合同额最高"，不仅要返回项目类型，还要返回该类型的具体合同额、占比、相关项目数量等
-- 如果问"销售额最高的产品"，要返回产品名称、销售额、销售数量、市场占比等完整信息
-- 结果格式优先使用DataFrame，包含多列相关数据
-"""
+                    你可以访问以下pandas数据框:
+                    {chr(10).join(dataset_info)}
+                    
+                    请根据用户提出的问题，编写Python代码来回答。要求：
+                    1. 只返回代码，不返回其他内容
+                    2. 只允许使用pandas和内置库
+                    3. 确保代码能够直接执行并返回结果
+                    4. 返回的结果应该是详细的、完整的数据，而不仅仅是简单答案
+                    5. 当用户询问最高、最低、排名等问题时，除了返回答案本身，还要返回相关的详细数据
+                    6. 结果应该包含足够的上下文信息，让用户能够验证和理解答案
+                    7. 如果是统计分析，要包含相关的数值、百分比、排名等详细信息
+                    8. 需要是完整可运行的代码，包括import必要的组件
+                    9. 优先返回DataFrame格式的结果，便于展示为表格
+                    
+                    示例：
+                    - 如果问"哪个项目合同额最高"，不仅要返回项目名称，还要返回跟该项目其他有用的信息，比如合同额，合同时间，项目类型等（如果表格有该这些字段信息）
+                    - 如果问"销售额最高的产品"，要返回产品名称、销售额、销售数量、市场占比等完整信息（如果表格有该这些字段信息）
+                    - 结果格式优先使用DataFrame，包含多列相关数据
+                    """
             
             # 创建提示模板
             prompt = ChatPromptTemplate([
@@ -1044,9 +1129,14 @@ class SmartWorkflowManager:
             
             # 绑定工具到LLM
             llm_with_tools = self.llm.bind_tools([python_tool])
-            
+
+            def debug_print(x):
+                print('中间结果：', x)
+                return x
+
+            debug_node = RunnableLambda(debug_print)
             # 创建执行链
-            llm_chain = prompt | llm_with_tools | parser | python_tool
+            llm_chain = prompt | llm_with_tools | debug_node| parser | debug_node| python_tool
             
             # 执行查询
             try:
@@ -1062,6 +1152,8 @@ class SmartWorkflowManager:
             
             try:
                 # 检查结果是否为pandas DataFrame
+                print('result type:',type(result))
+                parse_result = ''
                 if isinstance(result, pd.DataFrame):
                     # 转换为表格数据
                     table_data = self._convert_dataframe_to_table_data(result)
@@ -1071,6 +1163,7 @@ class SmartWorkflowManager:
                     total = table_data['total']
                     result_type = 'table_data'
                     logger.info(f"处理DataFrame结果: {len(result)}行 x {len(result.columns)}列")
+                    parse_result = table_data
                 # PythonAstREPLTool返回的是字符串结果
                 elif isinstance(result, str):
                     # 尝试解析结果中的数据
@@ -1078,30 +1171,55 @@ class SmartWorkflowManager:
                     
                     # 检查是否是DataFrame的字符串表示
                     if any('DataFrame' in line or ('|' in line and len([l for l in result_lines if '|' in l]) > 1) for line in result_lines):
-                        # 尝试将DataFrame字符串转换为Markdown表格
-                        markdown_table = self._convert_dataframe_to_markdown(result)
-                        data = [{'result': markdown_table}]
-                        columns = ['result']
+
+                        table_data = self._parse_dataframe_string_to_table_data(result)
+                        data = table_data['data']
+                        columns = table_data['columns']
                         total = 1
                         result_type = 'markdown_table'
+                        parse_result = table_data
+                    elif ('rows' in result_lines[-1] and 'columns' in result_lines[-1]):
+                        # 尝试解析DataFrame字符串为表格数据
+                        table_data = self._parse_dataframe_string_to_table_data(result)
+                        if 'data' in table_data and 'columns' in table_data:
+                            data = table_data['data']
+                            columns = table_data['columns']
+                            total = 1
+                            result_type = 'table_data'
+                            parse_result = table_data
+                        else:
+                            total = 1
+                            result_type = 'text'
+                            parse_result = table_data
+
                     else:
                         # 简单的数值或文本结果
-                        data = [{'result': result}]
-                        columns = ['result']
-                        total = 1
-                        result_type = 'text'
+                        # 尝试解析DataFrame字符串为表格数据
+                        table_data = self._parse_dataframe_string_to_table_data(result, 0)
+                        if 'data' in table_data and 'columns' in table_data:
+                            data = table_data['data']
+                            columns = table_data['columns']
+                            total = table_data['total']
+                            total = 1
+                            result_type = 'table_data'
+                            parse_result = table_data
+                        else:
+                            total = 1
+                            result_type = 'text'
+                            parse_result = table_data
                 elif isinstance(result, (int, float, bool)):
-                    data = [{'result': str(result)}]
-                    columns = ['result']
+                    data = result
+                    columns = result
                     total = 1
                     result_type = 'scalar'
+                    parse_result = result
                 else:
                     # 处理其他类型的结果
-                    data = [{'result': str(result)}]
-                    columns = ['result']
+                    data = result
+                    columns = result
                     total = 1
                     result_type = 'other'
-                
+                    parse_result = result
                 logger.info(f"结果处理完成: {result_type}, 数据行数: {total}")
                 
             except Exception as e:
@@ -1111,7 +1229,7 @@ class SmartWorkflowManager:
             
             # 生成总结
             try:
-                summary = await self._generate_query_summary(user_query, result, main_df)
+                summary = await self._generate_query_summary(user_query, parse_result, main_df)
             except Exception as e:
                 logger.warning(f"生成总结失败: {str(e)}")
                 summary = f"基于数据分析完成查询，共处理{len(main_df)}行数据。"
@@ -1152,11 +1270,11 @@ class SmartWorkflowManager:
             # 安全地获取数据集信息
             try:
                 dataset_info = f"""
-数据集信息:
-- 总行数: {len(df)}
-- 总列数: {len(df.columns)}
-- 列名: {', '.join(str(col) for col in df.columns.tolist())}
-"""
+                数据集信息:
+                - 总行数: {len(df)}
+                - 总列数: {len(df.columns)}
+                - 列名: {', '.join(str(col) for col in df.columns.tolist())}
+                """
             except Exception as e:
                 logger.warning(f"获取数据集信息失败: {str(e)}")
                 dataset_info = "数据集信息: 无法获取"
@@ -1169,25 +1287,25 @@ class SmartWorkflowManager:
                     else:
                         result_preview = "查询结果为空"
                 else:
-                    result_preview = str(result)[:500]  # 限制长度避免过长
+                    result_preview = str(result)  # 限制长度避免过长
             except Exception as e:
                 logger.warning(f"生成结果预览失败: {str(e)}")
                 result_preview = "无法生成结果预览"
             
             prompt = f"""
-用户查询: {query}
-
-{dataset_info}
-
-查询结果: {result_preview}...
-
-请生成一个简洁的中文总结，说明:
-1. 查询的主要发现
-2. 数据的关键特征
-3. 结果的业务含义
-
-总结应该在100字以内，通俗易懂。
-"""
+                    用户问题: {query}
+                    
+                    {dataset_info}
+                    
+                    查询结果: {result_preview}...
+                    
+                    系统已经根据用户提问查询出了结果，请根据结果生成一个简洁的中文总结，说明:
+                    1. 查询的主要发现
+                    2. 数据的关键特征
+                    3. 结果的业务含义
+                    
+                    总结应该在100字以内，通俗易懂。
+                    """
             
             try:
                 response = await self._run_in_executor(
