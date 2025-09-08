@@ -116,7 +116,6 @@ class ExcelMetadataService:
             
             # Create ExcelFile record
             excel_file = ExcelFile(
-                user_id=user_id,
                 original_filename=original_filename,
                 file_path=file_path,
                 file_size=file_size,
@@ -131,6 +130,7 @@ class ExcelMetadataService:
                 is_processed=metadata['is_processed'],
                 processing_error=metadata['processing_error']
             )
+
             
             # Save to database
             self.db.add(excel_file)
@@ -149,12 +149,12 @@ class ExcelMetadataService:
         """Get Excel files for a user with pagination."""
         try:
             # Get total count
-            total = self.db.query(ExcelFile).filter(ExcelFile.user_id == user_id).count()
+            total = self.db.query(ExcelFile).filter(ExcelFile.created_by == user_id).count()
             
             # Get files with pagination
             files = (self.db.query(ExcelFile)
-                    .filter(ExcelFile.user_id == user_id)
-                    .order_by(ExcelFile.upload_time.desc())
+                    .filter(ExcelFile.created_by == user_id)
+                    .order_by(ExcelFile.created_at.desc())
                     .offset(skip)
                     .limit(limit)
                     .all())
@@ -169,7 +169,7 @@ class ExcelMetadataService:
         """Get Excel file by ID and user ID."""
         try:
             return (self.db.query(ExcelFile)
-                   .filter(ExcelFile.id == file_id, ExcelFile.user_id == user_id)
+                   .filter(ExcelFile.id == file_id, ExcelFile.created_by == user_id)
                    .first())
         except Exception as e:
             logger.error(f"Error getting file {file_id} for user {user_id}: {str(e)}")

@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from .base import BaseTool, ToolRegistry, ToolResult
-from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool   
+from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool, PostgreSQLMCPTool
 from ...core.config import get_settings
 from ...utils.logger import get_logger
 from ..agent_config import AgentConfigService
@@ -79,7 +79,9 @@ class LangChainToolWrapper(LangChainBaseTool):
 
 class AgentConfig(BaseModel):
     """Agent configuration."""
-    enabled_tools: List[str] = Field(default_factory=lambda: ["calculator", "weather", "search", "datetime", "file", "generate_image"])
+    enabled_tools: List[str] = Field(default_factory=lambda: [
+        "calculator", "weather", "search", "datetime", "file", "generate_image", "postgresql_mcp"
+    ])
     max_iterations: int = Field(default=10)
     temperature: float = Field(default=0.1)
     system_message: str = Field(
@@ -103,6 +105,10 @@ class AgentService:
         self._initialize_tools()
         self._load_config()
         
+    # 在导入部分添加
+    from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool, PostgreSQLMCPTool
+    
+    # 在_initialize_tools方法中添加
     def _initialize_tools(self):
         """Initialize and register all available tools."""
         tools = [
@@ -111,7 +117,8 @@ class AgentService:
             SearchTool(),
             DateTimeTool(),
             FileTool(),
-            GenerateImageTool()
+            GenerateImageTool(),
+            PostgreSQLMCPTool()  # 添加PostgreSQL MCP工具
         ]
         
         for tool in tools:

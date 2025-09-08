@@ -17,6 +17,10 @@ from chat_agent.core.app import create_app
 # Create FastAPI application using factory function
 app = create_app()
 
+# 在 main.py 中添加表元数据路由
+
+
+
 if __name__ == "__main__":
     import uvicorn
     import argparse

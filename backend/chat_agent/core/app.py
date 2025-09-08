@@ -14,6 +14,7 @@ from .logging import setup_logging
 from .middleware import UserContextMiddleware
 from ..api.routes import router
 from ..db.database import init_db
+from ..api.endpoints import table_metadata
 
 
 @asynccontextmanager
@@ -56,7 +57,15 @@ def create_app(settings: Settings = None) -> FastAPI:
     
     # Include routers
     app.include_router(router, prefix="/api")
-    
+
+
+
+    app.include_router(table_metadata.router)
+    # 在现有导入中添加
+    from ..api.endpoints import database_config
+
+    # 在路由注册部分添加
+    app.include_router(database_config.router)
     # Health check endpoint
     @app.get("/health")
     async def health_check():

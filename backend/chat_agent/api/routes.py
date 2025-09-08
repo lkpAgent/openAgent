@@ -20,6 +20,9 @@ from .endpoints import smart_query
 from .endpoints import smart_chat
 from .endpoints import smart_chat_stream
 
+from .endpoints import database_config
+from .endpoints import table_metadata
+
 router.include_router(
     auth.router,
     prefix="/auth",
@@ -45,6 +48,18 @@ router.include_router(
 router.include_router(
     smart_chat_stream.router,
     tags=["smart-chat-stream"]
+)
+
+
+
+router.include_router(
+    database_config.router,
+    tags=["database-config"]
+)
+
+router.include_router(
+    table_metadata.router,
+    tags=["table-metadata"]
 )
 
 # router.include_router(

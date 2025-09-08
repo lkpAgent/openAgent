@@ -16,13 +16,22 @@ from langchain.llms import OpenAI
 from langchain_community.chat_models import ChatZhipuAI
 from langchain.schema import HumanMessage
 
+# 在 SmartQueryService 类中添加方法
+
+from .table_metadata_service import TableMetadataService
+
 class SmartQueryService:
     """
     智能问数服务基类
     """
     def __init__(self):
         self.executor = ThreadPoolExecutor(max_workers=4)
-        
+        self.table_metadata_service = None
+    
+    def set_db_session(self, db_session):
+        """设置数据库会话"""
+        self.table_metadata_service = TableMetadataService(db_session)
+    
     async def _run_in_executor(self, func, *args):
         """在线程池中运行阻塞函数"""
         loop = asyncio.get_event_loop()
@@ -626,3 +635,97 @@ class DatabaseQueryService(SmartQueryService):
             
         except Exception as e:
             return f"查询已完成，但生成总结时出现错误: {str(e)}"
+
+    # 在 SmartQueryService 类中添加方法
+    
+    from .table_metadata_service import TableMetadataService
+    
+    class SmartQueryService:
+        def __init__(self):
+            super().__init__()
+            self.table_metadata_service = None
+        
+        def set_db_session(self, db_session):
+            """设置数据库会话"""
+            self.table_metadata_service = TableMetadataService(db_session)
+        
+        async def get_database_context(self, user_id: int, query: str) -> str:
+            """获取数据库上下文信息用于问答"""
+            if not self.table_metadata_service:
+                return ""
+            
+            try:
+                # 获取用户的表元数据
+                table_metadata_list = self.table_metadata_service.get_user_table_metadata(user_id)
+                
+                if not table_metadata_list:
+                    return ""
+                
+                # 构建数据库上下文
+                context_parts = []
+                context_parts.append("=== 数据库表信息 ===")
+                
+                for metadata in table_metadata_list:
+                    table_info = []
+                    table_info.append(f"表名: {metadata.table_name}")
+                    
+                    if metadata.table_comment:
+                        table_info.append(f"表描述: {metadata.table_comment}")
+                    
+                    if metadata.qa_description:
+                        table_info.append(f"业务说明: {metadata.qa_description}")
+                    
+                    # 添加列信息
+                    if metadata.columns_info:
+                        columns = []
+                        for col in metadata.columns_info:
+                            col_desc = f"{col['column_name']} ({col['data_type']})"
+                            if col.get('column_comment'):
+                                col_desc += f" - {col['column_comment']}"
+                            columns.append(col_desc)
+                        table_info.append(f"字段: {', '.join(columns)}")
+                    
+                    # 添加示例数据
+                    if metadata.sample_data:
+                        table_info.append(f"示例数据: {metadata.sample_data[:2]}")
+                    
+                    table_info.append(f"总行数: {metadata.row_count}")
+                    
+                    context_parts.append("\n".join(table_info))
+                    context_parts.append("---")
+                
+                return "\n".join(context_parts)
+                
+            except Exception as e:
+                logger.error(f"获取数据库上下文失败: {str(e)}")
+                return ""
+        
+        async def execute_smart_query(self, query: str, user_id: int, **kwargs) -> Dict[str, Any]:
+            """执行智能查询（集成表元数据）"""
+            try:
+                # 获取数据库上下文
+                db_context = await self.get_database_context(user_id, query)
+                
+                # 构建增强的提示词
+                enhanced_prompt = f"""
+    {db_context}
+    
+    用户问题: {query}
+    
+    请基于上述数据库表信息，生成相应的SQL查询语句。
+    注意：
+    1. 使用准确的表名和字段名
+    2. 考虑数据类型和约束
+    3. 参考示例数据理解数据格式
+    4. 生成高效的查询语句
+    """
+                
+                # 调用原有的查询逻辑
+                return await super().execute_smart_query(enhanced_prompt, user_id, **kwargs)
+                
+            except Exception as e:
+                logger.error(f"智能查询失败: {str(e)}")
+                return {
+                    'success': False,
+                    'message': f"查询失败: {str(e)}"
+                }

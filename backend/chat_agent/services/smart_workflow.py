@@ -59,23 +59,15 @@ class SmartWorkflowManager:
         llm_config = settings.llm.get_current_config()
         
         # 根据配置动态选择LLM服务
-        if settings.llm.provider == "zhipu":
-            self.llm = ChatZhipuAI(
-                model=llm_config["model"],
-                api_key=llm_config["api_key"],
-                temperature=llm_config["temperature"],
-                streaming=False  # 禁用流式响应，避免pandas代理兼容性问题
-            )
-        else:
-            # 使用ChatOpenAI兼容其他提供商
-            self.llm = ChatOpenAI(
-                model=llm_config["model"],
-                api_key=llm_config["api_key"],
-                base_url=llm_config["base_url"],
-                temperature=llm_config["temperature"],
-                max_tokens=llm_config["max_tokens"],
-                streaming=False  # 禁用流式响应，避免pandas代理兼容性问题
-            )
+        # 使用ChatOpenAI兼容其他提供商
+        self.llm = ChatOpenAI(
+            model=llm_config["model"],
+            api_key=llm_config["api_key"],
+            base_url=llm_config["base_url"],
+            temperature=llm_config["temperature"],
+            max_tokens=llm_config["max_tokens"],
+            streaming=False  # 禁用流式响应，避免pandas代理兼容性问题
+        )
         
     async def _run_in_executor(self, func, *args):
         """在线程池中运行阻塞函数"""
@@ -721,7 +713,7 @@ class SmartWorkflowManager:
                 logger.warning("metadata_service未初始化，跳过数据库文件查询")
             
             # 检查持久化目录中的文件
-            persistent_dir = os.path.join("backend", "data", f"excel_{user_id}")
+            persistent_dir = os.path.join("backend", "data", 'uploads', f"excel_{user_id}")
             persistent_files = []
             if os.path.exists(persistent_dir):
                 persistent_files = [f for f in os.listdir(persistent_dir) 
@@ -745,7 +737,7 @@ class SmartWorkflowManager:
                     'row_count': row_count,
                     'column_count': column_count,
                     'description': f'Excel文件，包含{str(len(metadata.sheet_names))}个工作表' if metadata.sheet_names else '',
-                    'upload_time': metadata.upload_time.isoformat() if metadata.upload_time else None
+                    'created_at': metadata.created_at.isoformat() if metadata.created_at else None
                 }
                 file_list.append(file_info)
             
@@ -1098,7 +1090,7 @@ class SmartWorkflowManager:
             
             # 构建系统提示
             system_prompt = f"""
-                    你可以访问以下pandas数据框:
+                    你可以访问以python_tool里的locals里的pandas数据，pandas的基本信息与列名信息如下：
                     {chr(10).join(dataset_info)}
                     
                     请根据用户提出的问题，编写Python代码来回答。要求：
@@ -1176,7 +1168,7 @@ class SmartWorkflowManager:
                         data = table_data['data']
                         columns = table_data['columns']
                         total = 1
-                        result_type = 'markdown_table'
+                        result_type = 'table_data'
                         parse_result = table_data
                     elif ('rows' in result_lines[-1] and 'columns' in result_lines[-1]):
                         # 尝试解析DataFrame字符串为表格数据

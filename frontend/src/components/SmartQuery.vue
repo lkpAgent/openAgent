@@ -111,10 +111,13 @@
                 <div class="connection-section">
                   <h4>数据库配置</h4>
                   <el-form :model="dbConfig" label-width="60px" size="small">
+                    <el-form-item label="配置名">
+                      <el-input v-model="dbConfig.configName" placeholder="输入配置名称（可选）" />
+                    </el-form-item>
                     <el-form-item label="类型">
                       <el-select v-model="dbConfig.type" placeholder="选择数据库类型">
-                        <el-option label="MySQL" value="mysql" />
                         <el-option label="PostgreSQL" value="postgresql" />
+                        <el-option label="MySQL" value="mysql" />
                         <el-option label="SQLite" value="sqlite" />
                         <el-option label="SQL Server" value="sqlserver" />
                       </el-select>
@@ -135,18 +138,37 @@
                       <el-input v-model="dbConfig.password" type="password" placeholder="密码" show-password />
                     </el-form-item>
                     <el-form-item>
-                      <el-button type="primary" @click="testConnection" :loading="testingConnection" size="small">
-                        测试连接
-                      </el-button>
-                      <el-button @click="connectDatabase" :disabled="!connectionValid" size="small">
-                        连接
-                      </el-button>
+                      <div class="button-group">
+                        <el-button @click="testConnection" size="small" :loading="testingConnection">
+                          <el-icon><Connection /></el-icon>
+                          测试连接
+                        </el-button>
+                        <el-button @click="connectDatabase" size="small">
+                          连接
+                        </el-button>
+                        <el-button type="success" @click="saveDbConfig" :loading="savingConfig" size="small">
+                          <el-icon><Check /></el-icon>
+                          保存配置
+                        </el-button>
+                      </div>
                     </el-form-item>
                   </el-form>
                 </div>
 
                 <div class="table-list-section">
-                  <h4>数据库表列表</h4>
+                  <div class="table-list-header">
+                    <h4>数据库表列表</h4>
+                    <el-button 
+                      v-if="dbConnected"
+                      type="primary" 
+                      size="small" 
+                      @click="collectTableMetadata"
+                      :loading="collectingMetadata"
+                    >
+                      <el-icon><Collection /></el-icon>
+                      收集表元数据
+                    </el-button>
+                  </div>
                   <div v-if="!dbConnected" class="empty-list">
                     <el-empty description="请先连接数据库" :image-size="60" />
                   </div>
@@ -165,6 +187,54 @@
                       <div class="table-info">
                         <div class="table-name">{{ table }}</div>
                         <div class="table-meta">数据表</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="table-metadata-section" v-if="dbConnected && tableMetadataList.length > 0">
+                  <div class="metadata-header">
+                    <h4>表元数据管理</h4>
+                    <el-button 
+                      size="small" 
+                      @click="refreshTableMetadata"
+                      :loading="loadingMetadata"
+                    >
+                      <el-icon><RefreshLeft /></el-icon>
+                      刷新列表
+                    </el-button>
+                  </div>
+                  
+                  <div class="metadata-list">
+                    <div v-if="loadingMetadata" class="loading-list">
+                      <el-skeleton :rows="3" animated />
+                    </div>
+                    <div v-else class="metadata-items">
+                      <div 
+                        v-for="metadata in tableMetadataList" 
+                        :key="metadata.id"
+                        class="metadata-item"
+                        :class="{ active: selectedMetadata?.id === metadata.id }"
+                        @click="selectMetadata(metadata)"
+                      >
+                        <el-icon class="metadata-icon"><DataAnalysis /></el-icon>
+                        <div class="metadata-info">
+                          <div class="metadata-name">{{ metadata.table_name }}</div>
+                          <div class="metadata-meta">
+                            <span>{{ metadata.column_count }}列</span>
+                            <span>{{ formatDate(metadata.created_at) }}</span>
+                          </div>
+                        </div>
+                        <div class="metadata-actions">
+                          <el-button 
+                            size="small" 
+                            type="primary" 
+                            text 
+                            @click.stop="editMetadataSettings(metadata)"
+                          >
+                            <el-icon><Setting /></el-icon>
+                          </el-button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -260,10 +330,10 @@
         </div>
       </div>
       
-      <!-- 右侧智能问答区域 -->
+      <!-- 右侧智能查询区域 -->
        <div class="chat-panel" :class="{ 'chat-panel-compact': isCollapsed, 'chat-panel-expanded': isChatCollapsed }">
          <div class="chat-header">
-  <h3>智能数据问答</h3>
+  <h3>智能查询</h3>
   <div class="chat-actions">
     <el-button size="small" @click="clearChat">
       <el-icon><Delete /></el-icon>
@@ -456,6 +526,65 @@
 
     </div>
   </div>
+
+  <!-- 问答设置编辑对话框 -->
+  <el-dialog
+    v-model="qaSettingsDialogVisible"
+    :title="`编辑表 ${currentEditingMetadata?.table_name || ''} 的问答设置`"
+    width="600px"
+    :before-close="cancelQASettings"
+    class="qa-settings-dialog"
+  >
+    <div class="qa-settings-form">
+      <el-form :model="qaSettingsForm" label-width="120px" label-position="top">
+        <el-form-item label="启用问答">
+          <el-switch
+            v-model="qaSettingsForm.is_enabled_for_qa"
+            active-text="启用"
+            inactive-text="禁用"
+            active-color="#13ce66"
+            inactive-color="#ff4949"
+          />
+        </el-form-item>
+        
+        <el-form-item label="问答描述">
+          <el-input
+            v-model="qaSettingsForm.qa_description"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入该表的业务说明和用途描述，例如：
+            • 用户信息表：存储系统用户的基本信息，包括姓名、邮箱、注册时间等
+            • 订单表：记录用户购买商品的订单信息，包含订单号、商品、金额、状态等
+            • 产品表：管理商品信息，包括名称、价格、库存、分类等"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        
+        <el-form-item label="业务上下文">
+          <el-input
+            v-model="qaSettingsForm.business_context"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入表的业务背景和使用场景，例如：
+            • 该表用于电商系统的用户管理模块
+            • 支持用户注册、登录、个人信息维护等功能
+            • 与订单表、购物车表等有关联关系
+            • 数据更新频率较高，主要在用户操作时更新"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+    </div>
+    
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="cancelQASettings">取消</el-button>
+        <el-button type="primary" @click="saveQASettings">保存</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -480,7 +609,10 @@ import {
   Loading,
   Check,
   Close,
-  Clock
+  Clock,
+  Collection,
+  Setting,
+  Connection
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import MarkdownIt from 'markdown-it'
@@ -517,10 +649,21 @@ const uploadHeaders = computed(() => ({
 }))
 
 // 数据库相关
+// 数据库配置相关
+const savingConfig = ref(false)
+const loadingConfig = ref(false)
+const savedConfigs = ref([])
+const selectedConfig = ref(null)
+const isConnecting = ref(false) // 添加这行
+
+// 修改dbConfig结构，添加配置名称
+const isConnected = ref(false) // 添加数据库连接状态
+
 const dbConfig = ref({
-  type: 'mysql',
+  configName: '',
+  type: 'postgresql',
   host: 'localhost',
-  port: '3306',
+  port: '5432',
   database: '',
   username: '',
   password: ''
@@ -529,8 +672,15 @@ const testingConnection = ref(false)
 const connectionValid = ref(false)
 const dbConnected = ref(false)
 const dbTables = ref([])
+const tables = ref([]) // 如果模板中使用了tables变量，添加这行
 const selectedTable = ref('')
 const tableSchema = ref(null)
+
+// 表元数据管理相关
+const tableMetadataList = ref([])
+const selectedMetadata = ref(null)
+const collectingMetadata = ref(false)
+const loadingMetadata = ref(false)
 
 // 数据预览相关
 const previewData = ref(null)
@@ -775,24 +925,39 @@ const loadFilePreview = async (file: any) => {
 const loadTablePreview = async (table: string) => {
   previewLoading.value = true
   try {
-    // 这里应该调用API获取表格预览数据
-    // 暂时使用模拟数据
-    setTimeout(() => {
-      previewData.value = {
-        rows: 200,
-        columns: 4,
-        column_names: ['ID', '用户名', '邮箱', '创建时间'],
-        data: [
-          { 'ID': 1, '用户名': 'admin', '邮箱': 'admin@example.com', '创建时间': '2023-01-01' },
-          { 'ID': 2, '用户名': 'user1', '邮箱': 'user1@example.com', '创建时间': '2023-01-02' },
-          { 'ID': 3, '用户名': 'user2', '邮箱': 'user2@example.com', '创建时间': '2023-01-03' }
-        ],
-        total: 200
+    // 调用后端API获取表格预览数据
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/tables/${encodeURIComponent(table)}/data?limit=100`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
-      previewLoading.value = false
-    }, 1000)
+    })
+    
+    const result = await response.json()
+    
+    if (result.success && result.data) {
+      // 转换API返回的数据格式为前端预览组件需要的格式
+      const tableData = result.data
+      
+      previewData.value = {
+        rows: tableData.total_rows || tableData.data?.length || 0,
+        columns: tableData.columns?.length || 0,
+        column_names: tableData.columns || [],
+        data: tableData.data || [],
+        total: tableData.total_rows || tableData.data?.length || 0
+      }
+      
+      ElMessage.success('表格预览加载成功')
+    } else {
+      ElMessage.error(result.message || '加载表格预览失败')
+      // 如果API调用失败，清空预览数据
+      previewData.value = null
+    }
   } catch (error) {
+    console.error('加载表格预览失败:', error)
     ElMessage.error('加载表格预览失败')
+    previewData.value = null
+  } finally {
     previewLoading.value = false
   }
 }
@@ -986,29 +1151,346 @@ const testConnection = async () => {
   }
 }
 
-const connectDatabase = async () => {
+// 保存数据库配置
+const saveDbConfig = async () => {
+  if (!dbConfig.value.configName?.trim()) {
+    ElMessage.warning('请输入配置名称')
+    return
+  }
+  
+  savingConfig.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/connect-database`, {
+    const configData = {
+      name: dbConfig.value.configName,
+      db_type: dbConfig.value.type,
+      host: dbConfig.value.host,
+      port: parseInt(dbConfig.value.port),
+      database: dbConfig.value.database,
+      username: dbConfig.value.username,
+      password: dbConfig.value.password,
+      is_default: false
+    }
+    
+    // 使用现有的database-config API
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       },
-      body: JSON.stringify(dbConfig.value)
+      body: JSON.stringify(configData)
+    })
+    
+    const result = await response.json()
+    if (response.ok) {
+      ElMessage.success('数据库配置保存成功')
+      await loadSavedConfigs() // 重新加载配置列表
+    } else {
+      ElMessage.error(result.detail || '保存配置失败')
+    }
+  } catch (error) {
+    console.error('保存数据库配置失败:', error)
+    ElMessage.error('保存配置失败')
+  } finally {
+    savingConfig.value = false
+  }
+}
+
+// 加载数据库配置
+const loadDbConfig = async (configId) => {
+  try {
+    loadingConfig.value = true
+    await loadSavedConfigs()
+    
+    // 将局部变量改为响应式变量赋值
+    selectedConfig.value = savedConfigs.value.find(config => config.id === configId)
+    if (selectedConfig.value) {
+      dbConfig.value = {
+        type: selectedConfig.value.db_type,
+        host: selectedConfig.value.host,
+        port: selectedConfig.value.port,
+        database: selectedConfig.value.database,
+        username: selectedConfig.value.username,
+        password: '', // 密码不回填
+        configName: selectedConfig.value.config_name
+      }
+      ElMessage.success(`已加载配置: ${selectedConfig.value.config_name}`)
+      return true
+    }
+  } catch (error) {
+    console.error('加载配置失败:', error)
+    ElMessage.error('加载配置失败')
+    return false
+  } finally {
+    loadingConfig.value = false
+  }
+}
+
+// 加载保存的配置列表
+const loadSavedConfigs = async () => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+    
+    if (response.ok) {
+      const configs = await response.json()
+      savedConfigs.value = configs.map(config => ({
+        id: config.id,
+        config_name: config.name,
+        db_type: config.db_type,
+        host: config.host,
+        port: config.port.toString(),
+        database: config.database,
+        username: config.username,
+        created_at: config.created_at
+      }))
+    }
+  } catch (error) {
+    console.error('加载配置列表失败:', error)
+  }
+}
+
+// 加载指定类型的配置
+const loadConfigByType = async (dbType) => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/by-type/${dbType}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+    
+    if (response.ok) {
+      const config = await response.json()
+      // 设置selectedConfig
+      selectedConfig.value = {
+        id: config.id,
+        db_type: config.db_type,
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        username: config.username,
+        config_name: config.name
+      }
+      
+      // 自动填充所有配置，包括密码
+      dbConfig.value = {
+        ...dbConfig.value,
+        type: dbType,
+        configName: config.name,
+        host: config.host,
+        port: config.port.toString(),
+        database: config.database,
+        username: config.username,
+        password: config.password
+      }
+      return true
+    } else if (response.status === 404) {
+      // 没有找到该类型的配置时，清空selectedConfig
+      selectedConfig.value = null
+      
+      // 使用默认值
+      const defaultPorts = {
+        'postgresql': '5432',
+        'mysql': '3306',
+        'sqlserver': '1433',
+        'sqlite': ''
+      }
+      
+      dbConfig.value = {
+        ...dbConfig.value,
+        type: dbType,
+        configName: '',
+        host: 'localhost',
+        port: defaultPorts[dbType] || '',
+        database: '',
+        username: '',
+        password: ''
+      }
+      return false
+    }
+  } catch (error) {
+    console.error('加载配置失败:', error)
+    selectedConfig.value = null // 出错时也要清空
+    ElMessage.error('加载配置失败')
+    return false
+  }
+}
+
+// 监听数据库类型变化，自动加载对应配置
+watch(() => dbConfig.value.type, async (newType) => {
+  await loadConfigByType(newType)
+})
+
+const connectDatabase = async () => {
+  if (!selectedConfig.value?.id) {
+    ElMessage.error('请先选择数据库配置');
+    return;
+  }
+  
+  try {
+    isConnecting.value = true;
+    // 修改URL路径，使用database-config的接口
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/${selectedConfig.value.id}/connect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+      // 不需要body，config_id已经在URL路径中
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+        isConnected.value = true;
+        dbConnected.value = true;  // 添加这一行
+        // 从对象数组中提取表名
+        const tableList = result.data.tables || [];
+        dbTables.value = tableList.map(table => table.table_name);
+        ElMessage.success('数据库连接成功');
+    } else {
+      ElMessage.error(result.message || '连接失败');
+    }
+  } catch (error) {
+    ElMessage.error('连接失败: ' + error.message);
+  } finally {
+    isConnecting.value = false; // 连接完成，设置为false 
+  }
+}
+
+// 表元数据管理相关方法
+const collectTableMetadata = async () => {
+  if (!selectedConfig.value?.id) {
+    ElMessage.error('请先连接数据库')
+    return
+  }
+  
+  if (!dbTables.value || dbTables.value.length === 0) {
+    ElMessage.error('没有可收集的表，请先连接数据库获取表列表')
+    return
+  }
+  
+  collectingMetadata.value = true
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/collect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+      body: JSON.stringify({
+        database_config_id: selectedConfig.value.id,
+        table_names: dbTables.value
+      })
     })
     
     const result = await response.json()
     if (result.success) {
-      dbConnected.value = true
-      dbTables.value = result.data.tables
-      ElMessage.success('数据库连接成功')
-      updateQuerySuggestions()
+      ElMessage.success(`成功收集了 ${result.total_collected} 个表的元数据`)
+      await refreshTableMetadata()
     } else {
-      ElMessage.error(result.message || '连接失败')
+      ElMessage.error(result.message || '收集表元数据失败')
     }
   } catch (error) {
-    ElMessage.error('连接失败')
+    console.error('收集表元数据失败:', error)
+    ElMessage.error('收集表元数据失败')
+  } finally {
+    collectingMetadata.value = false
   }
+}
+
+const refreshTableMetadata = async () => {
+  loadingMetadata.value = true
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+    
+    const result = await response.json()
+    if (result.success) {
+      tableMetadataList.value = result.data.map(metadata => ({
+        id: metadata.id,
+        table_name: metadata.table_name,
+        column_count: metadata.columns?.length || 0,
+        created_at: metadata.created_at,
+        updated_at: metadata.updated_at,
+        qa_settings: metadata.qa_settings
+      }))
+    } else {
+      ElMessage.error(result.message || '加载表元数据失败')
+    }
+  } catch (error) {
+    console.error('加载表元数据失败:', error)
+    ElMessage.error('加载表元数据失败')
+  } finally {
+    loadingMetadata.value = false
+  }
+}
+
+const selectMetadata = (metadata) => {
+  selectedMetadata.value = metadata
+}
+
+// 问答设置编辑对话框相关状态
+const qaSettingsDialogVisible = ref(false)
+const currentEditingMetadata = ref(null)
+const qaSettingsForm = ref({
+  is_enabled_for_qa: true,
+  qa_description: '',
+  business_context: ''
+})
+
+const editMetadataSettings = async (metadata) => {
+  currentEditingMetadata.value = metadata
+  qaSettingsForm.value = {
+    is_enabled_for_qa: metadata.qa_settings?.is_enabled_for_qa ?? true,
+    qa_description: metadata.qa_settings?.qa_description || '',
+    business_context: metadata.qa_settings?.business_context || ''
+  }
+  qaSettingsDialogVisible.value = true
+}
+
+const saveQASettings = async () => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/${currentEditingMetadata.value.id}/qa-settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+      body: JSON.stringify(qaSettingsForm.value)
+    })
+    
+    const result = await response.json()
+    if (result.success) {
+      ElMessage.success('问答设置更新成功')
+      qaSettingsDialogVisible.value = false
+      await refreshTableMetadata()
+    } else {
+      ElMessage.error(result.message || '更新问答设置失败')
+    }
+  } catch (error) {
+    console.error('更新问答设置失败:', error)
+    ElMessage.error('更新问答设置失败')
+  }
+}
+
+const cancelQASettings = () => {
+  qaSettingsDialogVisible.value = false
+  currentEditingMetadata.value = null
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN')
 }
 
 const loadTableSchema = async () => {
@@ -1069,13 +1551,7 @@ const executeQuery = async () => {
   workflowSteps.value = []
   
   try {
-    // 使用新的智能工作流API
-    if (activeDataSource.value === 'excel') {
-      await executeSmartQuery()
-    } else {
-      // 保持原有的数据库查询逻辑
-      await executeDatabaseQuery()
-    }
+    await executeSmartQuery()
   } catch (error) {
     console.error('查询执行失败:', error)
     ElMessage.error('查询执行失败')
@@ -1083,6 +1559,8 @@ const executeQuery = async () => {
     queryLoading.value = false
   }
 }
+
+
 
 // 新的智能工作流查询
 const executeSmartQuery = async () => {
@@ -1351,7 +1829,7 @@ const toggleChatCollapse = () => {
     console.log('DOM更新完成，当前状态:', isChatCollapsed.value)
   })
   
-  ElMessage.success(isChatCollapsed.value ? '已展开智能问答区域' : '已恢复默认布局')
+  ElMessage.success(isChatCollapsed.value ? '已展开智能查询区域' : '已恢复默认布局')
 }
 const visualizeResult = () => {
   ElMessage.info('数据可视化功能开发中')
@@ -1490,10 +1968,24 @@ const formatSummary = (summary: string) => {
   return summary.replace(/\n/g, '<br>')
 }
 
+// 监听数据库类型变化，自动加载对应配置
+watch(() => dbConfig.value.type, async (newType) => {
+  await loadConfigByType(newType)
+})
+
 onMounted(async () => {
   updateQuerySuggestions()
-  // 加载用户的文件列表
-  await loadFileList()
+  loadFileList()
+  // 加载保存的数据库配置
+  await loadSavedConfigs()
+  
+  // 初始化时自动加载默认类型（PostgreSQL）的配置
+  if (dbConfig.value.type === 'postgresql') {
+    await loadConfigByType('postgresql')
+  }
+  
+  // 初始化表元数据列表
+  await refreshTableMetadata()
 })
 </script>
 
@@ -1577,7 +2069,7 @@ onMounted(async () => {
   width: 400px !important;
 }
 
-/* 展开模式下的右侧面板（智能问答展开时） */
+/* 展开模式下的右侧面板（智能查询展开时） */
 .chat-panel-expanded {
   width: 60% !important;
   transition: width 0.3s ease;
@@ -1588,7 +2080,7 @@ onMounted(async () => {
   width: 240px;
 }
 
-/* 展开模式下缩小其他面板（智能问答展开时） */
+/* 展开模式下缩小其他面板（智能查询展开时） */
 .query-content:has(.chat-panel-expanded) .data-source-panel {
   width: 200px !important;
   transition: width 0.3s ease;
@@ -2141,7 +2633,7 @@ onMounted(async () => {
 }
 
 :deep(.el-form-item__label) {
-  color: #e4e7ed;
+  color: #606266;
 }
 
 :deep(.el-input__wrapper) {
@@ -2767,5 +3259,250 @@ onMounted(async () => {
     width: 100%;
     height: 300px;
   }
+}
+
+/* 按钮组样式 */
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 修复按钮组表单项的左边距 */
+:deep(.el-form-item:has(.button-group) .el-form-item__content) {
+  margin-left: 0 !important;
+}
+
+/* 表列表标题样式 */
+.table-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.table-list-header h4 {
+  margin: 0;
+  color: #e4e7ed;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 表元数据管理样式 */
+.table-metadata-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #334155;
+}
+
+.metadata-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.metadata-header h4 {
+  margin: 0;
+  color: #e4e7ed;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.metadata-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.metadata-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.metadata-item {
+  padding: 12px;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.metadata-item:hover {
+  background: #475569;
+  border-color: #409eff;
+}
+
+.metadata-item.selected {
+  background: #1e3a8a;
+  border-color: #409eff;
+}
+
+/* 问答设置对话框样式 */
+:deep(.qa-settings-dialog) {
+  .el-dialog {
+    background: #1e293b;
+    border: 1px solid #334155;
+  }
+  
+  .el-dialog__header {
+    background: #334155;
+    border-bottom: 1px solid #475569;
+    padding: 16px 20px;
+  }
+  
+  .el-dialog__title {
+    color: #e4e7ed;
+    font-weight: 600;
+  }
+  
+  .el-dialog__body {
+    padding: 20px;
+    background: #1e293b;
+  }
+  
+  .el-dialog__footer {
+    background: #334155;
+    border-top: 1px solid #475569;
+    padding: 16px 20px;
+  }
+}
+
+.qa-settings-form {
+  .el-form-item__label {
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  
+  .el-form-item {
+     color: #e4e7ed !important;
+   }
+  
+  .el-form-item .el-form-item__content {
+    color: #e4e7ed !important;
+  }
+  
+  .el-input__wrapper {
+    background: #334155 !important;
+    border: 1px solid #475569 !important;
+    box-shadow: none !important;
+  }
+  
+  .el-input__inner {
+    color: #e4e7ed !important;
+    background: transparent !important;
+  }
+  
+  .el-input__wrapper:hover {
+    border-color: #409eff !important;
+  }
+  
+  .el-input__wrapper.is-focus {
+    border-color: #409eff !important;
+    box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.2) !important;
+  }
+  
+  .el-textarea__inner {
+    background: #334155 !important;
+    border: 1px solid #475569 !important;
+    color: #e4e7ed !important;
+    resize: vertical;
+  }
+  
+  .el-textarea__inner:hover {
+    border-color: #409eff !important;
+  }
+  
+  .el-textarea__inner:focus {
+    border-color: #409eff !important;
+    box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.2) !important;
+  }
+  
+  .el-input__count {
+    color: #94a3b8 !important;
+    background: transparent !important;
+  }
+  
+  .el-switch__label {
+    color: #e4e7ed !important;
+  }
+  
+  .el-switch__label.is-active {
+    color: #13ce66 !important;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  
+  .el-button {
+    padding: 8px 16px;
+  }
+  
+  .el-button--primary {
+    background: #409eff;
+    border-color: #409eff;
+  }
+  
+  .el-button--primary:hover {
+    background: #66b1ff;
+    border-color: #66b1ff;
+  }
+}
+
+.metadata-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.metadata-table-name {
+  font-weight: 600;
+  color: #e4e7ed;
+  font-size: 13px;
+}
+
+.metadata-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #10b981;
+  color: white;
+}
+
+.metadata-info {
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metadata-description {
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.metadata-updated {
+  color: #64748b;
+}
+
+.empty-metadata {
+  text-align: center;
+  padding: 40px 20px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.loading-metadata {
+  text-align: center;
+  padding: 20px;
+  color: #909399;
 }
 </style>

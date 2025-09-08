@@ -3,8 +3,7 @@ from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any, List
 import pandas as pd
-import io
-import json
+from chat_agent.utils.schemas import FileListResponse,ExcelPreviewRequest,NormalResponse
 import os
 import tempfile
 import logging
@@ -12,6 +11,7 @@ from datetime import datetime
 
 from chat_agent.db.database import get_db
 from chat_agent.services.auth import AuthService
+from chat_agent.services.database_config_service import DatabaseConfigService
 from chat_agent.utils.schemas import BaseResponse
 from chat_agent.services.smart_query import (
     SmartQueryService,
@@ -59,20 +59,6 @@ class QueryResponse(BaseModel):
     message: str
     data: Optional[Dict[str, Any]] = None
 
-# 通用返回结构
-class NormalResponse(BaseModel):
-    success: bool
-    message: str
-
-class ExcelPreviewRequest(BaseModel):
-    file_id: str
-    page: int = 1
-    page_size: int = 20
-
-class FileListResponse(BaseModel):
-    success: bool
-    message: str
-    data: Optional[Dict[str, Any]] = None
 
 @router.post("/upload-excel", response_model=ExcelUploadResponse)
 async def upload_excel(
@@ -167,7 +153,6 @@ async def upload_excel(
             'original_filename': file.filename,
             'file_size_mb': excel_file.file_size_mb,
             'sheet_names': excel_file.sheet_names,
-            'upload_time': excel_file.upload_time.isoformat() if excel_file.upload_time else None
         })
         
         return ExcelUploadResponse(
@@ -267,7 +252,7 @@ async def preview_excel(
             detail=f"预览文件失败: {str(e)}"
         )
 
-@router.post("/test-db-connection", response_model=BaseResponse)
+@router.post("/test-db-connection", response_model=NormalResponse)
 async def test_database_connection(
     config: DatabaseConfig,
     current_user = Depends(AuthService.get_current_user)
@@ -280,51 +265,31 @@ async def test_database_connection(
         is_connected = await db_service.test_connection(config.dict())
         
         if is_connected:
-            return BaseResponse(
+            return NormalResponse(
                 success=True,
                 message="数据库连接测试成功"
             )
         else:
-            return BaseResponse(
+            return NormalResponse(
                 success=False,
                 message="数据库连接测试失败"
             )
             
     except Exception as e:
-        return BaseResponse(
+        return NormalResponse(
             success=False,
             message=f"连接测试失败: {str(e)}"
         )
 
-@router.post("/connect-database", response_model=QueryResponse)
-async def connect_database(
-    config: DatabaseConfig,
-    current_user = Depends(AuthService.get_current_user)
-):
-    """
-    连接数据库并获取表列表
-    """
-    try:
-        db_service = DatabaseQueryService()
-        connection_result = await db_service.connect_database(config.dict(), current_user.id)
-        
-        if connection_result['success']:
-            return QueryResponse(
-                success=True,
-                message="数据库连接成功",
-                data=connection_result['data']
-            )
-        else:
-            return QueryResponse(
-                success=False,
-                message=connection_result['message']
-            )
-            
-    except Exception as e:
-        return QueryResponse(
-            success=False,
-            message=f"数据库连接失败: {str(e)}"
-        )
+# 删除第285-314行的connect_database方法
+# @router.post("/connect-database", response_model=QueryResponse)
+# async def connect_database(
+#     config_id: int,
+#     current_user = Depends(AuthService.get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     """连接数据库并获取表列表"""
+#     ... (整个方法都删除)
 
 @router.post("/table-schema", response_model=QueryResponse)
 async def get_table_schema(
@@ -492,7 +457,6 @@ async def get_file_list(
                 'file_type': file.file_type,
                 'sheet_names': file.sheet_names,
                 'sheet_count': file.sheet_count,
-                'upload_time': file.upload_time.isoformat() if file.upload_time else None,
                 'last_accessed': file.last_accessed.isoformat() if file.last_accessed else None,
                 'is_processed': file.is_processed,
                 'processing_error': file.processing_error

@@ -20,10 +20,15 @@ class BaseModel(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     created_by = Column(Integer, nullable=True)
     updated_by = Column(Integer, nullable=True)
-    
+
+    def __init__(self, **kwargs):
+        """Initialize ExcelFile and automatically set audit fields."""
+        super().__init__(**kwargs)
+        # Automatically set audit fields when creating new instance
+        self.set_audit_fields()
     def set_audit_fields(self, user_id: Optional[int] = None, is_update: bool = False):
         """Set audit fields for create/update operations.
-        
+
         Args:
             user_id: ID of the user performing the operation (optional, will use context if not provided)
             is_update: True for update operations, False for create operations
@@ -36,11 +41,11 @@ class BaseModel(Base):
             except Exception:
                 # If no user in context, skip setting audit fields
                 return
-        
+
         # Skip if still no user_id
         if user_id is None:
             return
-            
+
         if not is_update:
             # For create operations, set both create_by and update_by
             self.created_by = user_id

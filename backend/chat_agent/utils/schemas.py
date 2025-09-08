@@ -272,3 +272,18 @@ class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
     code: Optional[str] = None
+
+# 通用返回结构
+class NormalResponse(BaseModel):
+    success: bool
+    message: str
+
+class ExcelPreviewRequest(BaseModel):
+    file_id: str
+    page: int = 1
+    page_size: int = 20
+
+class FileListResponse(BaseModel):
+    success: bool
+    message: str
+    data: Optional[Dict[str, Any]] = None

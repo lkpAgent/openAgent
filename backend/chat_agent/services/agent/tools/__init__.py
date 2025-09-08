@@ -6,6 +6,7 @@ from .search import SearchTool
 from .datetime_tool import DateTimeTool
 from .file_tool import FileTool
 from .generate_image import GenerateImageTool
+from .postgresql_mcp import PostgreSQLMCPTool
 
 # Try to import decorated tools if available
 try:
@@ -26,6 +27,7 @@ __all__ = [
     'DateTimeTool',
     'GenerateImageTool',
     'FileTool',
+    'PostgreSQLMCPTool',
     'DECORATED_TOOLS',
     'LANGCHAIN_NATIVE_TOOLS'
 ]

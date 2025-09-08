@@ -198,7 +198,7 @@ const isCollapsed = ref(false)
 const upperNavItems = [
   {
     key: 'chat',
-    label: '智能问答',
+    label: '智能聊天',
     icon: 'ChatDotRound',
     route: '/chat'
   },
@@ -281,7 +281,7 @@ const setActiveModule = (moduleKey: string) => {
   const allNavItems = [...upperNavItems, ...lowerNavItems]
   const navItem = allNavItems.find(item => item.key === moduleKey)
   if (navItem && navItem.route) {
-    // 切换到智能问答时清空当前会话
+    // 切换到智能聊天时清空当前会话
     if (moduleKey === 'chat') {
       chatStore.clearCurrentConversation()
     }
