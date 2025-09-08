@@ -330,45 +330,16 @@ async def get_table_schema(
             success=False,
             message=f"获取表结构失败: {str(e)}"
         )
-
-@router.post("/execute-excel-query2", response_model=QueryResponse)
-async def execute_excel_query(
-    request: QueryRequest,
-    current_user = Depends(AuthService.get_current_user)
-):
-    """
-    执行Excel数据查询
-    """
-    try:
-        excel_service = ExcelAnalysisService()
-        query_result = await excel_service.execute_natural_language_query(
-            request.query,
-            current_user.id,
-            page=request.page,
-            page_size=request.page_size
-        )
-
-        if query_result['success']:
-            return QueryResponse(
-                success=True,
-                message="Excel查询执行成功",
-                data=query_result['data']
-            )
-        else:
-            return QueryResponse(
-                success=False,
-                message=query_result['message']
-            )
-
-    except Exception as e:
-        return QueryResponse(
-            success=False,
-            message=f"Excel查询执行失败: {str(e)}"
-        )
-
+ 
 
 class StreamQueryRequest(BaseModel):
     query: str
+    conversation_id: Optional[int] = None
+    is_new_conversation: bool = False
+
+class DatabaseStreamQueryRequest(BaseModel):
+    query: str
+    database_config_id: int
     conversation_id: Optional[int] = None
     is_new_conversation: bool = False
 
@@ -431,7 +402,7 @@ async def stream_smart_query(
                     logger.warning(f"保存用户消息失败: {e}")
 
             # 执行智能查询工作流（带流式推送）
-            async for step_data in workflow_manager.process_smart_query_stream(
+            async for step_data in workflow_manager.process_excel_query_stream(
                     user_query=request.query,
                     user_id=current_user.id,
                     conversation_id=conversation_id,
@@ -478,7 +449,7 @@ async def stream_smart_query(
             # 清理资源
             if workflow_manager:
                 try:
-                    workflow_manager.executor.shutdown(wait=False)
+                    workflow_manager.excel_workflow.executor.shutdown(wait=False)
                 except:
                     pass
 
@@ -496,49 +467,126 @@ async def stream_smart_query(
     )
 
 
-@router.post("/execute-db-query", response_model=QueryResponse)
+@router.post("/execute-db-query")
 async def execute_database_query(
-    request: QueryRequest,
-    current_user = Depends(AuthService.get_current_user)
+    request: DatabaseStreamQueryRequest,
+    current_user = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
-    执行数据库查询
+    流式数据库查询接口
+    支持实时推送工作流步骤和最终结果
     """
-    try:
-        if not request.table_name:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="数据库查询需要指定表名"
-            )
+    
+    async def generate_stream() -> AsyncGenerator[str, None]:
+        workflow_manager = None
         
-        db_service = DatabaseQueryService()
-        query_result = await db_service.execute_natural_language_query(
-            request.query,
-            request.table_name,
-            current_user.id,
-            page=request.page,
-            page_size=request.page_size
-        )
-        
-        if query_result['success']:
-            return QueryResponse(
-                success=True,
-                message="数据库查询执行成功",
-                data=query_result['data']
-            )
-        else:
-            return QueryResponse(
-                success=False,
-                message=query_result['message']
-            )
+        try:
+            # 验证请求参数
+            if not request.query or not request.query.strip():
+                yield f"data: {json.dumps({'type': 'error', 'message': '查询内容不能为空'}, ensure_ascii=False)}\n\n"
+                return
             
-    except HTTPException:
-        raise
-    except Exception as e:
-        return QueryResponse(
-            success=False,
-            message=f"数据库查询执行失败: {str(e)}"
-        )
+            if len(request.query) > 1000:
+                yield f"data: {json.dumps({'type': 'error', 'message': '查询内容过长，请控制在1000字符以内'}, ensure_ascii=False)}\n\n"
+                return
+            
+            # 发送开始信号
+            yield f"data: {json.dumps({'type': 'start', 'message': '开始处理数据库查询', 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
+            
+            # 初始化服务
+            workflow_manager = SmartWorkflowManager(db)
+            conversation_context_service = ConversationContextService()
+            
+            # 处理对话上下文
+            conversation_id = request.conversation_id
+            
+            # 如果是新对话或没有指定对话ID，创建新对话
+            if request.is_new_conversation or not conversation_id:
+                try:
+                    conversation_id = await conversation_context_service.create_conversation(
+                        user_id=current_user.id,
+                        title=f"数据库查询: {request.query[:20]}..."
+                    )
+                    yield f"data: {json.dumps({'type': 'conversation_created', 'conversation_id': conversation_id}, ensure_ascii=False)}\n\n"
+                except Exception as e:
+                    logger.warning(f"创建对话失败: {e}")
+                    # 不阻断流程，继续执行查询
+            
+            # 保存用户消息
+            if conversation_id:
+                try:
+                    await conversation_context_service.save_message(
+                        conversation_id=conversation_id,
+                        role="user",
+                        content=request.query
+                    )
+                except Exception as e:
+                    logger.warning(f"保存用户消息失败: {e}")
+            
+            # 执行数据库查询工作流（带流式推送）
+            async for step_data in workflow_manager.process_database_query_stream(
+                user_query=request.query,
+                user_id=current_user.id,
+                database_config_id=request.database_config_id
+            ):
+                # 推送工作流步骤
+                yield f"data: {json.dumps(step_data, ensure_ascii=False)}\n\n"
+                
+                # 如果是最终结果，保存到对话历史
+                if step_data.get('type') == 'final_result' and conversation_id:
+                    try:
+                        result_data = step_data.get('data', {})
+                        await conversation_context_service.save_message(
+                            conversation_id=conversation_id,
+                            role="assistant",
+                            content=result_data.get('summary', '查询完成'),
+                            metadata={
+                                'query_result': result_data,
+                                'workflow_steps': step_data.get('workflow_steps', []),
+                                'generated_sql': result_data.get('generated_sql', '')
+                            }
+                        )
+                        
+                        # 更新对话上下文
+                        await conversation_context_service.update_conversation_context(
+                            conversation_id=conversation_id,
+                            query=request.query,
+                            selected_files=[]
+                        )
+                        
+                        logger.info(f"数据库查询成功完成，对话ID: {conversation_id}")
+                        
+                    except Exception as e:
+                        logger.warning(f"保存消息到对话历史失败: {e}")
+            
+            # 发送完成信号
+            yield f"data: {json.dumps({'type': 'complete', 'message': '数据库查询处理完成', 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            logger.error(f"流式数据库查询异常: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': f'查询执行失败: {str(e)}'}, ensure_ascii=False)}\n\n"
+        
+        finally:
+            # 清理资源
+            if workflow_manager:
+                try:
+                    workflow_manager.database_workflow.executor.shutdown(wait=False)
+                except:
+                    pass
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "*"
+        }
+    )
 
 @router.delete("/cleanup-temp-files")
 async def cleanup_temp_files(

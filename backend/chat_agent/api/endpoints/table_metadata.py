@@ -40,6 +40,11 @@ class QASettingsUpdate(BaseModel):
     business_context: str = Field(default="")
 
 
+class TableByNameRequest(BaseModel):
+    database_config_id: int = Field(..., description="数据库配置ID")
+    table_name: str = Field(..., description="表名")
+
+
 @router.post("/collect")
 async def collect_table_metadata(
     request: TableSelectionRequest,
@@ -101,6 +106,67 @@ async def get_table_metadata(
             }
             for meta in metadata_list
         ]
+        
+        return {
+            "success": True,
+            "data": data
+        }
+        
+    except Exception as e:
+        logger.error(f"获取表元数据失败: {str(e)}")
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+
+@router.post("/by-table")
+async def get_table_metadata_by_name(
+    request: TableByNameRequest,
+    current_user: User = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """根据表名获取表元数据"""
+    try:
+        service = TableMetadataService(db)
+        metadata = service.get_table_metadata_by_name(
+            current_user.id,
+            request.database_config_id,
+            request.table_name
+        )
+        
+        if metadata:
+            data = {
+                "id": metadata.id,
+                "table_name": metadata.table_name,
+                "table_schema": metadata.table_schema,
+                "table_type": metadata.table_type,
+                "table_comment": metadata.table_comment or "",
+                "columns": metadata.columns_info if metadata.columns_info else [],
+                "column_count": len(metadata.columns_info) if metadata.columns_info else 0,
+                "row_count": metadata.row_count,
+                "is_enabled_for_qa": metadata.is_enabled_for_qa,
+                "qa_description": metadata.qa_description or "",
+                "business_context": metadata.business_context or "",
+                "created_at": metadata.created_at.isoformat() if metadata.created_at else "",
+                "updated_at": metadata.updated_at.isoformat() if metadata.updated_at else "",
+                "last_synced_at": metadata.last_synced_at.isoformat() if metadata.last_synced_at else "",
+                "qa_settings": {
+                    "is_enabled_for_qa": metadata.is_enabled_for_qa,
+                    "qa_description": metadata.qa_description or "",
+                    "business_context": metadata.business_context or ""
+                }
+            }
+            return {"success": True, "data": data}
+        else:
+            return {"success": False, "data": None, "message": "表元数据不存在"}
+            
+    except Exception as e:
+        logger.error(f"获取表元数据失败: {str(e)}")
+        return {
+            "success": False,
+            "message": str(e)
+        }
         
         return {
             "success": True,

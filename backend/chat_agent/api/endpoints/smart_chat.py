@@ -250,7 +250,7 @@ async def get_files_status(
         workflow_manager = SmartWorkflowManager()
         
         # 获取用户文件列表
-        file_list = await workflow_manager._load_user_file_list(current_user.id)
+        file_list = await workflow_manager.excel_workflow._load_user_file_list(current_user.id)
         
         # 统计信息
         total_files = len(file_list)

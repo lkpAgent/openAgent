@@ -10,7 +10,8 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from .base import BaseTool, ToolRegistry, ToolResult
-from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool, PostgreSQLMCPTool
+from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool
+from ..postgresql_tool_manager import get_postgresql_tool
 from ...core.config import get_settings
 from ...utils.logger import get_logger
 from ..agent_config import AgentConfigService
@@ -105,10 +106,6 @@ class AgentService:
         self._initialize_tools()
         self._load_config()
         
-    # 在导入部分添加
-    from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool, PostgreSQLMCPTool
-    
-    # 在_initialize_tools方法中添加
     def _initialize_tools(self):
         """Initialize and register all available tools."""
         tools = [
@@ -118,7 +115,7 @@ class AgentService:
             DateTimeTool(),
             FileTool(),
             GenerateImageTool(),
-            PostgreSQLMCPTool()  # 添加PostgreSQL MCP工具
+            get_postgresql_tool()  # 使用单例PostgreSQL MCP工具
         ]
         
         for tool in tools:

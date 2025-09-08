@@ -315,6 +315,21 @@ class TableMetadataService:
         
         return query.filter(TableMetadata.is_enabled_for_qa == True).all()
     
+    def get_table_metadata_by_name(
+        self,
+        user_id: int,
+        database_config_id: int,
+        table_name: str
+    ) -> Optional[TableMetadata]:
+        """根据表名获取表元数据"""
+        return self.db.query(TableMetadata).filter(
+            and_(
+                TableMetadata.created_by == user_id,
+                TableMetadata.database_config_id == database_config_id,
+                TableMetadata.table_name == table_name
+            )
+        ).first()
+    
     def update_table_qa_settings(
         self, 
         user_id: int, 
@@ -347,6 +362,62 @@ class TableMetadataService:
             logger.error(f"更新表问答设置失败: {str(e)}")
             self.db.rollback()
             return False
+    
+    def save_table_metadata(
+        self,
+        user_id: int,
+        database_config_id: int,
+        table_name: str,
+        columns_info: List[Dict[str, Any]],
+        primary_keys: List[str],
+        row_count: int,
+        table_comment: str = ''
+    ) -> TableMetadata:
+        """保存单个表的元数据"""
+        try:
+            # 检查是否已存在
+            existing = self.db.query(TableMetadata).filter(
+                and_(
+                    TableMetadata.created_by == user_id,
+                    TableMetadata.database_config_id == database_config_id,
+                    TableMetadata.table_name == table_name
+                )
+            ).first()
+            
+            if existing:
+                # 更新现有记录
+                existing.columns_info = columns_info
+                existing.primary_keys = primary_keys
+                existing.row_count = row_count
+                existing.table_comment = table_comment
+                existing.last_synced_at = datetime.utcnow()
+                self.db.commit()
+                return existing
+            else:
+                # 创建新记录
+                metadata = TableMetadata(
+                    created_by=user_id,
+                    database_config_id=database_config_id,
+                    table_name=table_name,
+                    table_schema='public',
+                    table_type='BASE TABLE',
+                    table_comment=table_comment,
+                    columns_info=columns_info,
+                    primary_keys=primary_keys,
+                    row_count=row_count,
+                    is_enabled_for_qa=True,
+                    last_synced_at=datetime.utcnow()
+                )
+                
+                self.db.add(metadata)
+                self.db.commit()
+                self.db.refresh(metadata)
+                return metadata
+                
+        except Exception as e:
+            logger.error(f"保存表元数据失败: {str(e)}")
+            self.db.rollback()
+            raise e
     
     def _decrypt_password(self, encrypted_password: str) -> str:
         """解密密码（需要实现加密逻辑）"""
