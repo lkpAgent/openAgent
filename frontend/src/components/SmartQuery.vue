@@ -1585,7 +1585,7 @@ const executeSmartQuery = async () => {
   }
   
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-chat-stream/query`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/execute-excel-query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
