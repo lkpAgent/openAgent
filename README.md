@@ -1,7 +1,8 @@
-# ChatAgent - 企业级智能对话与工作流编排平台
+# ChatAgent - 企业级大模型应用平台
 
 
-🚀 **完全开源的企业级大模型应用平台** - 集成智能问答、智能问数、知识库、工作流和智能体编排的大模型解决方案。采用Vue.js + FastAPI + PostgreSQL+Langchain/LangGraph架构，专为企业级应用设计，代码完全开源，支持私有化部署，可灵活扩展及二次开发。
+🚀 **完全开源的企业级大模型应用平台** - 集成智能问答、智能问数、知识库、工作流和智能体编排的大模型解决方案。
+采用Vue.js + FastAPI + PostgreSQL+Langchain/LangGraph架构，专为企业级应用设计，代码完全开源，支持私有化部署，可灵活扩展及二次开发。
 
 
 
@@ -71,7 +72,6 @@
 ### 前端技术栈
 - **框架**: Vue 3 + TypeScript + Vite
 - **UI组件**: Element Plus (开源UI库)
-- **路由**: Vue Router
 - **HTTP客户端**: Axios
 - **工作流编辑器**: 自研可视化编辑器
 - **工作流引擎**: 基于DAG的流程执行引擎
@@ -194,7 +194,7 @@ cp .env.example .env
 
 # 编辑.env文件，配置数据库连接和AI API密钥。相关配置信息见后面的配置说明
 
-# 配置完数据库信息后，初始化数据库表及创建登录账号(用户名: test, 密码: 123456)
+# 配置完数据库信息后，初始化数据库表及创建登录账号(用户名: test@example.com, 密码: 123456)
 cd backend/tests
 python init_db.py
 
@@ -223,7 +223,9 @@ VITE_API_BASE_URL = http://localhost:8000
 # 启动前端服务，默认端口3000
 npm run dev
 ```
- 
+启动成功后，访问http://localhost:3000，会进入到登录页面，默认账号密码为test@example.com/123456
+
+![登录界面](docs/images/login.png)
 
 ### 4. 访问应用
 - 前端地址: http://localhost:3000
