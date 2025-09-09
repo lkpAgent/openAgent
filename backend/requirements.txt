@@ -70,5 +70,4 @@ passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
 
 # 性能优化
-uvloop>=0.17.0  # 仅限Unix系统
 orjson>=3.9.0

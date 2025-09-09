@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a test user for login testing."""
+"""init db"""
 
 import sys
 import os
@@ -69,8 +69,8 @@ async def create_test_user():
 
         # Create test user
         user_data = UserCreate(
-            username='test1',
-            email='test1@example.com',
+            username='test',
+            email='test@example.com',
             password='123456',
             full_name='Test User 1'
         )
