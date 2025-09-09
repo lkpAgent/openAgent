@@ -36,24 +36,41 @@ original_cwd = os.getcwd()
 # 设置工作目录为backend，以便找到.env文件
 os.chdir(backend_dir)
 
-from chat_agent.db.database import get_db
+from chat_agent.db.database import get_db, init_db
 from chat_agent.services.user import UserService
 from chat_agent.utils.schemas import UserCreate
+import asyncio
 
-def create_test_user():
+async def create_database_tables():
+    """Create all database tables using SQLAlchemy models."""
+    try:
+        await init_db()
+        print('Database tables created successfully using SQLAlchemy models')
+        return True
+    except Exception as e:
+        print(f'Error creating database tables: {e}')
+        return False
+
+async def create_test_user():
     """Create a test user."""
-    db = next(get_db())
-    user_service = UserService(db)
+    # First, create all database tables using SQLAlchemy models
+    if not await create_database_tables():
+        print('Failed to create database tables')
+        return None
     
-    # Create test user
-    user_data = UserCreate(
-        username='test1',
-        email='test1@example.com',
-        password='123456',
-        full_name='Test User 1'
-    )
+    db = next(get_db())
     
     try:
+        user_service = UserService(db)
+        
+        # Create test user
+        user_data = UserCreate(
+            username='test1',
+            email='test1@example.com',
+            password='123456',
+            full_name='Test User 1'
+        )
+        
         # Check if user already exists
         existing_user = user_service.get_user_by_email(user_data.email)
         if existing_user:
@@ -72,7 +89,7 @@ def create_test_user():
 
 if __name__ == "__main__":
     try:
-        create_test_user()
+        asyncio.run(create_test_user())
     finally:
         # 恢复原始工作目录
         os.chdir(original_cwd)
