@@ -1,9 +1,44 @@
 #!/usr/bin/env python3
 """Create a test user for login testing."""
 
-from backend.chat_agent.db.database import get_db
-from backend.chat_agent.services.user import UserService
-from backend.chat_agent.utils.schemas import UserCreate
+import sys
+import os
+
+def find_project_root():
+    """智能查找项目根目录"""
+    current_dir = os.path.abspath(os.getcwd())
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 可能的项目根目录位置
+    possible_roots = [
+        current_dir,  # 当前工作目录
+        script_dir,   # 脚本所在目录
+        os.path.dirname(script_dir),  # 脚本父目录
+        os.path.dirname(os.path.dirname(script_dir))  # 脚本祖父目录
+    ]
+    
+    for root in possible_roots:
+        backend_dir = os.path.join(root, 'backend')
+        if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'chat_agent')):
+            return root, backend_dir
+    
+    raise FileNotFoundError("无法找到项目根目录和backend目录")
+
+# 查找项目根目录和backend目录
+project_root, backend_dir = find_project_root()
+
+# 添加backend目录到Python路径
+sys.path.insert(0, backend_dir)
+
+# 保存原始工作目录
+original_cwd = os.getcwd()
+
+# 设置工作目录为backend，以便找到.env文件
+os.chdir(backend_dir)
+
+from chat_agent.db.database import get_db
+from chat_agent.services.user import UserService
+from chat_agent.utils.schemas import UserCreate
 
 def create_test_user():
     """Create a test user."""
@@ -12,10 +47,10 @@ def create_test_user():
     
     # Create test user
     user_data = UserCreate(
-        username='demo',
-        email='demo@example.com',
+        username='test1',
+        email='test1@example.com',
         password='123456',
-        full_name='Demo User'
+        full_name='Test User 1'
     )
     
     try:
@@ -35,5 +70,9 @@ def create_test_user():
     finally:
         db.close()
 
-if __name__ == '__main__':
-    create_test_user()
+if __name__ == "__main__":
+    try:
+        create_test_user()
+    finally:
+        # 恢复原始工作目录
+        os.chdir(original_cwd)

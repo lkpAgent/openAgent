@@ -19,14 +19,14 @@ def reset_users():
     try:
         # 删除所有用户
         print("正在删除所有用户...")
-        deleted_count = db.query(User).delete()
-        print(f"已删除 {deleted_count} 个用户")
+        # deleted_count = db.query(User).delete()
+        # print(f"已删除 {deleted_count} 个用户")
         
         # 创建demo用户
         print("正在创建demo用户...")
         demo_user = User(
-            username="demo",
-            email="demo@example.com",
+            username="demo1",
+            email="demo1@example.com",
             hashed_password=AuthService.get_password_hash("123456"),
             is_active=True
         )
@@ -35,8 +35,8 @@ def reset_users():
         db.commit()
         
         print("Demo用户创建成功!")
-        print("用户名: demo")
-        print("邮箱: demo@example.com")
+        print("用户名: demo1")
+        print("邮箱: demo1@example.com")
         print("密码: 123456")
         
     except Exception as e:

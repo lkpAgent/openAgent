@@ -1,55 +1,82 @@
 #!/usr/bin/env python3
+"""Create a test user for login testing."""
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from sqlalchemy.orm import Session
-from chat_agent.db.database import get_db_session
-from chat_agent.models.user import User
-from chat_agent.services.auth import AuthService
+
+def find_project_root():
+    """智能查找项目根目录"""
+    current_dir = os.path.abspath(os.getcwd())
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # 可能的项目根目录位置
+    possible_roots = [
+        current_dir,  # 当前工作目录
+        script_dir,  # 脚本所在目录
+        os.path.dirname(script_dir),  # 脚本父目录
+        os.path.dirname(os.path.dirname(script_dir))  # 脚本祖父目录
+    ]
+
+    for root in possible_roots:
+        backend_dir = os.path.join(root, 'backend')
+        if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'chat_agent')):
+            return root, backend_dir
+
+    raise FileNotFoundError("无法找到项目根目录和backend目录")
+
+
+# 查找项目根目录和backend目录
+project_root, backend_dir = find_project_root()
+
+# 添加backend目录到Python路径
+sys.path.insert(0, backend_dir)
+
+# 保存原始工作目录
+original_cwd = os.getcwd()
+
+# 设置工作目录为backend，以便找到.env文件
+os.chdir(backend_dir)
+
+from chat_agent.db.database import get_db
+from chat_agent.services.user import UserService
+from chat_agent.utils.schemas import UserCreate
+
 
 def create_test_user():
-    """Create a test user for testing purposes."""
-    db = get_db_session()
-    
+    """Create a test user."""
+    db = next(get_db())
+    user_service = UserService(db)
+
+    # Create test user
+    user_data = UserCreate(
+        username='test1',
+        email='test1@example.com',
+        password='123456',
+        full_name='Test User 1'
+    )
+
     try:
         # Check if user already exists
-        existing_user = db.query(User).filter(User.email == "test@example.com").first()
+        existing_user = user_service.get_user_by_email(user_data.email)
         if existing_user:
-            print("Test user already exists!")
-            print(f"User ID: {existing_user.id}")
-            print(f"Username: {existing_user.username}")
-            print(f"Email: {existing_user.email}")
-            print(f"Is Active: {existing_user.is_active}")
+            print(f'User already exists: {existing_user.username} ({existing_user.email})')
             return existing_user
-        
+
         # Create new user
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            hashed_password=AuthService.get_password_hash("testpass123"),
-            is_active=True
-        )
-        
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
-        print("✅ Test user created successfully!")
-        print(f"User ID: {user.id}")
-        print(f"Username: {user.username}")
-        print(f"Email: {user.email}")
-        print(f"Is Active: {user.is_active}")
-        
+        user = user_service.create_user(user_data)
+        print(f'Created user: {user.username} ({user.email})')
         return user
-        
     except Exception as e:
-        print(f"❌ Error creating test user: {e}")
-        db.rollback()
+        print(f'Error creating user: {e}')
         return None
     finally:
         db.close()
 
+
 if __name__ == "__main__":
-    create_test_user()
+    try:
+        create_test_user()
+    finally:
+        # 恢复原始工作目录
+        os.chdir(original_cwd)
