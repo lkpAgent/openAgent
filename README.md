@@ -4,7 +4,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Vue 3](https://img.shields.io/badge/vue-3.x-green.svg)](https://vuejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-red.svg)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-blue.svg)](https://www.postgresql.org/)
 
 一个集成了智能对话、知识库管理、智能问数、工作流编排和智能体编排的现代化AI平台，采用Vue.js + FastAPI + PostgreSQL架构，支持本地源码部署。
 
@@ -50,9 +50,9 @@
 
 ### 后端技术栈
 - **Web框架**: FastAPI + SQLAlchemy + Alembic
-- **数据库**: PostgreSQL 15+
+- **数据库**: PostgreSQL 16+
 - **向量数据库**: PostgreSQL + pgvector 扩展
-- **AI框架**: LangChai/LangGraph + Deepseek/智谱AI
+- **AI框架**: LangChai/LangGraph + Deepseek/智谱AI/Doubao
 - **文档处理**: PyPDF2 + python-docx + markdown
 - **数据分析**: Pandas + NumPy 
 
@@ -63,34 +63,22 @@
 - **HTTP客户端**: Axios
 - **工作流编辑器**: 自定义可视化编辑器
 
-### 数据库设计
-- **用户系统**: 用户认证、权限管理
-- **对话系统**: 会话记录、消息历史
-- **知识库**: 文档存储、向量索引
-- **工作流**: 流程定义、执行记录
-- **智能体**: 角色配置、协作关系
 
 ## 🚀 本地部署指南
 
 ### 环境要求
 - Python 3.10+
 - Node.js 18+
-- PostgreSQL 15+
+- PostgreSQL 16+
 
 ### 1. 安装PostgreSQL和pgvector
 
 #### 方式一：Docker安装（推荐）
+使用 Docker + Docker Compose 部署 PostgreSQL 16 + pgvector 插件。
 
-本篇将手把手教你如何使用 Docker + Docker Compose 部署 PostgreSQL 16 + pgvector 插件。
+**1. 创建docker-compose.yml文件**
 
-**1. 创建项目目录与配置文件**
-
-我们建议将项目文件组织在一个单独目录下：
-```bash
-mkdir pgvector-demo && cd pgvector-demo
-```
-
-然后在其中创建一个 `docker-compose.yml` 文件，内容如下：
+内容如下：
 
 ```yaml
 version: '3.8'
@@ -100,9 +88,9 @@ services:
     image: pgvector/pgvector:pg16
     container_name: pgvector-db
     environment:
-      POSTGRES_USER: chat_agent_user
+      POSTGRES_USER: myuser
       POSTGRES_PASSWORD: your_password
-      POSTGRES_DB: chat_agent
+      POSTGRES_DB: mydb
     ports:
       - "5432:5432"
     volumes:
@@ -117,6 +105,9 @@ volumes:
 - 使用 `pgvector/pgvector:pg16` 镜像，内置 PostgreSQL 16 + pgvector 插件
 - 数据保存在 Docker 卷 `pgdata` 中，重启不会丢失
 - 监听宿主机端口 5432，可用本地工具如 pgAdmin, DBeaver, psql 连接
+- 默认数据库名称：mydb
+- 默认用户名：myuser
+- 默认密码：your_password
 
 **2. 启动服务**
 
@@ -136,7 +127,7 @@ docker ps
 
 进入 PostgreSQL 容器：
 ```bash
-docker exec -it pgvector-db psql -U chat_agent_user -d chat_agent
+docker exec -it pgvector-db psql -U myuser -d mydb
 ```
 
 启用 pgvector 插件：
@@ -166,43 +157,40 @@ FROM items
 ORDER BY embedding <-> '[1,1,1]'
 LIMIT 3;
 ```
-  
+-- 上述没报错且有结果返回，即安装成功
 
 ### 3. 后端部署
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/chat-agent.git
+git clone https://github.com/lkpAgent/chat-agent.git
 cd chat-agent/backend
 
-# 创建虚拟环境
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+#创建python虚拟环境，推荐使用conda创建虚拟环境
+conda create -n chat-agent python=3.10
+conda activate chat-agent
 
 # 安装依赖
 pip install -r requirements.txt
 
-# 配置环境变量
+# 配置环境变量,windows下直接复制.env.example文件为.env  
 cp .env.example .env
-# 编辑.env文件，配置数据库连接和AI API密钥
 
-# 运行数据库迁移
-alembic upgrade head
+# 编辑.env文件，配置数据库连接和AI API密钥。相关配置信息见后面的配置说明
 
-# 启动后端服务
+# 配置完数据库信息后，初始化数据库表及创建登录账号(用户名: test, 密码: 123456)
+cd backend/tests
+python init_db.py
+
+# 启动后端服务，默认8000端口
 python -m uvicorn chat_agent.main:app --reload --host 0.0.0.0 --port 8000
-```
+# 或者直接运行main.py
+# cd backend/chat_agent
+# python main.py
 
-### 4. 初始化用户
-
-为了能够登录系统，需要创建初始用户。
-
-```bash
-# 创建测试用户 (用户名: test1, 密码: 123456)
-python tests/create_test_user.py
 ```
 
 
-### 5. 前端部署
+### 4. 前端部署
 ```bash
 # 进入前端目录
 cd ../frontend
@@ -212,57 +200,67 @@ npm install
 
 # 配置环境变量
 cp .env.example .env
-# 编辑.env文件，配置API地址
+# 编辑.env文件，配置后端API地址
+VITE_API_BASE_URL = http://localhost:8000
 
-# 启动开发服务器
+# 启动前端服务，默认端口3000
 npm run dev
 ```
  
 
 ### 6. 访问应用
-- 前端地址: http://localhost:5173
+- 前端地址: http://localhost:3000
 - 后端API: http://localhost:8000
 - API文档: http://localhost:8000/docs
 
 ## ⚙️ 配置说明
 
-### 后端环境变量配置 (.env)
+### 后端环境变量配置 (backend/.env)
 
 ```env
-# 应用配置
-APP_NAME=智能对话与工作流编排平台
-DEBUG=true
-ENVIRONMENT=development
-SECRET_KEY=your-secret-key-here
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
-# 数据库配置 (PostgreSQL + pgvector)
-# Docker方式
-DATABASE_URL=postgresql://myuser:mypassword@localhost:5432/mydb
-# 本地安装方式（如果使用不同的用户名密码）
-# DATABASE_URL=postgresql://postgres:your_password@localhost:5432/chat_agent
-DATABASE_POOL_SIZE=10
-DATABASE_MAX_OVERFLOW=20
+# 数据库配置
+# ========================================
+DATABASE_URL=postgresql://your_username:your_password@your_host:your_port/your_db
+# 示例：
+# DATABASE_URL=postgresql://myuser:mypassword@127.0.0.1:5432/mydb
+
+# ========================================
+# 向量数据库配置
+# ========================================
+VECTOR_DB_TYPE=pgvector
+PGVECTOR_HOST=your_host
+PGVECTOR_PORT=your_port
+PGVECTOR_DATABASE=mydb
+PGVECTOR_USER=myuser
+PGVECTOR_PASSWORD=your_password
  
-# 大模型配置 (支持OpenAI协议的第三方服务)
+# 大模型配置 (支持OpenAI协议的第三方服务) 只需要配置一种chat大模型以及embedding大模型
+# ========================================
+# chat大模型配置
 # ========================================
 # 可选择的提供商: openai, deepseek, doubao, zhipu, moonshot
 LLM_PROVIDER=doubao
 
 # Embedding模型配置
+# ========================================
 # 可选择的提供商: openai, deepseek, doubao, zhipu, moonshot
 EMBEDDING_PROVIDER=zhipu
-
-# 智谱AI配置
-ZHIPU_API_KEY=your-zhipu-api-key
-ZHIPU_MODEL=glm-4
-ZHIPU_EMBEDDING_MODEL=embedding-2
 
 # OpenAI配置
 OPENAI_API_KEY=your-openai-api-key
 OPENAI_MODEL=gpt-4
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_EMBEDDING_MODEL=text-embedding-ada-002
+
+
+# 智谱AI配置
+ZHIPU_API_KEY=your-zhipu-api-key
+ZHIPU_MODEL=glm-4
+ZHIPU_EMBEDDING_MODEL=embedding-3
+ZHIPU_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+
+
 
 # DeepSeek配置
 DEEPSEEK_API_KEY=your-deepseek-api-key
@@ -273,7 +271,7 @@ DEEPSEEK_EMBEDDING_MODEL=deepseek-embedding
 # 豆包配置
 DOUBAO_API_KEY=your-doubao-api-key
 DOUBAO_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
-DOUBAO_MODEL=doubao-pro-4k
+DOUBAO_MODEL=doubao-1-5-pro-32k-250115
 DOUBAO_EMBEDDING_MODEL=doubao-embedding
 
 # Moonshot配置
@@ -282,46 +280,17 @@ MOONSHOT_BASE_URL=https://api.moonshot.cn/v1
 MOONSHOT_MODEL=moonshot-v1-8k
 MOONSHOT_EMBEDDING_MODEL=moonshot-embedding
 
-# 向量数据库配置
-VECTOR_DIMENSION=1536
-VECTOR_SIMILARITY_THRESHOLD=0.8
 
-# 文件上传配置
-UPLOAD_MAX_SIZE=50MB
-UPLOAD_ALLOWED_EXTENSIONS=pdf,docx,txt,md,xlsx,csv
-UPLOAD_PATH=./data/uploads
-
-# 日志配置
-LOG_LEVEL=INFO
-LOG_FILE=./logs/app.log
 ```
 
 ### 前端环境变量配置 (.env)
 
 ```env
 # API配置
-VITE_API_BASE_URL=http://localhost:8000
-VITE_WS_BASE_URL=ws://localhost:8000
+VITE_API_BASE_URL=http://localhost:8000/api
 
-# 应用配置
-VITE_APP_TITLE=智能对话与工作流编排平台
-VITE_APP_VERSION=1.0.0
 
-# 开发配置
-VITE_DEV_PORT=3000
-VITE_DEV_HOST=0.0.0.0
-```
 
-#### 向量数据库配置
-```env
-# 向量数据库类型 ( pgvector)
-VECTOR_DB_TYPE=pgvector
-PGVECTOR_HOST=1.1.1.1
-PGVECTOR_PORT=5432
-PGVECTOR_DATABASE=postgres
-PGVECTOR_USER=postgres
-PGVECTOR_PASSWORD=database_password
-```
 
 ## 📖 API文档
 
