@@ -185,8 +185,7 @@ config/local.yml
 *.pkl
 chroma/
 
-# Model files
-models/
+
 *.bin
 *.safetensors
 
