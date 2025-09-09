@@ -1,20 +1,17 @@
 import pandas as pd
-import numpy as np
 import pymysql
 import psycopg2
 import pyodbc
 import tempfile
 import os
-import json
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List
 from datetime import datetime
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 from langchain_experimental.agents import create_pandas_dataframe_agent
-from langchain.llms import OpenAI
 from langchain_community.chat_models import ChatZhipuAI
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 
 # 在 SmartQueryService 类中添加方法
 

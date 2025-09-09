@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableLambda
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_community.chat_models import ChatZhipuAI
 from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from chat_agent.core.context import UserContext
@@ -1071,10 +1071,12 @@ class SmartExcelWorkflowManager:
 
                 # 准备数据框字典，支持多个文件
                 df_locals = {}
+                var_name_to_filename = {}  # 变量名到文件名的映射
                 for filename, df in dataframes.items():
                     # 使用简化的变量名
                     var_name = f"df_{len(df_locals) + 1}" if len(dataframes) > 1 else "df"
                     df_locals[var_name] = df
+                    var_name_to_filename[var_name] = filename
 
                 # 创建Python代码执行工具
                 python_tool = PythonAstREPLTool(locals=df_locals)
@@ -1084,31 +1086,63 @@ class SmartExcelWorkflowManager:
             except Exception as e:
                 raise CodeExecutionError(f"创建Python工具失败: {str(e)}")
 
-            # 构建数据集信息
+            # 构建数据集信息（包含文件名和前5行数据）
             dataset_info = []
             for var_name, df in df_locals.items():
-                dataset_info.append(f"- {var_name}: {len(df)}行 x {len(df.columns)}列，列名: {', '.join(str(col) for col in df.columns.tolist())}")
+                filename = var_name_to_filename[var_name]
+                
+                # 基本信息
+                basic_info = f"- {var_name} (来源文件: {filename}): {len(df)}行 x {len(df.columns)}列"
+                
+                # 列名信息
+                columns_info = f"  列名: {', '.join(str(col) for col in df.columns.tolist())}"
+                
+                # 前5行数据预览
+                try:
+                    preview_df = df.head(5)
+                    preview_data = []
+                    for idx, row in preview_df.iterrows():
+                        row_data = []
+                        for col in df.columns:
+                            value = row[col]
+                            # 处理空值和特殊值
+                            if pd.isna(value):
+                                row_data.append('NaN')
+                            elif isinstance(value, (int, float)):
+                                row_data.append(str(value))
+                            else:
+                                # 限制字符串长度避免过长
+                                str_value = str(value)
+                                if len(str_value) > 20:
+                                    str_value = str_value[:17] + '...'
+                                row_data.append(str_value)
+                        preview_data.append(f"    行{idx}: {', '.join(row_data)}")
+                    
+                    preview_info = f"  前5行数据预览:\n{chr(10).join(preview_data)}"
+                except Exception as e:
+                    preview_info = f"  前5行数据预览: 无法生成预览 ({str(e)})"
+                
+                # 组合完整信息
+                dataset_info.append(f"{basic_info}\n{columns_info}\n{preview_info}")
 
             # 构建系统提示
             system_prompt = f"""
-                    你可以访问以python_tool里的locals里的pandas数据，pandas的基本信息与列名信息如下：
+                    你所有可以访问的数据来自于传递给您的python_tool里的locals里的pandas数据信（可能有多个）。
+                    pandas数据集详细信息（文件来源、列名信息和数据预览）如下：
                     {chr(10).join(dataset_info)}
-                    
-                    请根据用户提出的问题，编写Python代码来回答。要求：
+                    请根据用户提出的问题，结合给出的数据集的详细信息，直接编写Python相关代码来计算pandas中的值。要求：
                     1. 只返回代码，不返回其他内容
                     2. 只允许使用pandas和内置库
-                    3. 确保代码能够直接执行并返回结果
-                    4. 返回的结果应该是详细的、完整的数据，而不仅仅是简单答案
-                    5. 当用户询问最高、最低、排名等问题时，除了返回答案本身，还要返回相关的详细数据
-                    6. 结果应该包含足够的上下文信息，让用户能够验证和理解答案
-                    7. 如果是统计分析，要包含相关的数值、百分比、排名等详细信息
-                    8. 需要是完整可运行的代码，包括import必要的组件
-                    9. 优先返回DataFrame格式的结果，便于展示为表格
+                    3. 确保代码能够直接执行并返回结果，包括import必要的内置库
+                    4. 返回的结果应该是详细的、完整的数据，而不仅仅是简单答案 
+                    5. 结果应该包含足够的上下文信息，让用户能够验证和理解答案 
+                    6. 优先返回DataFrame格式的结果，便于展示为表格 
+                    7. 务必不要再去写代码查看数据集的结构，提示词里已经给出了每个数据集的结构信息，直接根据提示词里的结构信息进行判断。
+                    8. 要求代码中最后一次print的结果，必需是最后的正确结果（用户所需要的数据）
                     
                     示例：
                     - 如果问"哪个项目合同额最高"，不仅要返回项目名称，还要返回跟该项目其他有用的信息，比如合同额，合同时间，项目类型等（如果表格有该这些字段信息）
                     - 如果问"销售额最高的产品"，要返回产品名称、销售额、销售数量、市场占比等完整信息（如果表格有该这些字段信息）
-                    - 结果格式优先使用DataFrame，包含多列相关数据
                     """
 
             # 创建提示模板
@@ -1129,7 +1163,7 @@ class SmartExcelWorkflowManager:
 
             debug_node = RunnableLambda(debug_print)
             # 创建执行链
-            llm_chain = prompt | llm_with_tools | debug_node| parser | debug_node| python_tool
+            llm_chain = prompt | llm_with_tools | debug_node| parser | debug_node| python_tool| debug_node
 
             # 执行查询
             try:

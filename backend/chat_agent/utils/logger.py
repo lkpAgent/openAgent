@@ -8,7 +8,7 @@ from typing import Optional
 
 def setup_logger(
     name: str = "chat_agent",
-    level: str = "INFO",
+    level: str = "DEBUG",
     log_file: Optional[str] = None
 ) -> logging.Logger:
     """Setup logger with console and optional file output.

@@ -16,7 +16,7 @@ from langchain_community.document_loaders import (
     UnstructuredMarkdownLoader
 )
 import pdfplumber
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_postgres import PGVector
 from typing import List
 # 旧的ZhipuEmbeddings类已移除，现在统一使用EmbeddingFactory创建embedding实例
