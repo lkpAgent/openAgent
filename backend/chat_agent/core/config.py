@@ -188,7 +188,7 @@ class EmbeddingSettings(BaseSettings):
 
 class VectorDBSettings(BaseSettings):
     """Vector database configuration."""
-    type: str = Field(default="chroma")
+    type: str = Field(default="pgvector", alias="vector_db_type")
     persist_directory: str = Field(default="./data/chroma")
     collection_name: str = Field(default="documents")
     embedding_dimension: int = Field(default=2048)  # 智谱AI embedding-3模型的维度
@@ -332,13 +332,33 @@ class Settings(BaseSettings):
                 return cls()
             
         with open(config_file, "r", encoding="utf-8") as f:
-            config_data = yaml.safe_load(f)
+            config_data = yaml.safe_load(f) or {}
             
         # 处理环境变量替换
         config_data = cls._resolve_env_vars_nested(config_data)
         
-        # 直接使用嵌套配置创建Settings实例
-        return cls(**config_data)
+        # 为每个子设置类创建实例，确保它们能正确加载环境变量
+        # 如果YAML中没有对应配置，则使用默认的BaseSettings加载（会自动读取.env文件）
+        settings_kwargs = {}
+        
+        # 显式处理各个子设置，以解决debug等情况因为环境的变化没有自动加载.env配置的问题
+        settings_kwargs['database'] = DatabaseSettings(**(config_data.get('database', {})))
+        settings_kwargs['security'] = SecuritySettings(**(config_data.get('security', {})))
+        settings_kwargs['llm'] = LLMSettings(**(config_data.get('llm', {})))
+        settings_kwargs['embedding'] = EmbeddingSettings(**(config_data.get('embedding', {})))
+        settings_kwargs['vector_db'] = VectorDBSettings(**(config_data.get('vector_db', {})))
+        settings_kwargs['file'] = FileSettings(**(config_data.get('file', {})))
+        settings_kwargs['storage'] = StorageSettings(**(config_data.get('storage', {})))
+        settings_kwargs['logging'] = LoggingSettings(**(config_data.get('logging', {})))
+        settings_kwargs['cors'] = CORSSettings(**(config_data.get('cors', {})))
+        settings_kwargs['chat'] = ChatSettings(**(config_data.get('chat', {})))
+        
+        # 添加顶级配置
+        for key, value in config_data.items():
+            if key not in settings_kwargs:
+                settings_kwargs[key] = value
+        
+        return cls(**settings_kwargs)
     
     @staticmethod
     def _flatten_config(config: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:

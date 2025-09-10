@@ -3,15 +3,6 @@
 from fastapi import APIRouter
 from .endpoints import chat
 
-# Create main API router
-router = APIRouter()
-
-# Include sub-routers
-router.include_router(
-    chat.router,
-    prefix="/chat",
-    tags=["chat"]
-)
 
 # TODO: Add other routers when implemented
 from .endpoints import auth
@@ -22,11 +13,23 @@ from .endpoints import smart_chat
 from .endpoints import database_config
 from .endpoints import table_metadata
 
+# Create main API router
+router = APIRouter()
+
 router.include_router(
     auth.router,
     prefix="/auth",
     tags=["authentication"]
 )
+
+# Include sub-routers
+router.include_router(
+    chat.router,
+    prefix="/chat",
+    tags=["chat"]
+)
+
+
 
 router.include_router(
     knowledge_base.router,
