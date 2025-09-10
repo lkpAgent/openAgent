@@ -341,7 +341,8 @@
                     v-model="currentTableMetadata.qa_description"
                     type="textarea"
                     :rows="3"
-                    placeholder="请输入表的功能描述，例如：用户信息表、订单表、产品表等"
+                    placeholder="请输入该表的业务说明和用途描述，例如：
+            用户信息表：存储系统用户的基本信息，包括姓名、性别、手机号、邮箱等"
                     maxlength="200"
                     show-word-limit
                   />
@@ -352,7 +353,9 @@
                     v-model="currentTableMetadata.business_context"
                     type="textarea"
                     :rows="3"
-                    placeholder="请输入表的业务背景和使用场景"
+                    placeholder="请输入表的业务背景和使用场景，例如：
+            • 该表用于电商系统的用户管理模块
+            • 支持用户注册、登录、个人信息维护等功能""
                     maxlength="300"
                     show-word-limit
                   />
@@ -1249,6 +1252,17 @@ const saveDbConfig = async () => {
     if (response.ok) {
       ElMessage.success('数据库配置保存成功')
       await loadSavedConfigs() // 重新加载配置列表
+      
+      // 自动选择新保存的配置
+      if (result.id) {
+        selectedConfig.value = savedConfigs.value.find(config => config.id === result.id)
+      } else {
+        // 如果没有返回ID，选择最新的配置（按创建时间排序的第一个）
+        const sortedConfigs = [...savedConfigs.value].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        if (sortedConfigs.length > 0) {
+          selectedConfig.value = sortedConfigs[0]
+        }
+      }
     } else {
       ElMessage.error(result.detail || '保存配置失败')
     }

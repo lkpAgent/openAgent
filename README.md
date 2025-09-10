@@ -3,7 +3,7 @@
 
 🚀 **完全开源的大模型应用平台** 
 - 集成智能问答、智能问数、知识库、工作流和智能体编排的大模型解决方案。
-- 采用Vue.js + FastAPI + PostgreSQL+Langchain/LangGraph架构，
+- 采用Vue.js + FastAPI + PostgreSQL+Langchain/LangGraph架构。
 - 专为企业级应用设计，代码完全开源，支持私有化部署，可灵活扩展及二次开发。
 - 用户级数据隔离：每个用户的数据仅对其可见，确保数据安全。
 - 角色权限管理：支持管理员、普通用户等角色，可自定义权限。
