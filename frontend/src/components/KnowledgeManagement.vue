@@ -177,7 +177,8 @@
             
             <!-- 文档列表 -->
             <div class="document-list" v-loading="isLoadingDocuments">
-              <el-table :data="documents" style="width: 100%">
+              <!-- 有文档时显示表格 -->
+              <el-table v-if="documents.length > 0" :data="documents" style="width: 100%">
                 <el-table-column prop="original_filename" label="文件名" min-width="200">
                   <template #default="{ row }">
                     <div class="file-info">
@@ -221,7 +222,7 @@
               </el-table>
               
               <!-- 空状态 -->
-              <div v-if="documents.length === 0" class="empty-documents">
+              <div v-else class="empty-documents">
                 <el-empty description="暂无文档，请上传文档" />
               </div>
             </div>
@@ -928,6 +929,9 @@ onMounted(async () => {
   background: #1e293b;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  width: 0; /* 防止flex子元素溢出 */
+  min-width: 0;
 }
 
 .detail-empty {
@@ -1015,6 +1019,14 @@ onMounted(async () => {
   flex: 1;
   overflow: hidden;
   padding: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.document-list .el-table {
+  width: 100% !important;
+  max-width: 100%;
 }
 
 /* 上传按钮样式 */

@@ -67,10 +67,13 @@
 - **Web框架**: FastAPI + SQLAlchemy + Alembic
 - **数据库**: PostgreSQL 16+ (开源关系型数据库)
 - **向量数据库**: PostgreSQL + pgvector 扩展 (开源向量数据库)
-- **AI框架**: LangChain/LangGraph + 多模型支持
+- **智能体编排**: LangGraph 状态图 + 条件路由
+- **工具调用**: Function Calling 
+- **模型连接协议**: MCP (Model Context Protocol)
+- **RAG检索**: LangChain Vector Store 
+- **对话记忆**: ConversationBufferMemory
 - **文档处理**: PyPDF2 + python-docx + markdown
 - **数据分析**: Pandas + NumPy
-- **容器化**: Docker + Docker Compose
 
 ### 前端技术栈
 - **框架**: Vue 3 + TypeScript + Vite

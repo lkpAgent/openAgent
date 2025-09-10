@@ -115,7 +115,13 @@ class DocumentProcessor:
             self.pgvector_pool = PGVectorConnectionPool()
         else:
             # 向量数据库存储路径（Chroma兼容）
-            self.vector_db_path = settings.vector_db.persist_directory
+            vector_db_path = settings.vector_db.persist_directory
+            if not os.path.isabs(vector_db_path):
+                # 如果是相对路径，则基于项目根目录计算绝对路径
+                # 项目根目录是backend的父目录
+                backend_dir = Path(__file__).parent.parent.parent
+                vector_db_path = str(backend_dir / vector_db_path)
+            self.vector_db_path = vector_db_path
     
     def _init_embeddings(self):
         """根据配置初始化embedding模型"""

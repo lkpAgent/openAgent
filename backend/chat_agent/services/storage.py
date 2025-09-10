@@ -229,7 +229,14 @@ class StorageService:
                 endpoint_url=settings.storage.s3_endpoint_url
             )
         else:
-            self.backend = LocalStorageBackend(settings.storage.upload_directory)
+            # 确保使用绝对路径，避免在不同目录运行时路径不一致
+            upload_dir = settings.storage.upload_directory
+            if not os.path.isabs(upload_dir):
+                # 如果是相对路径，则基于项目根目录计算绝对路径
+                # 项目根目录是backend的父目录
+                backend_dir = Path(__file__).parent.parent.parent
+                upload_dir = str(backend_dir / upload_dir)
+            self.backend = LocalStorageBackend(upload_dir)
     
     def generate_file_path(self, knowledge_base_id: int, filename: str) -> str:
         """Generate unique file path for storage."""

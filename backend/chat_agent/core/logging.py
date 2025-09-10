@@ -11,8 +11,16 @@ from .config import LoggingSettings
 def setup_logging(logging_config: LoggingSettings) -> None:
     """Setup application logging."""
     
+    # 确保使用绝对路径，避免在不同目录运行时路径不一致
+    log_file_path = logging_config.file
+    if not Path(log_file_path).is_absolute():
+        # 如果是相对路径，则基于项目根目录计算绝对路径
+        # 项目根目录是backend的父目录
+        backend_dir = Path(__file__).parent.parent.parent
+        log_file_path = str(backend_dir / log_file_path)
+    
     # Create logs directory if it doesn't exist
-    log_file = Path(logging_config.file)
+    log_file = Path(log_file_path)
     log_file.parent.mkdir(parents=True, exist_ok=True)
     
     # Configure root logger
@@ -33,7 +41,7 @@ def setup_logging(logging_config: LoggingSettings) -> None:
     
     # File handler with rotation
     file_handler = logging.handlers.RotatingFileHandler(
-        filename=logging_config.file,
+        filename=log_file_path,
         maxBytes=logging_config.max_bytes,
         backupCount=logging_config.backup_count,
         encoding="utf-8"
