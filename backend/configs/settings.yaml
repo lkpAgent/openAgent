@@ -18,6 +18,7 @@ file:
   allowed_extensions: [".txt", ".pdf", ".docx", ".md"]
   chunk_size: 1000
   chunk_overlap: 200
+  semantic_splitter_enabled: true  # 启用语义分割器
 
 # Storage Configuration
 storage:

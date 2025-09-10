@@ -217,6 +217,7 @@ class FileSettings(BaseSettings):
     allowed_extensions: List[str] = Field(default=[".txt", ".pdf", ".docx", ".md"])
     chunk_size: int = Field(default=1000)
     chunk_overlap: int = Field(default=200)
+    semantic_splitter_enabled: bool = Field(default=False)  # 是否启用语义分割器
     
     model_config = {
         "env_file": ".env",
@@ -307,7 +308,6 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     cors: CORSSettings = Field(default_factory=CORSSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
-    
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

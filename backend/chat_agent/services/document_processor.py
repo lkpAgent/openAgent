@@ -85,6 +85,8 @@ class DocumentProcessor:
     """文档处理器，负责文档的加载、分段和向量化"""
     
     def __init__(self):
+        # 初始化语义分割器配置
+        self.semantic_splitter_enabled = settings.file.semantic_splitter_enabled
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=settings.file.chunk_size,
             chunk_overlap=settings.file.chunk_overlap,
@@ -182,15 +184,225 @@ class DocumentProcessor:
                 logger.error(f"PyPDFLoader回退也失败 {file_path}: {str(fallback_e)}")
                 raise fallback_e
     
-    def split_documents(self, documents: List[Document]) -> List[Document]:
-        """将文档分割成小块"""
+    def _merge_documents(self, documents: List[Document]) -> Document:
+        """将多个文档合并成一个文档"""
+        merged_text = ""
+        merged_metadata = {}
+        
+        for doc in documents:
+            if merged_text:
+                merged_text += "\n\n"
+            merged_text += doc.page_content
+            # 合并元数据
+            merged_metadata.update(doc.metadata)
+        
+        return Document(page_content=merged_text, metadata=merged_metadata)
+
+    def _get_semantic_split_points(self, text: str) -> List[str]:
+        """使用大模型分析文档内容，返回合适的分割点列表"""
         try:
-            chunks = self.text_splitter.split_documents(documents)
+            from langchain.chat_models import ChatOpenAI
+            from ..core.config import get_settings
+            
+            # 获取当前LLM配置
+            settings = get_settings()
+            llm_config = settings.llm.get_current_config()
+
+            prompt = f"""
+            # 任务说明
+            请分析文档内容，识别出适合作为分割点的关键位置。分割点应该是能够将文档划分为有意义段落的文本片段。
+
+            
+            # 分割规则
+            请严格按照以下规则识别分割点：
+
+            ## 基本要求
+            1. 分割点必须是完整的句子开头或段落开头
+            2. 每个分割后的部分应包含相对完整的语义内容
+            3. 每个分割部分的理想长度控制在500字以内，严禁超过1000字。如果超过了1000字，要强制分段。
+
+            ## 短段落处理
+            4. 如果某部分长度可能小于50字，应将其与后续内容合并，避免产生过短片段
+
+            ## 唯一性保证（重要）
+            5. 确保每个分割点在文档中具有唯一性：
+               - 检查文内是否存在相同的文本片段
+               - 如果存在重复，需要扩展分割点字符串，直到获得唯一标识
+               - 扩展方法：在当前分割点后追加几个字符，形成更长的唯一字符串
+
+            ## 示例说明
+            原始文档：
+            "目录：
+            第一章 标题一
+            第二章 标题二
+            正文
+            第一章 标题一
+            这是第一章的内容
+
+            第二章 标题二
+            这是第二章的内容"
+
+            错误分割点："第一章 标题一"（在目录和正文中重复出现）
+
+            正确分割点："第一章 标题一\n这是第"（通过追加内容确保唯一性）
+
+            # 输出格式
+            - 只返回分割点文本字符串
+            - 每个分割点用~~分隔
+            - 不要包含任何其他内容或解释
+
+            示例输出：分割点1~~分割点2~~分割点3
+ 
+            
+            文档内容：
+            {text[:10000]}  # 限制输入长度
+            """
+            
+            # 创建LLM实例
+            llm = ChatOpenAI(
+                model=llm_config["model"],
+                api_key=llm_config["api_key"],
+                base_url=llm_config["base_url"],
+                temperature=0.2,
+                max_tokens=llm_config["max_tokens"],
+                streaming=False
+            )
+            
+            response = llm.invoke(prompt)
+            
+            # 解析响应获取分割点列表
+            split_points = [point.strip() for point in response.content.split('~~') if point.strip()]
+            logger.info(f"语义分析得到 {len(split_points)} 个分割点")
+            return split_points
+            
+        except Exception as e:
+            logger.error(f"获取语义分割点失败: {str(e)}")
+            return []
+
+    def _split_by_semantic_points(self, text: str, split_points: List[str]) -> List[str]:
+        """根据语义分割点切分文本"""
+        chunks = []
+        current_pos = 0
+
+        # 按顺序查找每个分割点并切分文本
+        for point in split_points:
+            pos = text.find(point, current_pos)
+            if pos != -1:
+                # 添加当前位置到分割点位置的文本块
+                if pos > current_pos:
+                    chunk = text[current_pos:pos].strip()
+                    if chunk:
+                        chunks.append(chunk)
+                current_pos = pos
+
+        # 添加最后一个文本块
+        if current_pos < len(text):
+            chunk = text[current_pos:].strip()
+            if chunk:
+                chunks.append(chunk)
+
+        return chunks
+
+    def split_documents(self, documents: List[Document]) -> List[Document]:
+        """将文档分割成小块（含短段落合并和超长强制分割功能）"""
+        try:
+            if self.semantic_splitter_enabled and documents:
+                # 1. 合并文档
+                merged_doc = self._merge_documents(documents)
+
+                # 2. 获取语义分割点
+                split_points = self._get_semantic_split_points(merged_doc.page_content)
+
+                if split_points:
+                    # 3. 根据语义分割点切分文本
+                    text_chunks = self._split_by_semantic_points(merged_doc.page_content, split_points)
+
+                    # 4. 处理短段落合并和超长强制分割（新增逻辑）
+                    processed_chunks = []
+                    buffer = ""
+                    for chunk in text_chunks:
+                        # 先检查当前chunk是否超长（超过1000字符）
+                        if len(chunk) > 1000:
+                            # 如果有缓冲内容，先处理缓冲
+                            if buffer:
+                                processed_chunks.append(buffer)
+                                buffer = ""
+
+                            # 对超长chunk进行强制分割
+                            forced_splits = self._force_split_long_chunk(chunk)
+                            processed_chunks.extend(forced_splits)
+                        else:
+                            # 正常处理短段落合并
+                            if not buffer:
+                                buffer = chunk
+                            else:
+                                if len(buffer) < 100:
+                                    buffer = f"{buffer}\n{chunk}"
+                                else:
+                                    processed_chunks.append(buffer)
+                                    buffer = chunk
+
+                    # 添加最后剩余的缓冲内容
+                    if buffer:
+                        processed_chunks.append(buffer)
+
+                    # 5. 创建Document对象
+                    chunks = []
+                    for i, chunk in enumerate(processed_chunks):
+                        doc = Document(
+                            page_content=chunk,
+                            metadata={
+                                **merged_doc.metadata,
+                                'chunk_index': i,
+                                'merged': len(chunk) > 100,  # 标记是否经过合并
+                                'forced_split': len(chunk) > 1000  # 标记是否经过强制分割
+                            }
+                        )
+                        chunks.append(doc)
+                else:
+                    # 如果获取分割点失败，回退到默认分割器
+                    logger.warning("语义分割失败，使用默认分割器")
+                    chunks = self.text_splitter.split_documents(documents)
+            else:
+                # 使用默认分割器
+                chunks = self.text_splitter.split_documents(documents)
+
             logger.info(f"文档分割完成，共生成 {len(chunks)} 个文档块")
             return chunks
+
         except Exception as e:
             logger.error(f"文档分割失败: {str(e)}")
             raise
+
+    def _force_split_long_chunk(self, chunk: str) -> List[str]:
+        """强制分割超长段落（超过1000字符）"""
+        max_length = 1000
+        chunks = []
+
+        # 先尝试按换行符分割
+        if '\n' in chunk:
+            lines = chunk.split('\n')
+            current_chunk = ""
+            for line in lines:
+                if len(current_chunk) + len(line) + 1 > max_length:
+                    if current_chunk:
+                        chunks.append(current_chunk)
+                        current_chunk = line
+                    else:
+                        chunks.append(line[:max_length])
+                        current_chunk = line[max_length:]
+                else:
+                    if current_chunk:
+                        current_chunk += "\n" + line
+                    else:
+                        current_chunk = line
+            if current_chunk:
+                chunks.append(current_chunk)
+        else:
+            # 没有换行符则直接按长度分割
+            chunks = [chunk[i:i + max_length] for i in range(0, len(chunk), max_length)]
+
+        return chunks
     
     def create_vector_store(self, knowledge_base_id: int, documents: List[Document], document_id: int = None) -> str:
         """为知识库创建向量存储"""

@@ -686,8 +686,10 @@ class SmartDatabaseWorkflowManager:
         """执行SQL语句"""
         try:
             # 使用PostgreSQL MCP工具执行查询
-            query_result = self.postgresql_tool._execute_query(self.postgresql_tool.connections[str(user_id)]['connection'],sql_query)
-            
+            if str(user_id) in self.postgresql_tool.connections:
+                query_result = self.postgresql_tool._execute_query(self.postgresql_tool.connections[str(user_id)]['connection'],sql_query)
+            else:
+                raise QueryExecutionError('请重新进行数据库连接')
             if query_result.get('success'):
                 data = query_result.get('data', [])
                 return {
