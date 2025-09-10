@@ -277,13 +277,13 @@ class SmartDatabaseWorkflowManager:
                 }
                 yield step_data
                 
-                # 根据表元数据选择最相关的表并生成SQL
-                target_table, target_schema = await self._select_target_table(user_query, tables_info)
+                # 根据表元数据选择相关表并生成SQL
+                target_tables, target_schemas = await self._select_target_table(user_query, tables_info)
                 step_data = {
                     'type': 'workflow_step',
                     'step': 'table_selected',
                     'status': 'completed',
-                    'message': f'已经智能选择了相关表{target_table}',
+                    'message': f'已经智能选择了相关表: {", ".join(target_tables)}',
                     'timestamp': datetime.now().isoformat()
                 }
 
@@ -291,15 +291,15 @@ class SmartDatabaseWorkflowManager:
                 workflow_steps.append({
                     'step': 'table_metadata',
                     'status': 'completed',
-                    'message': f'已经智能选择了相关表{target_table}',
+                    'message': f'已经智能选择了相关表: {", ".join(target_tables)}',
                 })
-                sql_query = await self._generate_sql_query(user_query, target_table, target_schema)
+                sql_query = await self._generate_sql_query(user_query, target_tables, target_schemas)
                 
                 step_data.update({
                     'status': 'completed',
                     'message': 'SQL查询生成成功',
                     'details': {
-                        'target_table': target_table,
+                        'target_tables': target_tables,
                         'generated_sql': sql_query[:100] + '...' if len(sql_query) > 100 else sql_query
                     }
                 })
@@ -308,7 +308,7 @@ class SmartDatabaseWorkflowManager:
                 workflow_steps.append({
                     'step': 'sql_generation',
                     'status': 'completed',
-                    'message': 'SQL查询生成成功'
+                    'message': 'SQL语句生成成功'
                 })
                 
             except Exception as e:
@@ -385,11 +385,15 @@ class SmartDatabaseWorkflowManager:
                 }
                 yield step_data
                 
-                summary = await self._generate_database_summary(user_query, query_result, target_table)
+                summary = await self._generate_database_summary(user_query, query_result, ', '.join(target_tables))
                 
                 step_data.update({
                     'status': 'completed',
-                    'message': '总结生成完成'
+                    'message': '总结生成完成',
+                    'details': {
+                        'tables_analyzed': target_tables,
+                        'summary_length': len(summary)
+                    }
                 })
                 yield step_data
                 
@@ -443,7 +447,7 @@ class SmartDatabaseWorkflowManager:
                         **table_data,
                         'generated_sql': sql_query,
                         'summary': summary,
-                        'table_name': target_table,
+                        'table_name': target_tables,
                         'query_result': query_result,
                         'metadata_source': 'saved_database'  # 标记元数据来源
                     },
@@ -570,72 +574,94 @@ class SmartDatabaseWorkflowManager:
             logger.error(f"获取表结构异常: {str(e)}")
             raise TableSchemaError(f'获取表结构失败: {str(e)}')
     
-    async def _select_target_table(self, user_query: str, tables_info: Dict[str, Dict]) -> tuple[str, Dict]:
-        """根据用户查询选择最相关的表"""
+    async def _select_target_table(self, user_query: str, tables_info: Dict[str, Dict]) -> tuple[List[str], List[Dict]]:
+        """根据用户查询选择相关的表，支持返回多个表"""
         try:
             if len(tables_info) == 1:
                 # 只有一个表，直接返回
                 table_name = list(tables_info.keys())[0]
-                return table_name, tables_info[table_name]
+                return [table_name], [tables_info[table_name]]
             
-            # 多个表时，使用LLM选择最相关的表
+            # 多个表时，使用LLM选择相关的表
             tables_summary = []
             for table_name, schema in tables_info.items():
                 columns = schema.get('columns', [])
                 column_names = [col.get('column_name', col.get('name', '')) for col in columns]
-                tables_summary.append(f"表名: {table_name}, 字段: {', '.join(column_names[:10])}")
+                qa_desc = schema.get('qa_description', '')
+                business_ctx = schema.get('business_context', '')
+                tables_summary.append(f"表名: {table_name}\n字段: {', '.join(column_names[:10])}\n表描述: {qa_desc}\n业务上下文: {business_ctx}")
             
             prompt = f"""
-用户查询: {user_query}
-
-可用的表:
-{chr(10).join(tables_summary)}
-
-请根据用户查询选择最相关的表，只返回表名：
-"""
+            用户查询: {user_query}
+            
+            可用的表:
+            {chr(10).join(tables_summary)}
+            
+            请根据用户查询选择相关的表，可以选择多个表。分析表之间可能的关联关系，返回所有相关的表名，用逗号分隔。
+            可以通过qa_description（表描述），business_context(表的业务上下文），以及column_names几个字段判断要使用哪些表。
+            注意：只返回表名列表，后面不要跟其他的内容。
+            例如直接输出: table1,table2,table3
+            """
             
             response = await self.llm.ainvoke(prompt)
-            selected_table = response.content.strip()
+            selected_tables = [t.strip() for t in response.content.strip().split(',')]
             
             # 验证选择的表是否存在
-            if selected_table in tables_info:
-                return selected_table, tables_info[selected_table]
+            valid_tables = []
+            valid_schemas = []
+            for table in selected_tables:
+                if table in tables_info:
+                    valid_tables.append(table)
+                    valid_schemas.append(tables_info[table])
+                else:
+                    logger.warning(f"LLM选择的表 {table} 不存在")
+            
+            if valid_tables:
+                return valid_tables, valid_schemas
             else:
-                # 如果LLM返回的表名不存在，选择第一个表
+                # 如果没有有效的表，选择第一个表
                 table_name = list(tables_info.keys())[0]
-                logger.warning(f"LLM选择的表 {selected_table} 不存在，使用默认表 {table_name}")
-                return table_name, tables_info[table_name]
+                logger.warning(f"没有找到有效的表，使用默认表 {table_name}")
+                return [table_name], [tables_info[table_name]]
                 
         except Exception as e:
             logger.error(f"选择目标表异常: {str(e)}")
             # 出现异常时选择第一个表
             table_name = list(tables_info.keys())[0]
-            return table_name, tables_info[table_name]
+            return [table_name], [tables_info[table_name]]
     
-    async def _generate_sql_query(self, user_query: str, table_name: str, table_schema: Dict) -> str:
-        """生成SQL语句"""
+    async def _generate_sql_query(self, user_query: str, table_names: List[str], table_schemas: List[Dict]) -> str:
+        """生成SQL语句，支持多表关联查询"""
         try:
-            # 构建提示词
-            columns_info = []
-            for col in table_schema.get('columns', []):
-                col_info = f"{col['column_name']} ({col['data_type']})"
-                # if col.get('description'):
-                #     col_info += f" - {col['description']}"
-                columns_info.append(col_info)
+            # 构建所有表的结构信息
+            tables_info = []
+            for table_name, schema in zip(table_names, table_schemas):
+                columns_info = []
+                for col in schema.get('columns', []):
+                    col_info = f"{col['column_name']} ({col['data_type']})"
+                    columns_info.append(col_info)
+                
+                table_info = f"表名: {table_name}\n"
+                table_info += f"表描述: {schema.get('qa_description', '')}\n"
+                table_info += f"业务上下文: {schema.get('business_context', '')}\n"
+                table_info += "字段信息:\n" + "\n".join(columns_info)
+                tables_info.append(table_info)
             
-            schema_text = "\n".join(columns_info)
+            schema_text = "\n\n".join(tables_info)
             
             prompt = f"""
-基于以下表结构，将自然语言查询转换为SQL语句：
-
-表名: {table_name}
-字段信息:
-{schema_text}
-
-用户查询: {user_query}
-
-请生成对应的SQL查询语句，只返回SQL语句，不要包含其他解释：
-"""
+            基于以下表结构，将自然语言查询转换为SQL语句。如果需要关联多个表，请分析表之间的关系，使用合适的JOIN语法：
+            
+            {schema_text}
+            
+            用户查询: {user_query}
+            
+            请生成对应的SQL查询语句，要求：
+            1. 只返回SQL语句，不要包含其他解释
+            2. 如果查询涉及多个表，需要正确处理表之间的关联关系
+            3. 使用合适的JOIN类型（INNER JOIN、LEFT JOIN等）
+            4. 确保SELECT的字段来源明确，必要时使用表名前缀
+            """
             
             # 使用LLM生成SQL
             response = await self.llm.ainvoke(prompt)
@@ -678,29 +704,36 @@ class SmartDatabaseWorkflowManager:
             logger.error(f"查询执行异常: {str(e)}")
             raise QueryExecutionError(f'查询执行失败: {str(e)}')
     
-    async def _generate_database_summary(self, user_query: str, query_result: Dict, table_name: str) -> str:
-        """生成AI总结"""
+    async def _generate_database_summary(self, user_query: str, query_result: Dict, tables_str: str) -> str:
+        """生成AI总结，支持多表查询结果"""
         try:
             data = query_result.get('data', [])
             row_count = query_result.get('row_count', 0)
             columns = query_result.get('columns', [])
+            sql_query = query_result.get('sql_query', '')
             
             # 构建总结提示词
             prompt = f"""
 用户查询: {user_query}
-表名: {table_name}
+涉及的表: {tables_str}
 查询结果: 共 {row_count} 条记录
-字段: {', '.join(columns)}
+查询的字段: {', '.join(columns)}
+执行的SQL: {sql_query}
 
 前几条数据示例:
 {str(data[:3]) if data else '无数据'}
 
 请基于以上信息，用中文生成一个简洁的查询结果总结，包括：
-1. 查询的主要发现
-2. 数据的关键特征
-3. 对用户问题的回答
+1. 查询涉及的表及其关系
+2. 查询的主要发现和数据特征
+3. 对用户问题的直接回答
+4. 如果有关联查询，说明关联的结果特点
 
-总结应该简洁明了，不超过200字：
+总结要求：
+1. 语言简洁明了
+2. 重点突出查询结果
+3. 如果是多表查询，需要说明表之间的关系
+4. 总结不超过300字
 """
             
             # 使用LLM生成总结
@@ -712,7 +745,7 @@ class SmartDatabaseWorkflowManager:
             
         except Exception as e:
             logger.error(f"总结生成异常: {str(e)}")
-            return f"查询完成，共返回 {query_result.get('row_count', 0)} 条记录。"
+            return f"查询完成，共返回 {query_result.get('row_count', 0)} 条记录。涉及的表: {tables_str}"
     
     async def process_database_query(
         self, 
@@ -762,11 +795,11 @@ class SmartDatabaseWorkflowManager:
             
             logger.info(f"表元数据读取完成 - 共{len(tables_info)}个启用问答的表")
             
-            # 步骤3: 根据表元数据选择目标表并生成SQL
-            target_table, target_schema = await self._select_target_table(user_query, tables_info)
-            sql_query = await self._generate_sql_query(user_query, target_table, target_schema)
+            # 步骤3: 根据表元数据选择相关表并生成SQL
+            target_tables, target_schemas = await self._select_target_table(user_query, tables_info)
+            sql_query = await self._generate_sql_query(user_query, target_tables, target_schemas)
             
-            logger.info(f"SQL生成完成 - 目标表: {target_table}")
+            logger.info(f"SQL生成完成 - 目标表: {', '.join(target_tables)}")
             
             # 步骤4: 执行SQL查询
             query_result = await self._execute_database_query(user_id, sql_query)
@@ -776,7 +809,7 @@ class SmartDatabaseWorkflowManager:
             table_data = self._convert_query_result_to_table_data(query_result)
             
             # 步骤6: 生成数据总结
-            summary = await self._generate_database_summary(user_query, query_result, target_table)
+            summary = await self._generate_database_summary(user_query, query_result, ', '.join(target_tables))
             
             # 步骤7: 返回结果
             return {
@@ -785,7 +818,7 @@ class SmartDatabaseWorkflowManager:
                     **table_data,
                     'generated_sql': sql_query,
                     'summary': summary,
-                    'table_name': target_table,
+                    'table_names': target_tables,
                     'query_result': query_result,
                     'metadata_source': 'saved_database'  # 标记元数据来源
                 }

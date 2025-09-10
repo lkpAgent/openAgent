@@ -177,8 +177,8 @@
                   </div>
                   <div v-else class="tables">
                     <div 
-                      v-for="table in dbTables" 
-                      :key="table"
+                      v-for="(table, index) in dbTables"
+                      :key="`table-${index}`"
                       class="table-item"
                       :class="{ active: selectedTable === table }"
                       @click="selectTable(table)"
@@ -212,14 +212,14 @@
               <el-icon><Download /></el-icon>
               导出
             </el-button>
-            <el-button 
+            <el-button
               v-if="activeDataSource === 'database' && selectedTable && dbConnected"
-              size="small" 
-              @click="toggleMetadataConfig" 
+              size="small"
+              @click="toggleMetadataConfig"
               :type="metadataConfigExpanded ? 'warning' : 'primary'"
             >
               <el-icon><Setting /></el-icon>
-              {{ metadataConfigExpanded ? '收起配置' : '表配置' }}
+              {{ metadataConfigExpanded ? '收起配置' : '表元配置' }}
             </el-button>
             <el-button size="small" @click="toggleCollapse" :type="isCollapsed ? 'primary' : 'warning'">
               <el-icon><Aim v-if="!isCollapsed" /><FullScreen v-else /></el-icon>
@@ -227,7 +227,7 @@
             </el-button>
           </div>
         </div>
-        
+
         <div class="preview-content">
           <div v-if="!selectedFile && !selectedTable" class="empty-preview">
             <el-empty description="请选择Excel文件或数据表进行预览">
@@ -236,12 +236,12 @@
               </template>
             </el-empty>
           </div>
-          
+
           <div v-else-if="previewLoading" class="loading-preview">
             <el-skeleton :rows="8" animated />
             <div class="loading-text">正在加载数据预览...</div>
           </div>
-          
+
           <div v-else class="preview-data">
             <div class="preview-info">
               <div class="data-source-info">
@@ -259,18 +259,18 @@
                 <el-tag>列数: {{ previewData?.columns || 0 }}</el-tag>
               </div>
             </div>
-            
+
             <div class="preview-table">
-              <el-table 
-                :data="previewData?.data || []" 
+              <el-table
+                :data="previewData?.data || []"
                 height="320"
                 stripe
                 border
                 size="small"
               >
-                <el-table-column 
-                  v-for="column in previewData?.column_names || []" 
-                  :key="column"
+                <el-table-column
+                  v-for="(column, index) in previewData?.column_names || []"
+                  :key="`column-${index}`"
                   :prop="column"
                   :label="column"
                   min-width="120"
@@ -291,90 +291,72 @@
             </div>
           </div>
         </div>
-        
+
         <!-- 表元数据编辑区域 -->
         <div v-if="activeDataSource === 'database' && selectedTable && dbConnected && metadataConfigExpanded" class="table-metadata-editor">
           <div class="metadata-editor-header">
-            <h4>
-              <el-icon><DataAnalysis /></el-icon>
-              {{ selectedTable }} - 表元数据配置
-            </h4>
-            <div class="metadata-editor-actions">
-              <el-button 
-                size="small" 
-                type="primary" 
-                @click="saveTableMetadata"
-                :loading="savingMetadata"
-              >
-                <el-icon><Check /></el-icon>
-                保存配置
-              </el-button>
-              <el-button 
-                size="small" 
-                @click="loadCurrentTableMetadata"
-                :loading="loadingMetadata"
-              >
-                <el-icon><RefreshLeft /></el-icon>
-                刷新
-              </el-button>
-            </div>
+            <h4>{{ selectedTable }} - 表元数据配置</h4>
           </div>
-          
+
           <div class="metadata-editor-content">
             <div v-if="loadingMetadata" class="loading-metadata">
-              <el-skeleton :rows="4" animated />
-              <div class="loading-text">正在加载表元数据...</div>
+              <el-skeleton :rows="3" animated />
             </div>
-            
+
             <div v-else-if="currentTableMetadata" class="metadata-form">
-              <el-form :model="currentTableMetadata" label-width="100px" size="small">
-                <el-form-item label="启用问答">
-                  <el-switch 
-                    v-model="currentTableMetadata.is_enabled_for_qa"
-                    active-text="启用"
-                    inactive-text="禁用"
-                  />
-                </el-form-item>
-                
-                <el-form-item label="表描述">
-                  <el-input
-                    v-model="currentTableMetadata.qa_description"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="请输入该表的业务说明和用途描述，例如：
-            用户信息表：存储系统用户的基本信息，包括姓名、性别、手机号、邮箱等"
-                    maxlength="200"
-                    show-word-limit
-                  />
-                </el-form-item>
-                
-                <el-form-item label="业务上下文">
-                  <el-input
-                    v-model="currentTableMetadata.business_context"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="请输入表的业务背景和使用场景，例如：
-            • 该表用于电商系统的用户管理模块
-            • 支持用户注册、登录、个人信息维护等功能""
-                    maxlength="300"
-                    show-word-limit
-                  />
-                </el-form-item>
-                
-                <el-form-item label="表信息">
-                  <div class="table-info-display">
-                    <el-tag>{{ currentTableMetadata.columns?.length || 0 }} 列</el-tag>
-                    <el-tag type="success">{{ currentTableMetadata.row_count || 0 }} 行</el-tag>
-                    <el-tag type="info" v-if="currentTableMetadata.last_synced_at">
-                      更新时间: {{ formatDate(currentTableMetadata.last_synced_at) }}
-                    </el-tag>
+              <div class="form-section">
+                <div class="form-item">
+                  <div class="form-label">启用问答</div>
+                  <div class="form-content">
+                    <el-switch
+                      v-model="currentTableMetadata.is_enabled_for_qa"
+                      active-text="启用"
+                      inactive-text="禁用"
+                    />
                   </div>
-                </el-form-item>
-              </el-form>
+                </div>
+
+                <div class="form-item">
+                  <div class="form-label">表描述</div>
+                  <div class="form-content">
+                    <el-input
+                      v-model="currentTableMetadata.qa_description"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="请输入该表的业务说明和用途描述"
+                      maxlength="200"
+                      show-word-limit
+                    />
+                  </div>
+                </div>
+
+                <div class="form-item">
+                  <div class="form-label">业务上下文</div>
+                  <div class="form-content">
+                    <el-input
+                      v-model="currentTableMetadata.business_context"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="请输入表的业务背景和使用场景"
+                      maxlength="300"
+                      show-word-limit
+                    />
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <el-button type="primary" @click="saveTableMetadata" :loading="savingMetadata">
+                    保存配置
+                  </el-button>
+                  <el-button @click="loadCurrentTableMetadata" :loading="loadingMetadata">
+                    刷新
+                  </el-button>
+                </div>
+              </div>
             </div>
-            
+
             <div v-else class="empty-metadata">
-              <el-empty description="暂无表元数据，请先收集表信息">
+              <el-empty description="暂无表元数据">
                 <el-button type="primary" @click="collectCurrentTableMetadata">
                   <el-icon><Collection /></el-icon>
                   收集表元数据
@@ -384,7 +366,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- 右侧智能查询区域 -->
        <div class="chat-panel" :class="{ 'chat-panel-compact': isCollapsed, 'chat-panel-expanded': isChatCollapsed }">
          <div class="chat-header">
@@ -400,7 +382,7 @@
     </el-button>
   </div>
 </div>
-        
+
         <div class="chat-content">
           <div class="chat-messages" ref="chatMessagesContainer">
             <div v-if="chatMessages.length === 0" class="empty-chat">
@@ -410,10 +392,10 @@
                 </template>
               </el-empty>
             </div>
-            
+
             <div v-else>
-              <div 
-                v-for="(message, index) in chatMessages" 
+              <div
+                v-for="(message, index) in chatMessages"
                 :key="index"
                 class="message-item"
                 :class="message.type"
@@ -431,7 +413,7 @@
                     <div class="message-text">{{ message.content }}</div>
                   </div>
                 </div>
-                
+
                 <!-- 机器人消息 -->
                 <div v-else class="bot-message">
                   <div class="message-header">
@@ -441,7 +423,7 @@
                     <span class="message-sender">智能助手</span>
                     <span class="message-time">{{ formatTime(message.timestamp) }}</span>
                   </div>
-                  
+
                   <!-- 工作流步骤显示区域（仅在机器人回答中显示） -->
                   <div v-if="message.workflowSteps && message.workflowSteps.length > 0" class="workflow-steps-panel">
                     <div class="workflow-header" @click="toggleWorkflowCollapse(index)">
@@ -457,8 +439,8 @@
                       </el-icon>
                     </div>
                     <div v-show="!message.workflowCollapsed" class="workflow-steps">
-                      <div 
-                        v-for="(step, stepIndex) in message.workflowSteps" 
+                      <div
+                        v-for="(step, stepIndex) in message.workflowSteps"
                         :key="stepIndex"
                         class="workflow-step"
                         :class="step.status"
@@ -481,12 +463,12 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <!-- 表格结果显示区域 -->
                   <div v-if="message.resultType === 'table_data' && message.tableData" class="table-result">
                     <h3>查询结果</h3>
-                    <el-table 
-                      :data="message.tableData.data" 
+                    <el-table
+                      :data="message.tableData.data"
                       style="width: 100%"
                       :max-height="400"
                       stripe
@@ -494,10 +476,10 @@
                       size="small"
                       class="result-table"
                     >
-                      <el-table-column 
-                        v-for="column in message.tableData.columns" 
+                      <el-table-column
+                        v-for="column in message.tableData.columns"
                         :key="column.prop"
-                        :prop="column.prop" 
+                        :prop="column.prop"
                         :label="column.label"
                         :width="column.width"
                         show-overflow-tooltip
@@ -523,7 +505,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="message-content bot-content">
                     <div class="message-text" v-html="formatMessage(message.content)"></div>
                   </div>
@@ -531,13 +513,13 @@
               </div>
             </div>
           </div>
-          
+
           <div class="chat-input">
             <div class="query-suggestions" v-if="querySuggestions.length > 0">
               <div class="suggestions-title">推荐问题：</div>
               <div class="suggestions">
-                <el-tag 
-                  v-for="suggestion in querySuggestions" 
+                <el-tag
+                  v-for="suggestion in querySuggestions"
                   :key="suggestion"
                   class="suggestion-tag"
                   @click="applyQuerySuggestion(suggestion)"
@@ -547,7 +529,7 @@
                 </el-tag>
               </div>
             </div>
-            
+
             <div class="input-area">
               <el-input
                 v-model="queryText"
@@ -558,9 +540,9 @@
                 @keydown.enter.ctrl="executeQuery"
               />
               <div class="input-actions">
-                <el-button 
-                  type="primary" 
-                  @click="executeQuery" 
+                <el-button
+                  type="primary"
+                  @click="executeQuery"
                   :loading="queryLoading"
                   :disabled="!canExecuteQuery"
                 >
@@ -576,7 +558,7 @@
           </div>
         </div>
       </div>
-      
+
 
 
     </div>
@@ -601,7 +583,7 @@
             inactive-color="#ff4949"
           />
         </el-form-item>
-        
+
         <el-form-item label="问答描述">
           <el-input
             v-model="qaSettingsForm.qa_description"
@@ -615,7 +597,7 @@
             show-word-limit
           />
         </el-form-item>
-        
+
         <el-form-item label="业务上下文">
           <el-input
             v-model="qaSettingsForm.business_context"
@@ -632,7 +614,7 @@
         </el-form-item>
       </el-form>
     </div>
-    
+
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="cancelQASettings">取消</el-button>
@@ -743,7 +725,13 @@ const savingMetadata = ref(false)
 const metadataConfigExpanded = ref(false)
 
 // 数据预览相关
-const previewData = ref(null)
+const previewData = ref({
+  rows: 0,
+  columns: 0,
+  column_names: [],
+  data: [],
+  total: 0
+})
 const previewLoading = ref(false)
 const previewCurrentPage = ref(1)
 const previewPageSize = ref(20)
@@ -778,9 +766,15 @@ const handleDataSourceChange = async (tab: string) => {
   queryResult.value = null
   selectedFile.value = null
   selectedTable.value = ''
-  previewData.value = null
+  previewData.value = {
+    rows: 0,
+    columns: 0,
+    column_names: [],
+    data: [],
+    total: 0
+  }
   updateQuerySuggestions()
-  
+
   // 如果切换到数据库tab，自动连接第一个配置
   if (tab === 'database') {
     await autoConnectFirstConfig()
@@ -797,9 +791,9 @@ const loadFileList = async () => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     const result = await response.json()
-    
+
     if (result.success && result.data) {
       excelFileList.value = result.data.files.map(file => ({
         id: file.id,
@@ -815,7 +809,7 @@ const loadFileList = async () => {
           upload_time: file.upload_time
         }
       }))
-      
+
       // 如果有文件且没有选中的文件，自动选择第一个
       if (excelFileList.value.length > 0 && !selectedFile.value) {
         const firstSuccessFile = excelFileList.value.find(f => f.status === 'success')
@@ -839,7 +833,13 @@ const selectFile = (file: any) => {
   selectedTable.value = ''
   // 重置分页和清除之前的预览数据
   previewCurrentPage.value = 1
-  previewData.value = null
+  previewData.value = {
+    rows: 0,
+    columns: 0,
+    column_names: [],
+    data: [],
+    total: 0
+  }
   loadFilePreview(file)
 }
 
@@ -856,7 +856,7 @@ const formatUploadTime = (timestamp: number) => {
   const date = new Date(timestamp)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
   if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
@@ -878,20 +878,26 @@ const removeFile = async (file: any) => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     const result = await response.json()
-    
+
     if (result.success) {
       // 如果删除的是当前预览的文件，清空预览
       if (selectedFile.value && selectedFile.value.id === file.id) {
         selectedFile.value = null
-        previewData.value = null
+        previewData.value = {
+      rows: 0,
+      columns: 0,
+      column_names: [],
+      data: [],
+      total: 0
+    }
         excelData.value = null
       }
-      
+
       // 重新加载文件列表
       await loadFileList()
-      
+
       ElMessage.success('文件已删除')
     } else {
       ElMessage.error(result.message || '删除文件失败')
@@ -903,12 +909,30 @@ const removeFile = async (file: any) => {
 }
 
 // 表格相关方法
-const selectTable = (table: string) => {
+const selectTable = async (table: string) => {
   selectedTable.value = table
   selectedFile.value = null
-  loadTablePreview(table)
-  // 自动加载表元数据
-  loadCurrentTableMetadata()
+
+  // 先清空预览数据，避免显示旧数据
+  previewData.value = {
+    rows: 0,
+    columns: 0,
+    column_names: [],
+    data: [],
+    total: 0
+  }
+
+  // 重置表元数据配置状态
+  currentTableMetadata.value = null
+  metadataConfigExpanded.value = false
+
+  try {
+    // 只加载表预览数据
+    await loadTablePreview(table)
+  } catch (error) {
+    console.error('选择表时发生错误:', error)
+    ElMessage.error('加载表数据失败')
+  }
 }
 
 // 数据预览相关方法
@@ -916,10 +940,16 @@ const loadFilePreview = async (file: any) => {
   console.log('开始加载文件预览:', file)
   if (!file || file.status !== 'success') {
     console.log('文件状态不正确，跳过预览:', file?.status)
-    previewData.value = null
+    previewData.value = {
+      rows: 0,
+      columns: 0,
+      column_names: [],
+      data: [],
+      total: 0
+    }
     return
   }
-  
+
   previewLoading.value = true
   console.log('设置预览加载状态为true')
   try {
@@ -935,7 +965,7 @@ const loadFilePreview = async (file: any) => {
         page_size: previewPageSize.value
       })
     })
-    
+
     const result = await response.json()
     console.log('API响应结果:', result)
     if (result.success) {
@@ -999,13 +1029,13 @@ const loadTablePreview = async (table: string) => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     const result = await response.json()
-    
+
     if (result.success && result.data) {
       // 转换API返回的数据格式为前端预览组件需要的格式
       const tableData = result.data
-      
+
       previewData.value = {
         rows: tableData.total_rows || tableData.data?.length || 0,
         columns: tableData.columns?.length || 0,
@@ -1013,17 +1043,29 @@ const loadTablePreview = async (table: string) => {
         data: tableData.data || [],
         total: tableData.total_rows || tableData.data?.length || 0
       }
-      
+
       ElMessage.success('表格预览加载成功')
     } else {
       ElMessage.error(result.message || '加载表格预览失败')
       // 如果API调用失败，清空预览数据
-      previewData.value = null
+      previewData.value = {
+        rows: 0,
+        columns: 0,
+        column_names: [],
+        data: [],
+        total: 0
+      }
     }
   } catch (error) {
     console.error('加载表格预览失败:', error)
     ElMessage.error('加载表格预览失败')
-    previewData.value = null
+    previewData.value = {
+      rows: 0,
+      columns: 0,
+      column_names: [],
+      data: [],
+      total: 0
+    }
   } finally {
     previewLoading.value = false
   }
@@ -1057,30 +1099,30 @@ const clearChat = () => {
 const formatMessage = (content: string) => {
   // 检测是否包含Markdown表格
   const hasTable = content.includes('|') && (
-    content.includes('---') || 
+    content.includes('---') ||
     content.match(/\|.*\|.*\n.*\|.*\|/)
   )
-  
+
   if (hasTable) {
     // 手动转换Markdown表格为HTML
     const lines = content.split('\n')
     let htmlContent = ''
     let inTable = false
     let isFirstRow = true
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
-      
+
       // 检测表格行（包含|但不是分隔行）
       if (line.includes('|') && !line.includes('---')) {
         if (!inTable) {
           htmlContent += '<div class="table-container"><table class="markdown-table"><tbody>'
           inTable = true
         }
-        
+
         const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell)
         const tag = isFirstRow ? 'th' : 'td'
-        
+
         htmlContent += `<tr>${cells.map(cell => `<${tag}>${cell}</${tag}>`).join('')}</tr>`
         isFirstRow = false
       } else if (line.includes('---') && inTable) {
@@ -1092,7 +1134,7 @@ const formatMessage = (content: string) => {
           inTable = false
           isFirstRow = true
         }
-        
+
         // 处理其他内容（如标题）
         if (line.startsWith('##')) {
           htmlContent += `<h2>${line.substring(2).trim()}</h2>`
@@ -1103,19 +1145,19 @@ const formatMessage = (content: string) => {
         }
       }
     }
-    
+
     if (inTable) {
       htmlContent += '</tbody></table></div>'
     }
-    
+
     return htmlContent
   }
-  
+
   // 其他Markdown语法处理
   if (content.includes('#') || content.includes('**') || content.includes('```')) {
     return md.render(content)
   }
-  
+
   return content.replace(/\n/g, '<br>')
 }
 
@@ -1142,10 +1184,10 @@ const beforeExcelUpload = (file: File) => {
 
 const handleExcelUploadSuccess = async (file: any) => {
   console.log('文件上传开始:', file.name)
-  
+
   const formData = new FormData()
   formData.append('file', file.raw)
-  
+
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/upload-excel`, {
       method: 'POST',
@@ -1154,21 +1196,21 @@ const handleExcelUploadSuccess = async (file: any) => {
       },
       body: formData
     })
-    
+
     const result = await response.json()
-    
+
     if (result.success) {
       ElMessage.success('Excel文件上传成功')
-      
+
       // 重新加载文件列表
       await loadFileList()
-      
+
       // 自动选择刚上传的文件
       const uploadedFile = excelFileList.value.find(f => f.id === result.file_id)
       if (uploadedFile) {
         selectFile(uploadedFile)
       }
-      
+
       updateQuerySuggestions()
     } else {
       ElMessage.error(result.message || '上传失败')
@@ -1201,7 +1243,7 @@ const testConnection = async () => {
       },
       body: JSON.stringify(dbConfig.value)
     })
-    
+
     const result = await response.json()
     if (result.success) {
       connectionValid.value = true
@@ -1224,7 +1266,7 @@ const saveDbConfig = async () => {
     ElMessage.warning('请输入配置名称')
     return
   }
-  
+
   savingConfig.value = true
   try {
     const configData = {
@@ -1237,7 +1279,7 @@ const saveDbConfig = async () => {
       password: dbConfig.value.password,
       is_default: false
     }
-    
+
     // 使用现有的database-config API
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config`, {
       method: 'POST',
@@ -1247,12 +1289,12 @@ const saveDbConfig = async () => {
       },
       body: JSON.stringify(configData)
     })
-    
+
     const result = await response.json()
     if (response.ok) {
       ElMessage.success('数据库配置保存成功')
       await loadSavedConfigs() // 重新加载配置列表
-      
+
       // 自动选择新保存的配置
       if (result.id) {
         selectedConfig.value = savedConfigs.value.find(config => config.id === result.id)
@@ -1279,7 +1321,7 @@ const loadDbConfig = async (configId) => {
   try {
     loadingConfig.value = true
     await loadSavedConfigs()
-    
+
     // 将局部变量改为响应式变量赋值
     selectedConfig.value = savedConfigs.value.find(config => config.id === configId)
     if (selectedConfig.value) {
@@ -1313,7 +1355,7 @@ const loadSavedConfigs = async () => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     if (response.ok) {
       const configs = await response.json()
       savedConfigs.value = configs.map(config => ({
@@ -1341,7 +1383,7 @@ const loadConfigByType = async (dbType) => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     if (response.ok) {
       const config = await response.json()
       // 设置selectedConfig
@@ -1354,7 +1396,7 @@ const loadConfigByType = async (dbType) => {
         username: config.username,
         config_name: config.name
       }
-      
+
       // 自动填充所有配置，包括密码
       dbConfig.value = {
         ...dbConfig.value,
@@ -1370,7 +1412,7 @@ const loadConfigByType = async (dbType) => {
     } else if (response.status === 404) {
       // 没有找到该类型的配置时，清空selectedConfig
       selectedConfig.value = null
-      
+
       // 使用默认值
       const defaultPorts = {
         'postgresql': '5432',
@@ -1378,7 +1420,7 @@ const loadConfigByType = async (dbType) => {
         'sqlserver': '1433',
         'sqlite': ''
       }
-      
+
       dbConfig.value = {
         ...dbConfig.value,
         type: dbType,
@@ -1409,7 +1451,7 @@ const connectDatabase = async () => {
     ElMessage.error('请先选择数据库配置');
     return;
   }
-  
+
   try {
     isConnecting.value = true;
     // 修改URL路径，使用database-config的接口
@@ -1421,7 +1463,7 @@ const connectDatabase = async () => {
       }
       // 不需要body，config_id已经在URL路径中
     });
-    
+
     const result = await response.json();
     if (result.success) {
         isConnected.value = true;
@@ -1430,13 +1472,18 @@ const connectDatabase = async () => {
         const tableList = result.data.tables || [];
         dbTables.value = tableList.map(table => table.table_name);
         ElMessage.success('数据库连接成功');
+
+        // 连接成功后自动收集表元数据
+        if (dbTables.value.length > 0) {
+          await collectTableMetadata();
+        }
     } else {
       ElMessage.error(result.message || '连接失败');
     }
   } catch (error) {
     ElMessage.error('连接失败: ' + error.message);
   } finally {
-    isConnecting.value = false; // 连接完成，设置为false 
+    isConnecting.value = false; // 连接完成，设置为false
   }
 }
 
@@ -1447,14 +1494,14 @@ const autoConnectFirstConfig = async () => {
     if (savedConfigs.value.length === 0) {
       await loadSavedConfigs()
     }
-    
+
     // 如果有配置，自动选择第一个并连接
     if (savedConfigs.value.length > 0) {
       selectedConfig.value = savedConfigs.value[0]
-      
+
       // 自动连接数据库
       await connectDatabase()
-      
+
       // 连接成功后自动收集表元数据
       if (isConnected.value) {
         await collectTableMetadata()
@@ -1474,12 +1521,12 @@ const collectTableMetadata = async () => {
     ElMessage.error('请先连接数据库')
     return
   }
-  
+
   if (!dbTables.value || dbTables.value.length === 0) {
     ElMessage.error('没有可收集的表，请先连接数据库获取表列表')
     return
   }
-  
+
   collectingMetadata.value = true
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/collect`, {
@@ -1493,7 +1540,7 @@ const collectTableMetadata = async () => {
         table_names: dbTables.value
       })
     })
-    
+
     const result = await response.json()
     if (result.success) {
       ElMessage.success(`成功收集了 ${result.total_collected} 个表的元数据`)
@@ -1518,7 +1565,7 @@ const refreshTableMetadata = async () => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     const result = await response.json()
     if (result.success) {
       tableMetadataList.value = result.data.map(metadata => ({
@@ -1573,7 +1620,7 @@ const saveQASettings = async () => {
       },
       body: JSON.stringify(qaSettingsForm.value)
     })
-    
+
     const result = await response.json()
     if (result.success) {
       ElMessage.success('问答设置更新成功')
@@ -1601,7 +1648,7 @@ const formatDate = (dateString) => {
 
 const loadTableSchema = async () => {
   if (!selectedTable.value) return
-  
+
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/table-schema`, {
       method: 'POST',
@@ -1613,7 +1660,7 @@ const loadTableSchema = async () => {
         table_name: selectedTable.value
       })
     })
-    
+
     const result = await response.json()
     if (result.success) {
       tableSchema.value = result.data.schema
@@ -1652,7 +1699,7 @@ const loadCurrentTableMetadata = async () => {
     currentTableMetadata.value = null
     return
   }
-  
+
   loadingMetadata.value = true
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/by-table`, {
@@ -1666,19 +1713,25 @@ const loadCurrentTableMetadata = async () => {
         table_name: selectedTable.value
       })
     })
-    
+
     const result = await response.json()
     if (result.success && result.data) {
-      currentTableMetadata.value = {
+      // 清理和格式化表元数据
+      const cleanedMetadata = {
         id: result.data.id,
         table_name: result.data.table_name,
-        columns: result.data.columns,
+        columns: result.data.columns.map(col => ({
+          ...col,
+          column_default: col.column_default?.toString() || '',
+          column_name: col.column_name?.toString() || ''
+        })),
         row_count: result.data.row_count,
         last_synced_at: result.data.last_synced_at,
         is_enabled_for_qa: result.data.qa_settings?.is_enabled_for_qa ?? true,
-        qa_description: result.data.qa_settings?.qa_description || '',
-        business_context: result.data.qa_settings?.business_context || ''
+        qa_description: (result.data.qa_settings?.qa_description || '').toString(),
+        business_context: (result.data.qa_settings?.business_context || '').toString()
       }
+      currentTableMetadata.value = cleanedMetadata
     } else {
       currentTableMetadata.value = null
     }
@@ -1703,7 +1756,7 @@ const saveTableMetadata = async () => {
     ElMessage.error('没有可保存的表元数据')
     return
   }
-  
+
   savingMetadata.value = true
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/${currentTableMetadata.value.id}/qa-settings`, {
@@ -1718,7 +1771,7 @@ const saveTableMetadata = async () => {
         business_context: currentTableMetadata.value.business_context
       })
     })
-    
+
     const result = await response.json()
     if (result.success) {
       ElMessage.success('表元数据配置保存成功')
@@ -1742,7 +1795,7 @@ const collectCurrentTableMetadata = async () => {
     ElMessage.error('请先选择数据表')
     return
   }
-  
+
   collectingMetadata.value = true
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/collect`, {
@@ -1756,7 +1809,7 @@ const collectCurrentTableMetadata = async () => {
         table_names: [selectedTable.value]
       })
     })
-    
+
     const result = await response.json()
     if (result.success) {
       ElMessage.success('表元数据收集成功')
@@ -1778,10 +1831,10 @@ const applyQuerySuggestion = (suggestion: string) => {
 
 const executeQuery = async () => {
   if (!canExecuteQuery.value) return
-  
+
   queryLoading.value = true
   workflowSteps.value = []
-  
+
   try {
     await executeSmartQuery()
   } catch (error) {
@@ -1801,26 +1854,26 @@ const executeSmartQuery = async () => {
     conversation_id: currentConversationId.value,
     is_new_conversation: !currentConversationId.value
   }
-  
+
   // 如果是数据库查询，添加database_config_id参数
   if (activeDataSource.value === 'database' && selectedConfig.value) {
     requestBody.database_config_id = selectedConfig.value.id
   }
-  
+
   // 添加用户消息到聊天历史
   addChatMessage('user', queryText.value)
-  
+
   // 添加一个初始的机器人消息用于显示工作流进度
   const botMessageIndex = chatMessages.value.length
   addChatMessage('assistant', '正在处理您的查询...', {
     type: 'smart_query_processing'
   })
-  
+
   // 设置工作流步骤为展开状态（执行过程中显示）
   if (chatMessages.value[botMessageIndex]) {
     chatMessages.value[botMessageIndex].workflowCollapsed = false
   }
-  
+
   try {
     // 根据数据源类型选择不同的接口
     let apiEndpoint
@@ -1831,7 +1884,7 @@ const executeSmartQuery = async () => {
     } else {
       throw new Error('未知的数据源类型')
     }
-    
+
     const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
@@ -1840,41 +1893,41 @@ const executeSmartQuery = async () => {
       },
       body: JSON.stringify(requestBody)
     })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
-    
+
     while (true) {
       const { done, value } = await reader.read()
-      
+
       if (done) break
-      
+
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() || '' // 保留不完整的行
-      
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6))
-            
+
             if (data.type === 'workflow_step') {
               // 更新工作流步骤
               const existingStepIndex = workflowSteps.value.findIndex(
                 step => step.step === data.step
               )
-              
+
               if (existingStepIndex >= 0) {
                 workflowSteps.value[existingStepIndex] = data
               } else {
                 workflowSteps.value.push(data)
               }
-              
+
               // 实时更新机器人消息中的工作流步骤
               if (chatMessages.value[botMessageIndex]) {
                 chatMessages.value[botMessageIndex].workflowSteps = [...workflowSteps.value]
@@ -1886,12 +1939,12 @@ const executeSmartQuery = async () => {
                 if (data.conversation_id) {
                   currentConversationId.value = data.conversation_id
                 }
-                
+
                 // 更新机器人消息的内容为最终结果
                 if (chatMessages.value[botMessageIndex]) {
                   // 格式化显示内容：先显示数据，再显示摘要
                   let formattedContent = ''
-                  
+
                   // 处理数据结果
                   if (data.data?.result_type === 'table_data') {
                     // 处理表格数据
@@ -1901,14 +1954,14 @@ const executeSmartQuery = async () => {
                       data: data.data.data,
                       total: data.data.total
                     }
-                    
+
                     // 设置显示内容
                     let formattedContent = ''
                     if (data.data.summary) {
                       formattedContent += `## 分析摘要\n\n${data.data.summary}\n\n`
                     }
                     formattedContent += '查询结果已在上方表格中展示。'
-                    
+
                     chatMessages.value[botMessageIndex].content = formattedContent
                   } else if (['text', 'scalar', 'other'].includes(data.data?.result_type)) {
                     // 处理其他类型数据，按引用数据样式展示
@@ -1918,22 +1971,22 @@ const executeSmartQuery = async () => {
                       data: data.data.data,
                       summary: data.data.summary
                     }
-                    
+
                     // 设置显示内容
                     let formattedContent = ''
                     if (data.data.summary) {
                       formattedContent += `## 分析摘要\n\n${data.data.summary}\n\n`
                     }
                     formattedContent += '查询结果已在上方引用区域中展示。'
-                    
+
                     chatMessages.value[botMessageIndex].content = formattedContent
                   }
-                  
+
                   // 添加摘要信息
                   if (data.data?.summary) {
                     formattedContent += '## 分析摘要\n\n' + data.data.summary
                   }
-                  
+
                   chatMessages.value[botMessageIndex].content = formattedContent || '查询完成'
                   chatMessages.value[botMessageIndex].metadata = {
                     type: 'smart_query_result',
@@ -1943,7 +1996,7 @@ const executeSmartQuery = async () => {
                   // 执行完成后自动收起工作流步骤
                   chatMessages.value[botMessageIndex].workflowCollapsed = true
                 }
-                
+
                 ElMessage.success('智能查询执行成功')
               } else {
                 throw new Error(data.message || '查询失败')
@@ -1958,7 +2011,7 @@ const executeSmartQuery = async () => {
   } catch (error) {
     console.error('查询失败:', error)
     ElMessage.error('查询失败: ' + error.message)
-    
+
     // 更新机器人消息为错误信息
     if (chatMessages.value[botMessageIndex]) {
       chatMessages.value[botMessageIndex].content = '抱歉，查询过程中出现错误：' + error.message
@@ -1977,7 +2030,7 @@ const executeDatabaseQuery = async () => {
     page_size: pageSize.value,
     table_name: selectedTable.value
   }
-  
+
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/execute-db-query`, {
     method: 'POST',
     headers: {
@@ -1986,7 +2039,7 @@ const executeDatabaseQuery = async () => {
     },
     body: JSON.stringify(requestBody)
   })
-  
+
   const result = await response.json()
   if (result.success) {
     queryResult.value = result.data
@@ -2018,14 +2071,14 @@ const handlePageChange = (page: number) => {
 
 const exportCurrentResult = () => {
   if (!queryResult.value) return
-  
+
   // 导出CSV格式
   const csvContent = [queryResult.value.columns.join(',')]
-    .concat(queryResult.value.data.map(row => 
+    .concat(queryResult.value.data.map(row =>
       queryResult.value.columns.map(col => row[col]).join(',')
     ))
     .join('\n')
-  
+
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
@@ -2037,7 +2090,7 @@ const exportCurrentResult = () => {
 const getResultTypeLabel = (type: string) => {
   const labels = {
     'text': '文本结果',
-    'scalar': '标量结果', 
+    'scalar': '标量结果',
     'other': '其他结果'
   }
   return labels[type] || '查询结果'
@@ -2049,21 +2102,21 @@ const exportResults = () => {
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
-  
+
   // 如果展开数据预览区域，同时折叠导航栏
   if (isCollapsed.value && parentToggleSidebar) {
     parentToggleSidebar()
   }
-  
+
   ElMessage.success(isCollapsed.value ? '已展开数据预览区域' : '已恢复默认布局')
 }
 const toggleChatCollapse = () => {
   console.log('toggleChatCollapse 被调用，当前状态:', isChatCollapsed.value)
-  
+
   isChatCollapsed.value = !isChatCollapsed.value
-  
+
   console.log('新状态:', isChatCollapsed.value)
-  
+
   // 如果展开聊天面板，同时折叠导航栏
   if (isChatCollapsed.value && parentToggleSidebar) {
     try {
@@ -2072,12 +2125,12 @@ const toggleChatCollapse = () => {
       console.warn('调用 parentToggleSidebar 失败:', error)
     }
   }
-  
+
   // 强制触发DOM更新
   nextTick(() => {
     console.log('DOM更新完成，当前状态:', isChatCollapsed.value)
   })
-  
+
   ElMessage.success(isChatCollapsed.value ? '已展开智能查询区域' : '已恢复默认布局')
 }
 const visualizeResult = () => {
@@ -2091,7 +2144,7 @@ const addChatMessage = (role: string, content: string, metadata?: any) => {
     console.warn('chatMessages.value is not an array, resetting to empty array')
     chatMessages.value = []
   }
-  
+
   const message = {
     id: Date.now(),
     type: role === 'user' ? 'user' : 'assistant',
@@ -2102,7 +2155,7 @@ const addChatMessage = (role: string, content: string, metadata?: any) => {
     workflowCollapsed: true // 默认折叠工作流步骤
   }
   chatMessages.value.push(message)
-  
+
   // 清空当前工作流步骤（为下次查询准备）
   if (role === 'assistant') {
     workflowSteps.value = []
@@ -2119,11 +2172,11 @@ const toggleWorkflowCollapse = (messageIndex: number) => {
 // 获取工作流状态类型
 const getWorkflowStatusType = (steps: any[]) => {
   if (!steps || steps.length === 0) return 'info'
-  
+
   const hasRunning = steps.some(step => step.status === 'running')
   const hasFailed = steps.some(step => step.status === 'failed')
   const allCompleted = steps.every(step => step.status === 'completed')
-  
+
   if (hasRunning) return 'warning'
   if (hasFailed) return 'danger'
   if (allCompleted) return 'success'
@@ -2133,12 +2186,12 @@ const getWorkflowStatusType = (steps: any[]) => {
 // 获取工作流状态文本
 const getWorkflowStatusText = (steps: any[]) => {
   if (!steps || steps.length === 0) return '无步骤'
-  
+
   const hasRunning = steps.some(step => step.status === 'running')
   const hasFailed = steps.some(step => step.status === 'failed')
   const allCompleted = steps.every(step => step.status === 'completed')
   const completedCount = steps.filter(step => step.status === 'completed').length
-  
+
   if (hasRunning) return '执行中'
   if (hasFailed) return '执行失败'
   if (allCompleted) return '执行完成'
@@ -2161,7 +2214,7 @@ const getFilesStatus = async () => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     const result = await response.json()
     if (result.success) {
       return result.data
@@ -2178,7 +2231,7 @@ const resetConversationContext = async () => {
     clearChatHistory()
     return
   }
-  
+
   try {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-chat/conversation/${currentConversationId.value}/reset`, {
       method: 'POST',
@@ -2186,7 +2239,7 @@ const resetConversationContext = async () => {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
     })
-    
+
     const result = await response.json()
     if (result.success) {
       clearChatHistory()
@@ -2227,12 +2280,12 @@ onMounted(async () => {
   loadFileList()
   // 加载保存的数据库配置
   await loadSavedConfigs()
-  
+
   // 初始化时自动加载默认类型（PostgreSQL）的配置
   if (dbConfig.value.type === 'postgresql') {
     await loadConfigByType('postgresql')
   }
-  
+
   // 初始化表元数据列表
   await refreshTableMetadata()
 })
@@ -2370,11 +2423,11 @@ onMounted(async () => {
       border-color: #ffffff !important;
       box-shadow: 0 4px 12px rgba(26, 59, 126, 0.8) !important;
     }
-    
+
     :deep(.preview-table .el-scrollbar:hover .el-scrollbar__thumb) {
       background-color: #1a3b7e !important;
     }
-    
+
     :deep(.preview-table .el-scrollbar__thumb:hover) {
       background-color: #1a3b7e !important;
     }
@@ -2405,11 +2458,125 @@ onMounted(async () => {
   font-size: 16px;
 }
 
+.columns-table {
+  margin-top: 10px;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  background: #1e293b;
+}
+
+.columns-table :deep(.el-table) {
+  background: transparent;
+  --el-table-border-color: #334155;
+  --el-table-header-bg-color: rgba(30, 41, 59, 0.8);
+  --el-table-row-hover-bg-color: rgba(30, 41, 59, 0.6);
+}
+
+.columns-table :deep(.el-table__inner-wrapper::before) {
+  display: none;
+}
+
+.columns-table :deep(.el-table th) {
+  background: rgba(30, 41, 59, 0.8);
+  color: #e4e7ed;
+  font-weight: 600;
+}
+
+.columns-table :deep(.el-table td) {
+  color: #e4e7ed;
+  border-bottom: 1px solid #334155;
+}
+
 .source-tabs {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
   color: #e4e7ed;
+}
+
+/* 表元数据编辑器样式 */
+.metadata-editor-header {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-bottom: 1px solid #334155;
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.metadata-editor-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #e4e7ed;
+}
+
+.metadata-editor-content {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #334155;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 14px;
+  color: #e4e7ed;
+  line-height: 20px;
+}
+
+.form-content {
+  width: 100%;
+}
+
+.form-content :deep(.el-input__wrapper),
+.form-content :deep(.el-textarea__wrapper) {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  box-shadow: none;
+}
+
+.form-content :deep(.el-input__wrapper:hover),
+.form-content :deep(.el-textarea__wrapper:hover) {
+  border-color: #1d4ed8;
+}
+
+.form-content :deep(.el-input__wrapper.is-focus),
+.form-content :deep(.el-textarea__wrapper.is-focus) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.form-content :deep(.el-input__inner),
+.form-content :deep(.el-textarea__inner) {
+  color: #e4e7ed;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #334155;
+}
+
+.empty-metadata {
+  padding: 40px 0;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.loading-metadata {
+  padding: 20px 0;
 }
 
 .excel-panel,
@@ -3491,7 +3658,7 @@ onMounted(async () => {
   .data-source-panel {
     width: 280px;
   }
-  
+
   .chat-panel {
     width: 460px;
   }
@@ -3501,7 +3668,7 @@ onMounted(async () => {
   .query-content {
     flex-direction: column;
   }
-  
+
   .data-source-panel,
   .data-preview-panel,
   .chat-panel {
@@ -3596,23 +3763,23 @@ onMounted(async () => {
     background: #1e293b;
     border: 1px solid #334155;
   }
-  
+
   .el-dialog__header {
     background: #334155;
     border-bottom: 1px solid #475569;
     padding: 16px 20px;
   }
-  
+
   .el-dialog__title {
     color: #e4e7ed;
     font-weight: 600;
   }
-  
+
   .el-dialog__body {
     padding: 20px;
     background: #1e293b;
   }
-  
+
   .el-dialog__footer {
     background: #334155;
     border-top: 1px solid #475569;
@@ -3625,60 +3792,60 @@ onMounted(async () => {
     font-weight: 500;
     margin-bottom: 8px;
   }
-  
+
   .el-form-item {
      color: #e4e7ed !important;
    }
-  
+
   .el-form-item .el-form-item__content {
     color: #e4e7ed !important;
   }
-  
+
   .el-input__wrapper {
     background: #334155 !important;
     border: 1px solid #475569 !important;
     box-shadow: none !important;
   }
-  
+
   .el-input__inner {
     color: #e4e7ed !important;
     background: transparent !important;
   }
-  
+
   .el-input__wrapper:hover {
     border-color: #409eff !important;
   }
-  
+
   .el-input__wrapper.is-focus {
     border-color: #409eff !important;
     box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.2) !important;
   }
-  
+
   .el-textarea__inner {
     background: #334155 !important;
     border: 1px solid #475569 !important;
     color: #e4e7ed !important;
     resize: vertical;
   }
-  
+
   .el-textarea__inner:hover {
     border-color: #409eff !important;
   }
-  
+
   .el-textarea__inner:focus {
     border-color: #409eff !important;
     box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.2) !important;
   }
-  
+
   .el-input__count {
     color: #94a3b8 !important;
     background: transparent !important;
   }
-  
+
   .el-switch__label {
     color: #e4e7ed !important;
   }
-  
+
   .el-switch__label.is-active {
     color: #13ce66 !important;
   }
@@ -3688,16 +3855,16 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  
+
   .el-button {
     padding: 8px 16px;
   }
-  
+
   .el-button--primary {
     background: #409eff;
     border-color: #409eff;
   }
-  
+
   .el-button--primary:hover {
     background: #66b1ff;
     border-color: #66b1ff;
