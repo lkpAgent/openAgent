@@ -3,8 +3,8 @@
 import os
 import yaml
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from pydantic import Field
+from typing import Any, Dict, List, Optional, Union
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -37,7 +37,15 @@ class SecuritySettings(BaseSettings):
         "extra": "ignore"
     }
 
-
+class ToolSetings(BaseSettings):
+    # Tavily搜索配置
+    tavily_api_key: Optional[str] = Field(default=None)
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+        "extra": "ignore"
+    }
 class LLMSettings(BaseSettings):
     """大模型配置 - 支持多种OpenAI协议兼容的服务商."""
     provider: str = Field(default="openai", alias="llm_provider")  # openai, deepseek, doubao, zhipu, moonshot
@@ -214,10 +222,33 @@ class FileSettings(BaseSettings):
     """File processing configuration."""
     upload_dir: str = Field(default="./data/uploads")
     max_size: int = Field(default=10485760)  # 10MB
-    allowed_extensions: List[str] = Field(default=[".txt", ".pdf", ".docx", ".md"])
+    allowed_extensions: Union[str, List[str]] = Field(default=[".txt", ".pdf", ".docx", ".md"])
     chunk_size: int = Field(default=1000)
     chunk_overlap: int = Field(default=200)
     semantic_splitter_enabled: bool = Field(default=False)  # 是否启用语义分割器
+    
+    @field_validator('allowed_extensions', mode='before')
+    @classmethod
+    def parse_allowed_extensions(cls, v):
+        """Parse comma-separated string to list of extensions."""
+        if isinstance(v, str):
+            # Split by comma and add dots if not present
+            extensions = [ext.strip() for ext in v.split(',')]
+            return [ext if ext.startswith('.') else f'.{ext}' for ext in extensions]
+        elif isinstance(v, list):
+            # Ensure all extensions start with dot
+            return [ext if ext.startswith('.') else f'.{ext}' for ext in v]
+        return v
+    
+    def get_allowed_extensions_list(self) -> List[str]:
+        """Get allowed extensions as a list."""
+        if isinstance(self.allowed_extensions, list):
+            return self.allowed_extensions
+        elif isinstance(self.allowed_extensions, str):
+            # Split by comma and add dots if not present
+            extensions = [ext.strip() for ext in self.allowed_extensions.split(',')]
+            return [ext if ext.startswith('.') else f'.{ext}' for ext in extensions]
+        return []
     
     model_config = {
         "env_file": ".env",
@@ -308,6 +339,7 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     cors: CORSSettings = Field(default_factory=CORSSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
+    tool: ToolSetings = Field(default_factory=ToolSetings)
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
@@ -352,6 +384,7 @@ class Settings(BaseSettings):
         settings_kwargs['logging'] = LoggingSettings(**(config_data.get('logging', {})))
         settings_kwargs['cors'] = CORSSettings(**(config_data.get('cors', {})))
         settings_kwargs['chat'] = ChatSettings(**(config_data.get('chat', {})))
+        settings_kwargs['tool'] = ToolSetings(**(config_data.get('tool', {})))
         
         # 添加顶级配置
         for key, value in config_data.items():

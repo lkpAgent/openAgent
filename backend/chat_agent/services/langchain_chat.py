@@ -47,39 +47,16 @@ class LangChainChatService:
         self.db = db
         self.conversation_service = ConversationService(db)
         
-        # 获取当前LLM配置
-        llm_config = settings.llm.get_current_config()
+        from ..core.llm import create_llm
         
         # 添加调试日志
         logger.info(f"LLM Provider: {settings.llm.provider}")
-        logger.info(f"LLM Config type: {type(llm_config)}")
-        logger.info(f"LLM Config: {llm_config}")
-        
-        if llm_config is None:
-            logger.error("LLM config is None, check environment variables")
-            raise ValueError("LLM configuration is not properly loaded")
-        
-        logger.info(f"LLM Config: model={llm_config['model']}, base_url={llm_config['base_url']}, api_key={llm_config['api_key'][:10] if llm_config['api_key'] else 'None'}...")
         
         # Initialize LangChain ChatOpenAI
-        self.llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-            streaming=False
-        )
+        self.llm = create_llm(streaming=False)
         
         # Streaming LLM for stream responses
-        self.streaming_llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-            streaming=True
-        )
+        self.streaming_llm = create_llm(streaming=True)
         
         self.streaming_handler = StreamingCallbackHandler()
         
@@ -340,17 +317,20 @@ class LangChainChatService:
         max_tokens: Optional[int] = None
     ):
         """Update LLM configuration."""
-        if model:
-            self.llm.model_name = model
-            self.streaming_llm.model_name = model
+        from ..core.llm import create_llm
         
-        if temperature is not None:
-            self.llm.temperature = temperature
-            self.streaming_llm.temperature = temperature
+        # 重新创建LLM实例
+        self.llm = create_llm(
+            model=model,
+            temperature=temperature,
+            streaming=False
+        )
         
-        if max_tokens is not None:
-            self.llm.max_tokens = max_tokens
-            self.streaming_llm.max_tokens = max_tokens
+        self.streaming_llm = create_llm(
+            model=model,
+            temperature=temperature,
+            streaming=True
+        )
         
         logger.info(f"Updated LLM configuration: model={model}, temperature={temperature}, max_tokens={max_tokens}")
     

@@ -55,20 +55,9 @@ class SmartExcelWorkflowManager:
         else:
             self.metadata_service = None
 
-        # 获取当前LLM配置
-        settings = get_settings()
-        llm_config = settings.llm.get_current_config()
-
-        # 根据配置动态选择LLM服务
-        # 使用ChatOpenAI兼容其他提供商
-        self.llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-            streaming=False  # 禁用流式响应，避免pandas代理兼容性问题
-        )
+        from ..core.llm import create_llm
+        # 禁用流式响应，避免pandas代理兼容性问题
+        self.llm = create_llm(streaming=False)
 
     async def _run_in_executor(self, func, *args):
         """在线程池中运行阻塞函数"""

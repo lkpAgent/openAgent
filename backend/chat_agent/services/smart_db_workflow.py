@@ -47,19 +47,8 @@ class SmartDatabaseWorkflowManager:
         self.db = db
         self.table_metadata_service = TableMetadataService(db) if db else None
         
-        # 获取当前LLM配置
-        settings = get_settings()
-        llm_config = settings.llm.get_current_config()
-        
-        # 根据配置动态选择LLM服务
-        self.llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-            streaming=False
-        )
+        from ..core.llm import create_llm
+        self.llm = create_llm()
     
     async def _run_in_executor(self, func, *args):
         """在线程池中运行阻塞函数"""

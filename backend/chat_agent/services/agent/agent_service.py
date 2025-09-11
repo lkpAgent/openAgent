@@ -153,16 +153,8 @@ class AgentService:
     def _create_agent_executor(self) -> AgentExecutor:
         """Create LangChain agent executor."""
         # Get LLM configuration
-        llm_config = self.settings.llm.get_current_config()
-        
-        # Create LLM instance
-        llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=self.config.temperature,
-            max_tokens=self.settings.llm.max_tokens
-        )
+        from ...core.llm import create_llm
+        llm = create_llm()
         
         # Get enabled tools
         tools = self._get_enabled_tools()

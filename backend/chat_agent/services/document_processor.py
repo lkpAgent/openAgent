@@ -204,9 +204,7 @@ class DocumentProcessor:
             from langchain.chat_models import ChatOpenAI
             from ..core.config import get_settings
             
-            # 获取当前LLM配置
-            settings = get_settings()
-            llm_config = settings.llm.get_current_config()
+
 
             prompt = f"""
             # 任务说明
@@ -257,16 +255,8 @@ class DocumentProcessor:
             文档内容：
             {text[:10000]}  # 限制输入长度
             """
-            
-            # 创建LLM实例
-            llm = ChatOpenAI(
-                model=llm_config["model"],
-                api_key=llm_config["api_key"],
-                base_url=llm_config["base_url"],
-                temperature=0.2,
-                max_tokens=llm_config["max_tokens"],
-                streaming=False
-            )
+            from ..core.llm import create_llm
+            llm = create_llm(temperature=0.2)
             
             response = llm.invoke(prompt)
             
