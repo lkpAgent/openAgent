@@ -4,8 +4,8 @@ import requests
 from typing import Dict, Any, List
 
 from sqlalchemy import desc
-from ..base import BaseTool, ToolParameter, ToolParameterType, ToolResult
-from ....utils.logger import get_logger
+from chat_agent.services.agent.base import BaseTool, ToolParameter, ToolParameterType, ToolResult
+from chat_agent.utils.logger import get_logger
 
 logger = get_logger("generate_image_tool")
 

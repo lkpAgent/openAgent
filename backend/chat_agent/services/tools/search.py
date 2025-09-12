@@ -5,9 +5,9 @@ from typing import List, Optional
 from langchain_tavily import TavilySearch
 
 
-from ..base import BaseTool, ToolParameter, ToolParameterType, ToolResult
-from ....core.config import get_settings
-from ....utils.logger import get_logger
+from chat_agent.services.agent.base import BaseTool, ToolParameter, ToolParameterType, ToolResult
+from chat_agent.core.config import get_settings
+from chat_agent.utils.logger import get_logger
 
 logger = get_logger("search_tool")
 

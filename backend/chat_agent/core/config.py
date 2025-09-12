@@ -40,6 +40,7 @@ class SecuritySettings(BaseSettings):
 class ToolSetings(BaseSettings):
     # Tavily搜索配置
     tavily_api_key: Optional[str] = Field(default=None)
+    weather_api_key: Optional[str] = Field(default=None)
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

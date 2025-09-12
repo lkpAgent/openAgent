@@ -147,6 +147,7 @@ class ChatRequest(BaseModel):
     use_knowledge_base: bool = Field(default=False)
     knowledge_base_id: Optional[int] = Field(None, description="Knowledge base ID for RAG mode")
     use_agent: bool = Field(default=False, description="Enable agent mode with tool calling capabilities")
+    use_langgraph: bool = Field(default=False, description="Enable LangGraph agent mode with advanced tool calling")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(None, ge=1, le=8192)
 

@@ -379,6 +379,12 @@ const chatModes = [
     label: '智能体对话',
     description: '任务自动化',
     icon: Service
+  },
+  {
+    key: 'langgraph',
+    label: 'LangGraph智能体',
+    description: '高级工具调用',
+    icon: Service
   }
 ]
 
@@ -409,6 +415,12 @@ const quickActions = computed(() => {
         { text: '开始工作流程' },
         { text: '查看任务状态' },
         { text: '生成报告' }
+      ]
+    case 'langgraph':
+      return [
+        { text: '杭州和北京现在的天气如何？' },
+        { text: '帮我计算 25 * 34 + 67' },
+        { text: '搜索最新的AI技术发展' }
       ]
     default:
       return []
@@ -532,6 +544,11 @@ const sendMessage = async () => {
     // 如果是agent模式，添加use_agent参数
     if (currentMode.value === 'agent') {
       messageData.use_agent = true
+    }
+    
+    // 如果是LangGraph模式，添加use_langgraph参数
+    if (currentMode.value === 'langgraph') {
+      messageData.use_langgraph = true
     }
     
     // 如果是RAG模式，添加知识库参数

@@ -14,7 +14,7 @@ async def test_search_tool_directly():
     
     try:
         # Import search tool
-        from chat_agent.services.agent.tools.search import SearchTool
+        from chat_agent.services.tools import SearchTool
         
         # Create search tool instance
         search_tool = SearchTool()
@@ -48,7 +48,7 @@ def test_tool_registration():
     
     try:
         # Import all tools
-        from chat_agent.services.agent.tools import (
+        from chat_agent.services.tools import (
             CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool
         )
         

@@ -186,6 +186,7 @@ async def chat(
         temperature=chat_request.temperature,
         max_tokens=chat_request.max_tokens,
         use_agent=chat_request.use_agent,
+        use_langgraph=chat_request.use_langgraph,
         use_knowledge_base=chat_request.use_knowledge_base,
         knowledge_base_id=chat_request.knowledge_base_id
     )
@@ -209,6 +210,7 @@ async def chat_stream(
             temperature=chat_request.temperature,
             max_tokens=chat_request.max_tokens,
             use_agent=chat_request.use_agent,
+            use_langgraph=chat_request.use_langgraph,
             use_knowledge_base=chat_request.use_knowledge_base,
             knowledge_base_id=chat_request.knowledge_base_id
         ):

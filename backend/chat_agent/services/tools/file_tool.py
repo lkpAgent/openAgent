@@ -6,8 +6,8 @@ import csv
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from ..base import BaseTool, ToolParameter, ToolParameterType, ToolResult
-from ....utils.logger import get_logger
+from chat_agent.services.agent.base import BaseTool, ToolParameter, ToolParameterType, ToolResult
+from chat_agent.utils.logger import get_logger
 
 logger = get_logger("file_tool")
 
@@ -86,7 +86,7 @@ class FileTool(BaseTool):
                     return True
                     
             # For demo purposes, allow current directory and subdirectories
-            current_dir = os.path.abspath(".")
+            current_dir = os.path.abspath("")
             if abs_path.startswith(current_dir):
                 return True
                 

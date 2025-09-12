@@ -3,8 +3,8 @@
 import asyncio
 import re
 from typing import List, Dict, Any
-from ..base import BaseTool, ToolParameter, ToolParameterType, ToolResult
-from ....utils.logger import get_logger
+from chat_agent.services.agent.base import BaseTool, ToolParameter, ToolParameterType, ToolResult
+from chat_agent.utils.logger import get_logger
 
 logger = get_logger("example_tool")
 

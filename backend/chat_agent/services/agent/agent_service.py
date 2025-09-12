@@ -2,15 +2,14 @@
 
 import asyncio
 from typing import List, Dict, Any, Optional, AsyncGenerator
-from langchain.agents import AgentExecutor, create_openai_tools_agent,create_tool_calling_agent
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.tools import BaseTool as LangChainBaseTool
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from .base import BaseTool, ToolRegistry, ToolResult
-from .tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool
+from chat_agent.services.tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool
 from ..postgresql_tool_manager import get_postgresql_tool
 from ...core.config import get_settings
 from ...utils.logger import get_logger

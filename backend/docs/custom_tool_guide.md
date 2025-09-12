@@ -229,25 +229,26 @@ import os
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.agent.tools.my_custom_tool import MyCustomTool
+from chat_agent.services.tools import MyCustomTool
+
 
 async def test_custom_tool():
     """测试自定义工具。"""
     print("=== 测试自定义工具 ===")
-    
+
     try:
         # 创建工具实例
         tool = MyCustomTool()
         print(f"✓ 工具创建成功: {tool.get_name()}")
         print(f"✓ 工具描述: {tool.get_description()}")
-        
+
         # 测试工具执行
         result = await tool.execute(
             input_text="Hello World",
             count=3,
             uppercase=True
         )
-        
+
         if result.success:
             print("✓ 工具执行成功!")
             print(f"✓ 结果: {result.result}")
@@ -255,10 +256,11 @@ async def test_custom_tool():
         else:
             print(f"✗ 工具执行失败: {result.error}")
             return False
-            
+
     except Exception as e:
         print(f"✗ 测试失败: {e}")
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(test_custom_tool())

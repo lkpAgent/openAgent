@@ -120,6 +120,7 @@ export interface ChatRequest {
   use_knowledge_base?: boolean
   knowledge_base_id?: number
   use_agent?: boolean
+  use_langgraph?: boolean
   temperature?: number
   max_tokens?: number
 }

@@ -25,6 +25,7 @@ langchain-community>=0.0.10
 langchain-experimental>=0.0.50  # pandas代理
 langchain-postgres>=0.0.6  # PGVector支持
 langchain-openai>=0.0.5  # OpenAI集成
+langgraph>=0.0.40  # LangGraph工作流编排
 
 # AI模型服务商
 zhipuai>=2.0.0  # 智谱AI

@@ -15,6 +15,7 @@ from .conversation import ConversationService
 from .langchain_chat import LangChainChatService
 from .knowledge_chat import KnowledgeChatService
 from .agent.agent_service import get_agent_service
+from .agent.langgraph_agent_service import get_langgraph_agent_service
 
 logger = get_logger("chat_service")
 
@@ -35,6 +36,9 @@ class ChatService:
         # Initialize Agent service with database session
         self.agent_service = get_agent_service(db)
         
+        # Initialize LangGraph Agent service with database session
+        self.langgraph_service = get_langgraph_agent_service(db)
+        
         logger.info("ChatService initialized with LangChain backend and Agent support")
     
 
@@ -47,6 +51,7 @@ class ChatService:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         use_agent: bool = False,
+        use_langgraph: bool = False,
         use_knowledge_base: bool = False,
         knowledge_base_id: Optional[int] = None
     ) -> ChatResponse:
@@ -63,6 +68,51 @@ class ChatService:
                 temperature=temperature,
                 max_tokens=max_tokens
             )
+        elif use_langgraph:
+            logger.info(f"Processing chat request for conversation {conversation_id} via LangGraph Agent")
+            
+            # Get conversation history for LangGraph agent
+            conversation = self.conversation_service.get_conversation(conversation_id)
+            if not conversation:
+                raise ChatServiceError(f"Conversation {conversation_id} not found")
+            
+            messages = self.conversation_service.get_conversation_messages(conversation_id)
+            chat_history = [{
+                "role": "user" if msg.role == MessageRole.USER else "assistant",
+                "content": msg.content
+            } for msg in messages]
+            
+            # Use LangGraph agent service
+            agent_result = await self.langgraph_service.chat(message, chat_history)
+            
+            if agent_result["success"]:
+                # Save user message
+                user_message = self.conversation_service.add_message(
+                    conversation_id=conversation_id,
+                    content=message,
+                    role=MessageRole.USER
+                )
+                
+                # Save assistant response
+                assistant_message = self.conversation_service.add_message(
+                    conversation_id=conversation_id,
+                    content=agent_result["response"],
+                    role=MessageRole.ASSISTANT,
+                    message_metadata={"intermediate_steps": agent_result["intermediate_steps"]}
+                )
+                
+                return ChatResponse(
+                    message=MessageResponse(
+                        id=assistant_message.id,
+                        content=agent_result["response"],
+                        role=MessageRole.ASSISTANT,
+                        conversation_id=conversation_id,
+                        created_at=assistant_message.created_at,
+                        metadata=assistant_message.metadata
+                    )
+                )
+            else:
+                raise ChatServiceError(f"LangGraph Agent error: {agent_result.get('error', 'Unknown error')}")
         elif use_agent:
             logger.info(f"Processing chat request for conversation {conversation_id} via Agent")
             
@@ -127,6 +177,7 @@ class ChatService:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         use_agent: bool = False,
+        use_langgraph: bool = False,
         use_knowledge_base: bool = False,
         knowledge_base_id: Optional[int] = None
     ) -> AsyncGenerator[str, None]:
@@ -148,6 +199,55 @@ class ChatService:
                     role=MessageRole.ASSISTANT
                 )
                 yield json.dumps(stream_chunk.dict(), ensure_ascii=False)
+        elif use_langgraph:
+            logger.info(f"Processing streaming chat request for conversation {conversation_id} via LangGraph Agent")
+            
+            # Get conversation history for LangGraph agent
+            conversation = self.conversation_service.get_conversation(conversation_id)
+            if not conversation:
+                raise ChatServiceError(f"Conversation {conversation_id} not found")
+            
+            messages = self.conversation_service.get_conversation_messages(conversation_id)
+            chat_history = [{
+                "role": "user" if msg.role == MessageRole.USER else "assistant",
+                "content": msg.content
+            } for msg in messages]
+            
+            # Save user message first
+            user_message = self.conversation_service.add_message(
+                conversation_id=conversation_id,
+                content=message,
+                role=MessageRole.USER
+            )
+            
+            # Use LangGraph agent service streaming
+            full_response = ""
+            intermediate_steps = []
+            
+            async for chunk in self.langgraph_service.chat_stream(message, chat_history):
+                if chunk["type"] == "response":
+                    full_response = chunk["content"]
+                    intermediate_steps = chunk.get("intermediate_steps", [])
+                    
+                    # Return the chunk as-is to maintain type information
+                    yield json.dumps(chunk, ensure_ascii=False)
+                    
+                elif chunk["type"] == "error":
+                    # Return the chunk as-is to maintain type information
+                    yield json.dumps(chunk, ensure_ascii=False)
+                    return
+                else:
+                    # For other types (status, step, etc.), pass through
+                    yield json.dumps(chunk, ensure_ascii=False)
+            
+            # Save assistant response
+            if full_response:
+                self.conversation_service.add_message(
+                    conversation_id=conversation_id,
+                    content=full_response,
+                    role=MessageRole.ASSISTANT,
+                    message_metadata={"intermediate_steps": intermediate_steps}
+                )
         elif use_agent:
             logger.info(f"Processing streaming chat request for conversation {conversation_id} via Agent")
             
