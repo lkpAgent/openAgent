@@ -105,6 +105,33 @@ export interface Message {
   created_at: string
   updated_at: string
   status?: string // 用于显示流式状态，如"正在思考..."、"正在使用工具..."等
+  thinking_data?: ThinkingData // LangGraph智能体思考过程数据
+}
+
+// LangGraph思考过程数据结构
+export interface ThinkingData {
+  steps: ThinkingStep[]
+  tool_calls: ToolCall[]
+  current_step: string
+  status: 'thinking' | 'tool_calling' | 'completed' | 'error'
+}
+
+export interface ThinkingStep {
+  id: number
+  type: 'thinking' | 'tool_start' | 'tool_end'
+  content: string
+  timestamp: string
+  node_name?: string
+  tool_call?: ToolCall
+}
+
+export interface ToolCall {
+  id: number
+  name: string
+  input: Record<string, any>
+  output: any
+  status: 'running' | 'completed' | 'error'
+  timestamp: string
 }
 
 export interface MessageCreate {

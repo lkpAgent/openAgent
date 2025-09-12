@@ -1,7 +1,7 @@
 """PostgreSQL MCP工具全局管理器"""
 
 from typing import Optional
-from chat_agent.services.tools.postgresql_mcp import PostgreSQLMCPTool
+from chat_agent.services.mcp.postgresql_mcp import PostgreSQLMCPTool
 from ..utils.logger import get_logger
 
 logger = get_logger("postgresql_tool_manager")

@@ -1,114 +1,79 @@
-"""天气工具"""
-
-from typing import List, Optional
-from chat_agent.services.agent.base import BaseTool, ToolParameter, ToolParameterType, ToolResult
-from chat_agent.core.config import get_settings
-from chat_agent.utils.logger import get_logger
+from langchain.tools import BaseTool
+from pydantic import BaseModel, Field, PrivateAttr
+from typing import Optional, Type, ClassVar
 import requests
-logger = get_logger("weather_tool")
-# @tool(args_schema=WeatherQuery)
-# def get_weather(loc):
-#     """
-#         查询即时天气函数
-#         :param loc: 必要参数，字符串类型，用于表示查询天气的具体城市名称，\
-#         :return：心知天气 API查询即时天气的结果，具体URL请求地址为："https://api.seniverse.com/v3/weather/now.json"
-#         返回结果对象类型为解析之后的JSON格式对象，并用字符串形式进行表示，其中包含了全部重要的天气信息
-#     """
-#     url = "https://api.seniverse.com/v3/weather/now.json"
-#     params = {
-#         "key": "SFU3cSAGMY_JHvpjJ",
-#         "location": loc,
-#         "language": "zh-Hans",
-#         "unit": "c",
-#     }
-#     response = requests.get(url, params=params)
-#     temperature = response.json()
-#     return temperature['results'][0]['now']
+import logging
+from chat_agent.core.config import get_settings
 
-class WeatherTool(BaseTool):
-    """天气查询API"""
-    
-    def __init__(self):
-        """初始化天气api工具"""
-        super().__init__()
-        self.weather_api_key = get_settings().tool.weather_api_key
-        self.params = {
-                "key": self.weather_api_key,
-                "language": "zh-Hans",
-                "unit": "c",
-            }
-    
-    def get_name(self) -> str:
-        return "weather"
-    
-    def get_description(self) -> str:
-        return "使用天气api进行查找城市的天气情况"
-    
-    def get_parameters(self) -> List[ToolParameter]:
-        return [
-            ToolParameter(
-                name="loc",
-                type=ToolParameterType.STRING,
-                description="城市名称，如长沙",
-                required=True
-            )
+logger = logging.getLogger("weather_tool")
 
-        ]
-    
-    async def execute(self, **kwargs) -> ToolResult:
-        """获取城市的天气情况"""
+# 定义输入参数模型（替代原get_parameters()）
+class WeatherInput(BaseModel):
+    location: str = Field(
+        description="城市名称，例如：'北京'，只能是单个城市",
+        examples=["北京", "上海", "New York"]
+    )
+
+class WeatherQueryTool(BaseTool):
+    """心知天气API查询工具（LangChain标准版）"""
+    name: ClassVar[str] = "天气API查询工具"
+    description: ClassVar[str] = """通过心知天气API查询实时天气数据。 name = "天气API查询工具"  # 工具唯一标识 """
+    args_schema: Type[BaseModel] = WeatherInput  # 参数规范
+    # 使用PrivateAttr声明不参与验证的私有属性
+    _api_key: str = PrivateAttr()
+    _base_params: dict = PrivateAttr()
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._api_key = get_settings().tool.weather_api_key
+        if not self._api_key:
+            raise ValueError("Weather API key not found in settings")
+
+        # 基础请求参数
+        self._base_params = {
+            "key": self._api_key,
+            "language": "zh-Hans",
+            "unit": "c"
+        }
+
+    def _run(self, location: str) -> dict:
+        """同步执行天气查询"""
         try:
-            # 支持两种参数名：loc 和 location
-            loc = kwargs.get("loc") or kwargs.get("location")
-            if not loc:
-                return ToolResult(
-                    success=False,
-                    result="",
-                    error="城市名称不能为空"
-                )
-            
-            logger.info(f"查询城市天气信息，城市：{loc}")
-            try:
-                url = "https://api.seniverse.com/v3/weather/now.json"
-                params = self.params.copy()
-                params['location'] = loc
-                response = requests.get(url, params=params)
-                response.raise_for_status()  # 检查HTTP状态码
-                
-                temperature = response.json()
-                
-                # 检查API响应是否包含错误
-                if 'results' not in temperature or not temperature['results']:
-                    error_msg = temperature.get('message', '未知错误')
-                    logger.warning(f"天气API返回错误：{error_msg}")
-                    return ToolResult(
-                        success=False,
-                        result="",
-                        error=f"天气API返回错误：{error_msg}"
-                    )
-                
-                weather_data = temperature['results'][0]['now']
-                logger.info(f"获取天气信息完成，查询：{weather_data}")
-                return ToolResult(
-                    success=True,
-                    result={
-                        "query": loc,
-                        "results": weather_data,
-                        "summary": f"找到 城市：'{loc}'的天气信息：\n\n{weather_data}"
-                    }
-                )
-            except Exception as weather_error:
-                logger.warning(f"获取天气信息失败：{str(weather_error)}")
-                return ToolResult(
-                    success=False,
-                    result="",
-                    error=f"获取天气信息失败：{str(weather_error)}"
-                )
-            
+            logger.info(f"查询天气 - 城市: {location}")
+
+            # 构建API请求
+            url = "https://api.seniverse.com/v3/weather/now.json"
+            params = {**self._base_params, "location": location}
+
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # 处理API响应
+            if 'results' not in data:
+                error_msg = data.get('status', 'API返回格式异常')
+                raise ValueError(f"天气API错误: {error_msg}")
+
+            weather = data['results'][0]['now']
+            return {
+                "status": "success",
+                "location": location,
+                "temperature": weather["temperature"],
+                "condition": weather["text"],
+                "humidity": weather.get("humidity", "N/A"),
+                "wind": weather.get("wind_direction", "N/A"),
+                "full_data": weather
+            }
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"网络请求失败: {str(e)}")
+            return {"status": "error", "message": f"网络错误: {str(e)}"}
         except Exception as e:
-            logger.error(f"获取天气信息失败：{str(e)}", exc_info=True)
-            return ToolResult(
-                success=False,
-                result="",
-                error=f"获取天气信息失败：{str(e)}"
-            )
+            logger.error(f"查询失败: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    async def _arun(self, location: str) -> dict:
+        """异步执行（示例实现）"""
+        # 实际项目中可以用aiohttp替换requests
+        return self._run(location)

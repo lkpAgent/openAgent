@@ -305,18 +305,77 @@ export const useChatStore = defineStore('chat', () => {
               try {
                 const parsed = JSON.parse(data)
                 
-                // 处理不同类型的流式消息
-                // 处理不同类型的流式响应
-                if (parsed.type === 'status' || parsed.type === 'thinking') {
-                  // 状态消息，显示在UI中但不累积到最终内容
-                  console.log('Agent status:', parsed.content)
-                  // 更新临时状态显示
-                  const lastMessageIndex = messages.value.length - 1
-                  if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
-                    // 可以在这里添加状态显示逻辑，比如显示"正在思考..."等
+                // 处理智能体模式的流式响应
+                const lastMessageIndex = messages.value.length - 1
+                if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                  // 初始化智能体数据结构
+                  if (!messages.value[lastMessageIndex].agent_data) {
+                    messages.value[lastMessageIndex].agent_data = {
+                      status: 'thinking',
+                      steps: [],
+                      current_tool: null
+                    }
+                  }
+                  
+                  const agentData = messages.value[lastMessageIndex].agent_data
+                  
+                  if (parsed.type === 'thinking') {
+                    // 处理思考过程
+                    console.log('🤔 Thinking:', parsed.content)
+                    agentData.status = 'thinking'
+                    agentData.steps.push({
+                      id: Date.now(),
+                      type: 'thinking',
+                      content: parsed.content,
+                      timestamp: new Date().toISOString(),
+                      node_name: parsed.node_name || 'agent',
+                      raw_output: parsed.raw_output
+                    })
+                    
+                  } else if (parsed.type === 'tool_end') {
+                    // 处理工具执行完成
+                    console.log('🔧 Tool end:', parsed.content)
+                    agentData.status = 'tool_calling'
+                    agentData.steps.push({
+                      id: Date.now(),
+                      type: 'tool_end',
+                      content: parsed.content,
+                      timestamp: new Date().toISOString(),
+                      node_name: parsed.node_name || 'tools',
+                      tool_name: parsed.tool_name,
+                      tool_output: parsed.tool_output
+                    })
+                    
+                  } else if (parsed.type === 'response') {
+                    // 处理最终响应
+                    console.log('💬 Response:', parsed.content)
+                    agentData.status = 'completed'
+                    agentData.steps.push({
+                      id: Date.now(),
+                      type: 'response',
+                      content: parsed.content,
+                      timestamp: new Date().toISOString(),
+                      intermediate_steps: parsed.intermediate_steps
+                    })
+                    
+                    // 设置消息内容
+                    messages.value[lastMessageIndex].content = parsed.content
+                    
+                  } else if (parsed.type === 'status') {
+                    // 处理状态消息
+                    console.log('📊 Status:', parsed.content)
                     messages.value[lastMessageIndex].status = parsed.content
                   }
-                } else if (parsed.type === 'tool_start' || parsed.type === 'tool' || parsed.type === 'tool_end' || parsed.type === 'tool_result') {
+                }
+                
+                // 处理其他类型的流式数据
+                if (parsed.type === 'content') {
+                  // 处理内容块
+                  const lastMessageIndex = messages.value.length - 1
+                  if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
+                    messages.value[lastMessageIndex].content += parsed.content
+                  }
+                } else if (parsed.type === 'tool' || parsed.type === 'tool_result') {
                   // 工具执行相关消息
                   console.log('Tool execution:', parsed.content)
                   const lastMessageIndex = messages.value.length - 1
@@ -334,6 +393,11 @@ export const useChatStore = defineStore('chat', () => {
                     messages.value[lastMessageIndex].content += parsed.content
                     // 清除状态显示
                     messages.value[lastMessageIndex].status = undefined
+                    
+                    // 更新智能体状态为生成中
+                    if (messages.value[lastMessageIndex].agent_data) {
+                      messages.value[lastMessageIndex].agent_data.status = 'generating'
+                    }
                   }
                   onChunk?.(parsed.content)
                 } else if (parsed.type === 'response' && parsed.content) {
@@ -343,6 +407,25 @@ export const useChatStore = defineStore('chat', () => {
                     messages.value[lastMessageIndex].content = parsed.content
                     // 清除状态显示
                     messages.value[lastMessageIndex].status = undefined
+                    
+                    // 更新智能体状态为完成
+                    if (messages.value[lastMessageIndex].agent_data) {
+                      messages.value[lastMessageIndex].agent_data.status = 'completed'
+                      // 添加完成步骤
+                      const step = {
+                        id: Date.now(),
+                        type: 'completed',
+                        content: '回答生成完成',
+                        timestamp: new Date().toISOString()
+                      }
+                      messages.value[lastMessageIndex].agent_data.steps.push(step)
+                    }
+                    
+                    // 兼容旧的思考过程数据
+                    if (messages.value[lastMessageIndex].thinking_data) {
+                      messages.value[lastMessageIndex].thinking_data.status = 'completed'
+                      messages.value[lastMessageIndex].thinking_data.current_step = '思考完成'
+                    }
                   }
                   onChunk?.(parsed.content)
                 } else if (parsed.content) {

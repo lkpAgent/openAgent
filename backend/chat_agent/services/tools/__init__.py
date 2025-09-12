@@ -1,18 +1,10 @@
 """Agent tools package."""
 
-from .calculator import CalculatorTool
-from .weather import WeatherTool
-from .search import SearchTool
+from .weather import WeatherQueryTool
+from .search import TavilySearchTool
 from .datetime_tool import DateTimeTool
-from .file_tool import FileTool
-from .generate_image import GenerateImageTool
-from .postgresql_mcp import PostgreSQLMCPTool
+from chat_agent.services.mcp.postgresql_mcp import PostgreSQLMCPTool
 
-# Try to import decorated tools if available
-try:
-    from .example_decorated_tool import DECORATED_TOOLS
-except ImportError:
-    DECORATED_TOOLS = []
 
 # Try to import LangChain native tools if available
 try:
@@ -21,13 +13,9 @@ except ImportError:
     LANGCHAIN_NATIVE_TOOLS = []
 
 __all__ = [
-    'CalculatorTool',
-    'WeatherTool', 
-    'SearchTool',
+    'WeatherQueryTool',
+    'TavilySearchTool',
     'DateTimeTool',
-    'GenerateImageTool',
-    'FileTool',
     'PostgreSQLMCPTool',
-    'DECORATED_TOOLS',
     'LANGCHAIN_NATIVE_TOOLS'
 ]

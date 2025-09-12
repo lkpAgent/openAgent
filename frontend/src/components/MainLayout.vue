@@ -198,7 +198,7 @@ const isCollapsed = ref(false)
 const upperNavItems = [
   {
     key: 'chat',
-    label: '智能聊天',
+    label: '智能问答',
     icon: 'ChatDotRound',
     route: '/chat'
   },

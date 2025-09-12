@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from pydantic import BaseModel, Field
 
 from .base import BaseTool, ToolRegistry, ToolResult
-from chat_agent.services.tools import CalculatorTool, WeatherTool, SearchTool, DateTimeTool, FileTool, GenerateImageTool
+from chat_agent.services.tools import  WeatherQueryTool, TavilySearchTool, DateTimeTool
 from ..postgresql_tool_manager import get_postgresql_tool
 from ...core.config import get_settings
 from ...utils.logger import get_logger
@@ -108,12 +108,9 @@ class AgentService:
     def _initialize_tools(self):
         """Initialize and register all available tools."""
         tools = [
-            CalculatorTool(),
-            WeatherTool(),
-            SearchTool(),
+            WeatherQueryTool(),
+            TavilySearchTool(),
             DateTimeTool(),
-            FileTool(),
-            GenerateImageTool(),
             get_postgresql_tool()  # 使用单例PostgreSQL MCP工具
         ]
         

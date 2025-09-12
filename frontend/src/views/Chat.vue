@@ -41,22 +41,7 @@
           </el-select>
         </div>
         
-        <!-- 智能体模式配置 -->
-        <div v-if="currentMode === 'agent'" class="config-item">
-          <el-select 
-            v-model="selectedAgent" 
-            placeholder="选择智能体"
-            size="small"
-            style="width: 200px;"
-          >
-            <el-option
-              v-for="agent in availableAgents"
-              :key="agent.id"
-              :label="agent.name"
-              :value="agent.id"
-            />
-          </el-select>
-        </div>
+
         
         <el-button 
           type="primary" 
@@ -116,7 +101,7 @@
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 左侧对话区域 -->
-      <div class="chat-area">
+      <div class="chat-area" :class="{ 'with-agent-panel': currentMode === 'agent' }">
         <!-- 消息列表 -->
         <div class="messages-container" ref="messagesContainer">
           <!-- 欢迎消息 -->
@@ -156,6 +141,29 @@
               </div>
               
               <div class="message-content">
+                <!-- 智能体模式下的简化状态显示 -->
+                <div v-if="message.role === 'assistant' && currentMode === 'agent' && message.agent_data && message.agent_data.status !== 'completed'" class="agent-status-simple">
+                  <!-- 显示最新步骤的图标和状态文字，但只在未完成时显示 -->
+                  <div v-if="message.agent_data.steps && message.agent_data.steps.length > 0" class="agent-current-status">
+                    <template v-for="(step, index) in message.agent_data.steps" :key="step.id">
+                      <div v-if="index === message.agent_data.steps.length - 1 && step.type !== 'response' && !hasResponseStep(message.agent_data.steps)" class="current-step-display">
+                        <span v-if="step.type === 'thinking'" class="step-status">
+                          <span class="type-icon">🤔</span>
+                          <span class="status-text">大模型思考中</span>
+                        </span>
+                        <span v-else-if="step.type.includes('tool')" class="step-status">
+                          <span class="type-icon">🔧</span>
+                          <span class="status-text">正在调用工具: {{ step.tool_name || '未知工具' }}</span>
+                        </span>
+                        <span v-else class="step-status">
+                          <span class="type-icon">📝</span>
+                          <span class="status-text">处理中</span>
+                        </span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+                
                 <!-- 如果有状态信息，显示状态 -->
                 <div v-if="message.status" class="message-status">
                   <el-icon class="status-icon"><Loading /></el-icon>
@@ -167,7 +175,18 @@
                   <span></span>
                   <span></span>
                 </div>
-                <!-- 否则显示正常消息内容 -->
+                <!-- 智能体模式：只显示response类型的内容 -->
+                <div v-else-if="message.role === 'assistant' && currentMode === 'agent'" class="message-text">
+                  <!-- 检查是否有response类型的步骤，如果有则显示其内容 -->
+                  <div v-if="message.agent_data && message.agent_data.steps">
+                    <template v-for="step in message.agent_data.steps" :key="step.id">
+                      <div v-if="step.type === 'response'" v-html="renderMarkdown(step.content)"></div>
+                    </template>
+                  </div>
+                  <!-- 如果没有response步骤但有消息内容，显示消息内容 -->
+                  <div v-else-if="message.content" v-html="renderMarkdown(message.content)"></div>
+                </div>
+                <!-- 普通模式显示正常消息内容 -->
                 <div v-else class="message-text" v-html="renderMarkdown(message.content)"></div>
                 <div class="message-time">{{ formatTime(message.created_at) }}</div>
               </div>
@@ -221,65 +240,71 @@
         </div>
       </div>
       
-      <!-- 右侧智能体工作流展示区域 -->
-      <div class="workflow-panel" v-if="currentMode === 'agent'">
-        <div class="workflow-header">
-          <div class="workflow-title">
-            <el-icon><Setting /></el-icon>
-            <span>智能体工作流</span>
-          </div>
-          <div class="workflow-status">
-            <el-tag :type="workflowStatus === 'running' ? 'warning' : workflowStatus === 'completed' ? 'success' : 'info'" size="small">
-              {{ workflowStatusText }}
-            </el-tag>
-          </div>
+
+      <!-- 右侧智能体思考流程展示区域 -->
+      <div v-if="currentMode === 'agent'" class="agent-panel">
+        <div class="agent-header">
+          <h3>🤖 智能体思考流程</h3>
+          <el-tag :type="getAgentStatusType(currentAgentData?.status || 'idle')" size="small">
+            {{ getAgentStatusText(currentAgentData?.status || 'idle') }}
+          </el-tag>
         </div>
         
-        <div class="workflow-content">
-          <div class="workflow-steps">
-            <div class="current-workflow" v-if="currentWorkflow">
-              <h4>当前工作流执行过程</h4>
-              <div class="workflow-step" 
-                   v-for="(step, index) in workflowSteps" 
-                   :key="index"
-                   :class="{ 
-                     'active': step.status === 'running',
-                     'completed': step.status === 'completed',
-                     'pending': step.status === 'pending'
-                   }">
-                <div class="step-icon">
-                  <el-icon v-if="step.status === 'completed'"><Check /></el-icon>
-                  <el-icon v-else-if="step.status === 'running'" class="rotating"><Loading /></el-icon>
-                  <el-icon v-else><Clock /></el-icon>
+        <div v-if="currentAgentData?.steps?.length > 0" class="agent-content">
+          <!-- 智能体思考流程列表 -->
+          <div class="thinking-steps">
+            <div 
+              v-for="(step, index) in currentAgentData.steps" 
+              :key="step.id || index" 
+              class="thinking-step"
+              :class="`step-${step.type}`"
+            >
+              <!-- 简化的步骤显示 -->
+              <div class="step-header">
+                <div class="step-type-info">
+                  <span v-if="step.type === 'thinking'" class="type-icon">🤔</span>
+                  <span v-else-if="step.type === 'tool_end'" class="type-icon">🔧</span>
+                  <span v-else-if="step.type === 'response'" class="type-icon">💬</span>
+                  <span v-else class="type-icon">📝</span>
+                  
+                  <span class="type-name">
+                    <span v-if="step.type === 'thinking'">思考中</span>
+                    <span v-else-if="step.type.includes('tool')">调用工具</span>
+                    <span v-else-if="step.type === 'response'">回复</span>
+                    <span v-else>处理中</span>
+                  </span>
+                  
+                  <span v-if="step.type.includes('tool') && step.tool_name" class="tool-info">
+                    : {{ step.tool_name }}
+                  </span>
                 </div>
-                <div class="step-content">
-                  <div class="step-title">{{ step.title }}</div>
-                  <div class="step-description">{{ step.description }}</div>
-                  <div class="step-status" v-if="step.status === 'completed'">
-                    <el-tag type="success" size="small">已完成</el-tag>
-                  </div>
-                  <div class="step-status" v-else-if="step.status === 'running'">
-                    <el-tag type="warning" size="small">进行中</el-tag>
-                  </div>
-                  <div class="step-status" v-else>
-                    <el-tag type="info" size="small">等待中</el-tag>
-                  </div>
+              </div>
+              
+              <!-- 内容 -->
+               <div v-if="step.content" class="step-content">
+                 {{ step.content }}
+               </div>
+               
+               <!-- 工具输出 -->
+               <div v-if="step.type.includes('tool') && step.tool_output" class="tool-output">
+                 <div class="output-label">工具输出:</div>
+                 <div class="output-content">{{ step.tool_output }}</div>
+               </div>
+                
+                <!-- 时间戳 -->
+                <div class="step-timestamp">
+                  <el-icon><Clock /></el-icon>
+                  <span>{{ formatTime(step.timestamp) }}</span>
                 </div>
               </div>
             </div>
-            
-            <div class="workflow-placeholder" v-else>
-              <el-empty description="暂无工作流执行">
-                <template #image>
-                  <el-icon size="60" color="#ccc"><Setting /></el-icon>
-                </template>
-              </el-empty>
-            </div>
           </div>
         </div>
+        
+        <!-- 空状态已移除 -->
       </div>
-    </div>
-  </div>
+
+    </div> 
 </template>
 
 <script setup lang="ts">
@@ -297,7 +322,9 @@ import {
   Clock,
   User,
   Close,
-  Search
+  Search,
+  Tools,
+  Share
 } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useKnowledgeStore } from '@/stores/knowledge'
@@ -305,6 +332,7 @@ import { formatTime } from '@/utils'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
+import type { ThinkingData } from '@/types'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -377,13 +405,7 @@ const chatModes = [
   {
     key: 'agent',
     label: '智能体对话',
-    description: '任务自动化',
-    icon: Service
-  },
-  {
-    key: 'langgraph',
-    label: 'LangGraph智能体',
-    description: '高级工具调用',
+    description: '智能体协作处理复杂任务',
     icon: Service
   }
 ]
@@ -410,13 +432,8 @@ const quickActions = computed(() => {
         { text: '搜索技术文档' },
         { text: '查找常见问题解答' }
       ]
+
     case 'agent':
-      return [
-        { text: '开始工作流程' },
-        { text: '查看任务状态' },
-        { text: '生成报告' }
-      ]
-    case 'langgraph':
       return [
         { text: '杭州和北京现在的天气如何？' },
         { text: '帮我计算 25 * 34 + 67' },
@@ -427,35 +444,62 @@ const quickActions = computed(() => {
   }
 })
 
-// 工作流相关数据
-const currentWorkflow = ref(null)
-const workflowStatus = ref('idle') // idle, running, completed, error
-const workflowStatusText = computed(() => {
-  switch (workflowStatus.value) {
-    case 'running': return '执行中'
-    case 'completed': return '已完成'
-    case 'error': return '执行失败'
-    default: return '待执行'
+
+
+// 智能体对话相关数据 - 从当前消息的agent_data获取
+const currentAgentData = computed(() => {
+  const lastMessage = messages.value[messages.value.length - 1]
+  if (lastMessage && lastMessage.role === 'assistant' && lastMessage.agent_data) {
+    return lastMessage.agent_data
+  }
+  return {
+    status: 'idle',
+    steps: [],
+    current_tool: null
   }
 })
 
-const workflowSteps = ref([
-  {
-    title: '自然语言理解',
-    description: '解析用户查询意图，识别实体和关键信息',
-    status: 'completed'
-  },
-  {
-    title: '知识检索',
-    description: '从知识库中检索与推荐系统设计相关的文档',
-    status: 'running'
-  },
-  {
-    title: '智能体协作',
-    description: '协调推荐系统专家、算法工程师和架构师智能体',
-    status: 'pending'
+// 获取智能体状态类型
+const getAgentStatusType = (status: string) => {
+  switch (status) {
+    case 'thinking': return 'warning'
+    case 'tool_calling': return 'primary'
+    case 'responding': return 'success'
+    default: return 'info'
   }
-])
+}
+
+// 获取智能体状态文本
+const getAgentStatusText = (status: string) => {
+  switch (status) {
+    case 'thinking': return '思考中'
+    case 'tool_calling': return '工具调用中'
+    case 'responding': return '回复中'
+    default: return '空闲'
+  }
+}
+
+// 获取步骤类型文本
+const getStepTypeText = (type) => {
+  switch (type) {
+    case 'thinking': return '🤔 思考'
+    case 'tool_end': return '✅ 工具完成'
+    case 'response': return '💬 回复'
+    default: return type
+  }
+}
+
+// 格式化时间
+const formatTime = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+// 检查步骤中是否包含response类型
+const hasResponseStep = (steps: any[]) => {
+  return steps && steps.some(step => step.type === 'response')
+}
 
 const messages = computed(() => chatStore.messages)
 const knowledgeBases = computed(() => knowledgeStore.knowledgeBases)
@@ -485,6 +529,11 @@ const switchMode = (mode: string) => {
   if (mode !== 'agent') {
     selectedAgent.value = ''
   }
+  
+  // 强制触发重新渲染
+  nextTick(() => {
+    // 确保DOM更新
+  })
   
   ElMessage.success(`已切换到${chatModes.find(m => m.key === mode)?.label}模式`)
 }
@@ -540,14 +589,9 @@ const sendMessage = async () => {
       message: messageContent,
       conversation_id: conversationId
     }
-    
-    // 如果是agent模式，添加use_agent参数
+    console.log('currentMode.value='+currentMode.value)
+    // 如果是智能体模式，添加use_agent参数
     if (currentMode.value === 'agent') {
-      messageData.use_agent = true
-    }
-    
-    // 如果是LangGraph模式，添加use_langgraph参数
-    if (currentMode.value === 'langgraph') {
       messageData.use_langgraph = true
     }
     
@@ -725,6 +769,11 @@ const formatConversationTime = (timeStr: string) => {
   width: 100%;
   min-width: 0;
   height: 100%;
+}
+
+/* 智能体模式下为右侧面板留出空间 */
+.chat-area.with-agent-panel {
+  width: calc(100% - 400px);
 }
 
 /* 消息容器 */
@@ -998,6 +1047,72 @@ const formatConversationTime = (timeStr: string) => {
     opacity: 1;
   }
 }
+
+/* 智能体状态显示样式 */
+.agent-status-simple {
+  margin-bottom: 8px;
+}
+
+.agent-current-status {
+  display: flex;
+  align-items: center;
+}
+
+.current-step-display {
+  display: flex;
+  align-items: center;
+}
+
+.step-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  font-size: 12px;
+  color: #6366f1;
+}
+
+.step-status .type-icon {
+  font-size: 14px;
+}
+
+.step-status .status-text {
+  font-weight: 500;
+}
+
+.agent-status-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px 0;
+}
+
+.agent-status-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.agent-status-tag .el-icon {
+  font-size: 12px;
+}
+
+.current-tool {
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+
 
 /* 输入区域样式 */
 .input-area {
@@ -1310,132 +1425,7 @@ const formatConversationTime = (timeStr: string) => {
   color: #67c23a;
 }
 
-/* 右侧工作流面板样式 */
-.workflow-panel {
-  width: 350px;
-  background: #1e293b;
-  border-left: 1px solid #334155;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
 
-.workflow-header {
-  padding: 20px;
-  border-bottom: 1px solid #334155;
-  background: #1e293b;
-  color: #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.workflow-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.workflow-content {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background: #1e293b;
-}
-
-.current-workflow h4 {
-  margin: 0 0 16px 0;
-  color: #e2e8f0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.workflow-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  border: 1px solid #475569;
-  background: #334155;
-  transition: all 0.3s ease;
-}
-
-.workflow-step.active {
-  background: rgba(255, 197, 61, 0.1);
-  border-color: #ffc53d;
-  box-shadow: 0 2px 8px rgba(255, 197, 61, 0.2);
-}
-
-.workflow-step.completed {
-  background: rgba(82, 196, 26, 0.1);
-  border-color: #52c41a;
-}
-
-.workflow-step.pending {
-  background: #334155;
-  border-color: #475569;
-}
-
-.step-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.workflow-step.completed .step-icon {
-  background: #52c41a;
-  color: white;
-}
-
-.workflow-step.active .step-icon {
-  background: #faad14;
-  color: white;
-}
-
-.workflow-step.pending .step-icon {
-  background: #d9d9d9;
-  color: #8c8c8c;
-}
-
-.step-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.step-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #e2e8f0;
-  margin-bottom: 4px;
-}
-
-.step-description {
-  font-size: 12px;
-  color: #94a3b8;
-  line-height: 1.4;
-  margin-bottom: 8px;
-}
-
-.step-status {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.workflow-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-}
 
 .rotating {
   animation: rotate 1s linear infinite;
@@ -1449,4 +1439,169 @@ const formatConversationTime = (timeStr: string) => {
     transform: rotate(360deg);
   }
 }
+
+/* 右侧智能体思考流程面板样式 */
+.agent-panel {
+  width: 400px;
+  background: #1e293b;
+  border-left: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.agent-header {
+  padding: 16px;
+  border-bottom: 1px solid #334155;
+  background: #0f172a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.agent-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.thinking-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.thinking-step {
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.thinking-step:hover {
+  background: #3f4a5f;
+  border-color: #64748b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.thinking-step.step-thinking {
+  border-left: 4px solid #3b82f6;
+}
+
+.thinking-step.step-tool_end {
+  border-left: 4px solid #10b981;
+}
+
+.thinking-step.step-response {
+  border-left: 4px solid #8b5cf6;
+}
+
+.step-header {
+  margin-bottom: 8px;
+}
+
+.step-type-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #475569;
+  border-radius: 6px;
+}
+
+.step-type-info .type-icon {
+  font-size: 16px;
+}
+
+.step-type-info .type-name {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.step-type-info .tool-info {
+  color: #fbbf24;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.step-content {
+  color: #e2e8f0;
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 3px solid #6366f1;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.tool-output {
+  margin-top: 8px;
+}
+
+.output-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+  margin-bottom: 4px;
+}
+
+.output-content {
+  color: #6ee7b7;
+  background: #0f172a;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 3px solid #10b981;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Courier New', monospace;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.step-timestamp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #475569;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.agent-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+}
+
+
 </style>
