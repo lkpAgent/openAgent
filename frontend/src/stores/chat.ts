@@ -251,6 +251,12 @@ export const useChatStore = defineStore('chat', () => {
   
   const sendMessageStream = async (data: ChatRequest, onChunk?: (chunk: string) => void) => {
     try {
+      // 防止重复调用
+      if (isStreaming.value) {
+        console.warn('Already streaming, ignoring duplicate call')
+        return
+      }
+      
       isStreaming.value = true
       
       // Add user message immediately
@@ -324,7 +330,7 @@ export const useChatStore = defineStore('chat', () => {
                     console.log('🤔 Thinking:', parsed.content)
                     agentData.status = 'thinking'
                     agentData.steps.push({
-                      id: Date.now(),
+                      id: `thinking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                       type: 'thinking',
                       content: parsed.content,
                       timestamp: new Date().toISOString(),
@@ -332,13 +338,13 @@ export const useChatStore = defineStore('chat', () => {
                       raw_output: parsed.raw_output
                     })
                     
-                  } else if (parsed.type === 'tool_end') {
+                  } else if (parsed.type === 'tools_end') {
                     // 处理工具执行完成
-                    console.log('🔧 Tool end:', parsed.content)
+                    console.log('🔧 Tools end:', parsed.content)
                     agentData.status = 'tool_calling'
                     agentData.steps.push({
-                      id: Date.now(),
-                      type: 'tool_end',
+                      id: `tools_end_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      type: 'tools_end',
                       content: parsed.content,
                       timestamp: new Date().toISOString(),
                       node_name: parsed.node_name || 'tools',
@@ -346,19 +352,69 @@ export const useChatStore = defineStore('chat', () => {
                       tool_output: parsed.tool_output
                     })
                     
-                  } else if (parsed.type === 'response') {
-                    // 处理最终响应
-                    console.log('💬 Response:', parsed.content)
-                    agentData.status = 'completed'
+                  } else if (parsed.type === 'response_start') {
+                    // 处理开始输出
+                    console.log('💬 Response start:', parsed.content)
+                    agentData.status = 'responding'
                     agentData.steps.push({
-                      id: Date.now(),
-                      type: 'response',
-                      content: parsed.content,
-                      timestamp: new Date().toISOString(),
-                      intermediate_steps: parsed.intermediate_steps
+                      id: `response_start_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      type: 'response_start',
+                      content: '正在输出',
+                      timestamp: new Date().toISOString()
                     })
                     
-                    // 设置消息内容
+                  } else if (parsed.type === 'response') {
+                    // 处理流式响应内容，同时更新消息内容和steps中的response步骤
+                    if (!messages.value[lastMessageIndex].content) {
+                      messages.value[lastMessageIndex].content = ''
+                    }
+                    messages.value[lastMessageIndex].content = parsed.content
+                    
+                    // 在agent_data.steps中创建或更新response步骤
+                    const steps = agentData.steps
+                    const existingResponseIndex = steps.findIndex(step => step.type === 'response')
+                    
+                    const responseStep = {
+                      id: `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      type: 'response',
+                      content: parsed.content,
+                      timestamp: new Date().toISOString()
+                    }
+                    
+                    if (existingResponseIndex >= 0) {
+                      // 更新已存在的response步骤内容
+                      steps[existingResponseIndex] = {
+                        ...steps[existingResponseIndex],
+                        content: parsed.content
+                      }
+                    } else {
+                      // 添加新的response步骤
+                      steps.push(responseStep)
+                    }
+                    
+                  } else if (parsed.type === 'complete') {
+                    // 处理完成状态
+                    console.log('✅ Complete:', parsed.content)
+                    agentData.status = 'completed'
+                    
+                    // 更新最后一个response_start步骤为complete
+                    const lastResponseStartIndex = agentData.steps.findLastIndex(step => step.type === 'response_start')
+                    if (lastResponseStartIndex >= 0) {
+                      agentData.steps[lastResponseStartIndex] = {
+                        ...agentData.steps[lastResponseStartIndex],
+                        type: 'complete',
+                        content: '本次对话过程完成'
+                      }
+                    } else {
+                      agentData.steps.push({
+                        id: `complete_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        type: 'complete',
+                        content: '本次对话过程完成',
+                        timestamp: new Date().toISOString()
+                      })
+                    }
+                    
+                    // 设置最终消息内容
                     messages.value[lastMessageIndex].content = parsed.content
                     
                   } else if (parsed.type === 'status') {
@@ -401,33 +457,80 @@ export const useChatStore = defineStore('chat', () => {
                   }
                   onChunk?.(parsed.content)
                 } else if (parsed.type === 'response' && parsed.content) {
-                  // 完整响应内容，直接设置
+                  // 处理流式响应内容
                   const lastMessageIndex = messages.value.length - 1
                   if (lastMessageIndex >= 0 && messages.value[lastMessageIndex].role === 'assistant') {
-                    messages.value[lastMessageIndex].content = parsed.content
-                    // 清除状态显示
-                    messages.value[lastMessageIndex].status = undefined
-                    
-                    // 更新智能体状态为完成
-                    if (messages.value[lastMessageIndex].agent_data) {
-                      messages.value[lastMessageIndex].agent_data.status = 'completed'
-                      // 添加完成步骤
-                      const step = {
-                        id: Date.now(),
-                        type: 'completed',
-                        content: '回答生成完成',
-                        timestamp: new Date().toISOString()
+                    if (parsed.done) {
+                      // 完成时设置最终内容
+                      messages.value[lastMessageIndex].content = parsed.content
+                      // 清除状态显示
+                      messages.value[lastMessageIndex].status = undefined
+                      
+                      // 更新智能体状态为完成
+                      if (messages.value[lastMessageIndex].agent_data) {
+                        messages.value[lastMessageIndex].agent_data.status = 'completed'
+                        
+                        // 移除已存在的response步骤，确保只有一个最终response
+                        const steps = messages.value[lastMessageIndex].agent_data.steps
+                        const existingResponseIndex = steps.findIndex(step => step.type === 'response')
+                        
+                        const responseStep = {
+                          id: `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                          type: 'response',
+                          content: parsed.content,
+                          timestamp: new Date().toISOString()
+                        }
+                        
+                        if (existingResponseIndex >= 0) {
+                          // 替换已存在的response步骤
+                          steps[existingResponseIndex] = responseStep
+                        } else {
+                          // 添加新的response步骤
+                          steps.push(responseStep)
+                        }
                       }
-                      messages.value[lastMessageIndex].agent_data.steps.push(step)
-                    }
-                    
-                    // 兼容旧的思考过程数据
-                    if (messages.value[lastMessageIndex].thinking_data) {
-                      messages.value[lastMessageIndex].thinking_data.status = 'completed'
-                      messages.value[lastMessageIndex].thinking_data.current_step = '思考完成'
+                      
+                      // 兼容旧的思考过程数据
+                      if (messages.value[lastMessageIndex].thinking_data) {
+                        messages.value[lastMessageIndex].thinking_data.status = 'completed'
+                        messages.value[lastMessageIndex].thinking_data.current_step = '思考完成'
+                      }
+                      
+                      onChunk?.(parsed.content)
+                    } else {
+                      // 流式过程中，累积更新content实现打字机效果
+                      messages.value[lastMessageIndex].content = parsed.content
+                      
+                      // 更新智能体状态为生成中
+                      if (messages.value[lastMessageIndex].agent_data) {
+                        messages.value[lastMessageIndex].agent_data.status = 'responding'
+                        
+                        // 在流式过程中也要创建/更新response步骤
+                        const steps = messages.value[lastMessageIndex].agent_data.steps
+                        const existingResponseIndex = steps.findIndex(step => step.type === 'response')
+                        
+                        const responseStep = {
+                          id: `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                          type: 'response',
+                          content: parsed.content,
+                          timestamp: new Date().toISOString()
+                        }
+                        
+                        if (existingResponseIndex >= 0) {
+                          // 更新已存在的response步骤内容
+                          steps[existingResponseIndex] = {
+                            ...steps[existingResponseIndex],
+                            content: parsed.content
+                          }
+                        } else {
+                          // 添加新的response步骤
+                          steps.push(responseStep)
+                        }
+                      }
+                      
+                      onChunk?.(parsed.content)
                     }
                   }
-                  onChunk?.(parsed.content)
                 } else if (parsed.content) {
                   // 兼容旧格式的流式响应
                   const lastMessageIndex = messages.value.length - 1

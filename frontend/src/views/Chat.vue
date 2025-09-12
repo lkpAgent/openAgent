@@ -175,13 +175,11 @@
                   <span></span>
                   <span></span>
                 </div>
-                <!-- 智能体模式：只显示response类型的内容 -->
+                <!-- 智能体模式：只显示最后一个response类型的内容 -->
                 <div v-else-if="message.role === 'assistant' && currentMode === 'agent'" class="message-text">
-                  <!-- 检查是否有response类型的步骤，如果有则显示其内容 -->
+                  <!-- 检查是否有response类型的步骤，如果有则显示最后一个response的内容 -->
                   <div v-if="message.agent_data && message.agent_data.steps">
-                    <template v-for="step in message.agent_data.steps" :key="step.id">
-                      <div v-if="step.type === 'response'" v-html="renderMarkdown(step.content)"></div>
-                    </template>
+                    <div v-if="getLastResponseStep(message.agent_data.steps)" v-html="renderMarkdown(getLastResponseStep(message.agent_data.steps).content)"></div>
                   </div>
                   <!-- 如果没有response步骤但有消息内容，显示消息内容 -->
                   <div v-else-if="message.content" v-html="renderMarkdown(message.content)"></div>
@@ -254,7 +252,7 @@
           <!-- 智能体思考流程列表 -->
           <div class="thinking-steps">
             <div 
-              v-for="(step, index) in currentAgentData.steps" 
+              v-for="(step, index) in getUniqueSteps(currentAgentData.steps)" 
               :key="step.id || index" 
               class="thinking-step"
               :class="`step-${step.type}`"
@@ -263,14 +261,16 @@
               <div class="step-header">
                 <div class="step-type-info">
                   <span v-if="step.type === 'thinking'" class="type-icon">🤔</span>
-                  <span v-else-if="step.type === 'tool_end'" class="type-icon">🔧</span>
-                  <span v-else-if="step.type === 'response'" class="type-icon">💬</span>
+                  <span v-else-if="step.type === 'tools_end'" class="type-icon">🔧</span>
+                  <span v-else-if="step.type === 'response_start'" class="type-icon">💬</span>
+                  <span v-else-if="step.type === 'complete'" class="type-icon">✅</span>
                   <span v-else class="type-icon">📝</span>
                   
                   <span class="type-name">
                     <span v-if="step.type === 'thinking'">思考中</span>
-                    <span v-else-if="step.type.includes('tool')">调用工具</span>
-                    <span v-else-if="step.type === 'response'">回复</span>
+                    <span v-else-if="step.type === 'tools_end'">调用工具</span>
+                    <span v-else-if="step.type === 'response_start'">正在输出</span>
+                    <span v-else-if="step.type === 'complete'">本次对话过程完成</span>
                     <span v-else>处理中</span>
                   </span>
                   
@@ -281,12 +281,12 @@
               </div>
               
               <!-- 内容 -->
-               <div v-if="step.content" class="step-content">
+               <div v-if="step.content && step.type !== 'response'" class="step-content">
                  {{ step.content }}
                </div>
                
                <!-- 工具输出 -->
-               <div v-if="step.type.includes('tool') && step.tool_output" class="tool-output">
+               <div v-if="step.type === 'tools_end' && step.tool_output" class="tool-output">
                  <div class="output-label">工具输出:</div>
                  <div class="output-content">{{ step.tool_output }}</div>
                </div>
@@ -499,6 +499,30 @@ const formatTime = (timestamp) => {
 // 检查步骤中是否包含response类型
 const hasResponseStep = (steps: any[]) => {
   return steps && steps.some(step => step.type === 'response')
+}
+
+// 获取最后一个response类型的步骤
+const getLastResponseStep = (steps: any[]) => {
+  if (!steps) return null
+  // 从后往前查找最后一个response类型的步骤
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (steps[i].type === 'response') {
+      return steps[i]
+    }
+  }
+  return null
+}
+
+// 获取所有步骤列表，按时间顺序显示
+const getUniqueSteps = (steps: any[]) => {
+  if (!steps) return []
+  
+  // 直接返回所有步骤，按时间顺序排序
+  return steps.sort((a, b) => {
+    const timeA = new Date(a.timestamp || 0).getTime()
+    const timeB = new Date(b.timestamp || 0).getTime()
+    return timeA - timeB
+  })
 }
 
 const messages = computed(() => chatStore.messages)
