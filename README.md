@@ -45,7 +45,7 @@
 - Node.js 18+
 - PostgreSQL 16+
 
-### 1. 安装PostgreSQL和pgvector
+### 1. 安装数据库：PostgreSQL及pgvector插件（向量搜索)
 
 #### 方式一：Docker安装（推荐）
 使用 Docker + Docker Compose 部署 PostgreSQL 16 + pgvector 插件。
