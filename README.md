@@ -191,6 +191,8 @@ npm run dev
 ### 5. 后端配置说明
 
 #### 后端环境变量配置 (backend/.env)
+几个核心配置：系统数据库地址DATABASE_URL，向量数据库配置，CHAT大模型提供商：LLM_PROVIDER及相关配置，向量大模型提供商：EMBEDDING_PROVIDER
+几个工具API_KEY:tavilySearch,心知天气API
 
 ```env
 
