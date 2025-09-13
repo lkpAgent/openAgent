@@ -15,13 +15,13 @@ from dotenv import load_dotenv
 load_dotenv(project_root / '.env')
 
 from sqlalchemy.orm import Session
-from chat_agent.db.database import get_db
-from chat_agent.services.knowledge_chat import KnowledgeChatService
-from chat_agent.services.conversation import ConversationService
-from chat_agent.services.knowledge_base import KnowledgeBaseService
-from chat_agent.models.message import MessageRole
-from chat_agent.utils.schemas import ConversationCreate
-from chat_agent.core.config import settings
+from open_agent.db.database import get_db
+from open_agent.services.knowledge_chat import KnowledgeChatService
+from open_agent.services.conversation import ConversationService
+from open_agent.services.knowledge_base import KnowledgeBaseService
+from open_agent.models.message import MessageRole
+from open_agent.utils.schemas import ConversationCreate
+from open_agent.core.config import settings
 
 async def test_knowledge_chat_integration():
     """测试知识库对话集成功能。"""

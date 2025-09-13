@@ -1,6 +1,6 @@
 # Chat Agent Configuration
 app:
-  name: "ChatAgent"
+  name: "openAgent"
   version: "0.1.0"
   debug: true
   environment: "development"

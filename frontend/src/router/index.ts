@@ -85,7 +85,7 @@ router.beforeEach(async (to, from, next) => {
   
   // Set page title
   if (to.meta.title) {
-    document.title = `${to.meta.title} - ChatAgent`
+    document.title = `${to.meta.title} - openAgent`
   }
   
   const userStore = useUserStore()

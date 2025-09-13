@@ -10,8 +10,8 @@ os.environ['ENV_FILE'] = os.path.join(os.path.dirname(os.path.dirname(os.path.ab
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入所需模块
-from chat_agent.services.tools import SearchTool
-from chat_agent.core.config import get_settings
+from open_agent.services.tools import SearchTool
+from open_agent.core.config import get_settings
 
 # 重新加载settings以确保获取最新的环境变量
 settings = get_settings()

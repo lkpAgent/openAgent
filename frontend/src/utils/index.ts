@@ -1,4 +1,4 @@
-// Utility functions for ChatAgent
+// Utility functions for openAgent
 
 /**
  * Format time to readable string

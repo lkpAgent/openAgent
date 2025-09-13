@@ -8,11 +8,11 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.document_processor import DocumentProcessor
-from chat_agent.services.embedding_factory import EmbeddingFactory
-from chat_agent.services.knowledge_chat import KnowledgeChatService
-from chat_agent.core.config import get_settings
-from chat_agent.db.database import get_db
+from open_agent.services.document_processor import DocumentProcessor
+from open_agent.services.embedding_factory import EmbeddingFactory
+from open_agent.services.knowledge_chat import KnowledgeChatService
+from open_agent.core.config import get_settings
+from open_agent.db.database import get_db
 
 def test_embedding_consistency():
     """测试embedding配置一致性"""

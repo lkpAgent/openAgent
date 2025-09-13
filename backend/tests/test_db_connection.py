@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.core.config import get_settings
+from open_agent.core.config import get_settings
 import psycopg2
 from urllib.parse import urlparse
 

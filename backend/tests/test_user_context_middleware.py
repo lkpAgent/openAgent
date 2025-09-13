@@ -11,10 +11,10 @@ backend_dir = Path(__file__).parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from chat_agent.core.context import UserContext
-from chat_agent.services.auth import AuthService
-from chat_agent.db.database import get_db_session
-from chat_agent.models.user import User
+from open_agent.core.context import UserContext
+from open_agent.services.auth import AuthService
+from open_agent.db.database import get_db_session
+from open_agent.models.user import User
 
 def test_user_context_direct():
     """Test UserContext directly."""

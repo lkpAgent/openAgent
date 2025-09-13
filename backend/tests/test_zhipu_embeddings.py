@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.embedding_factory import EmbeddingFactory
+from open_agent.services.embedding_factory import EmbeddingFactory
 import requests
 import json
 

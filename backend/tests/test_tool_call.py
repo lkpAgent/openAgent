@@ -11,9 +11,9 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.tools import GenerateImageTool
-from chat_agent.services.agent.base import ToolRegistry
-from chat_agent.services.agent.agent_service import AgentService
+from open_agent.services.tools import GenerateImageTool
+from open_agent.services.agent.base import ToolRegistry
+from open_agent.services.agent.agent_service import AgentService
 
 async def test_tool_direct_call():
     """直接测试工具调用"""

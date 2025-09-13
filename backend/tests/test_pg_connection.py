@@ -5,7 +5,7 @@ import logging
 import psycopg2
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.core.config import Settings
+from open_agent.core.config import Settings
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)

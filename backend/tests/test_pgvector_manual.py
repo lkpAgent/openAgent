@@ -8,8 +8,8 @@ import numpy as np
 import json
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.core.config import Settings
-from chat_agent.services.embedding_factory import EmbeddingFactory
+from open_agent.core.config import Settings
+from open_agent.services.embedding_factory import EmbeddingFactory
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)

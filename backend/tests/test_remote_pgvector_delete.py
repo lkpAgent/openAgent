@@ -13,8 +13,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from langchain.schema import Document
 from langchain_postgres import PGVector
-from chat_agent.core.config import settings
-from chat_agent.services.embedding_factory import EmbeddingFactory
+from open_agent.core.config import settings
+from open_agent.services.embedding_factory import EmbeddingFactory
 from urllib.parse import quote
 
 def test_remote_pgvector_delete():

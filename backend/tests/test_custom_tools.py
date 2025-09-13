@@ -8,7 +8,7 @@ import os
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.tools.example_tool import TextProcessorTool, NumberProcessorTool
+from open_agent.services.tools.example_tool import TextProcessorTool, NumberProcessorTool
 
 
 async def test_text_processor_tool():

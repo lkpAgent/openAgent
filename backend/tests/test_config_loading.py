@@ -9,7 +9,7 @@ import logging
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.core.config import Settings
+from open_agent.core.config import Settings
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

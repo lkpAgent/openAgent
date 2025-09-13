@@ -1,7 +1,7 @@
 {
   "name": "chat-agent-frontend",
   "version": "0.1.0",
-  "description": "Vue.js frontend for ChatAgent application",
+  "description": "Vue.js frontend for openAgent application",
   "private": true,
   "scripts": {
     "dev": "vite",

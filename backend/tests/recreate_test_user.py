@@ -5,9 +5,9 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.orm import Session
-from chat_agent.db.database import get_db_session
-from chat_agent.models.user import User
-from chat_agent.services.auth import AuthService
+from open_agent.db.database import get_db_session
+from open_agent.models.user import User
+from open_agent.services.auth import AuthService
 
 def recreate_test_user():
     """Delete and recreate test user."""

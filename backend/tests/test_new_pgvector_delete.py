@@ -14,8 +14,8 @@ sys.path.insert(0, str(project_root))
 
 from langchain_postgres import PGVector
 from langchain.schema import Document
-from chat_agent.core.config import settings
-from chat_agent.services.embedding_factory import EmbeddingFactory
+from open_agent.core.config import settings
+from open_agent.services.embedding_factory import EmbeddingFactory
 from urllib.parse import quote
 
 def test_pgvector_delete():

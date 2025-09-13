@@ -13,8 +13,8 @@ from langchain.schema import Document
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.core.config import get_settings
-from chat_agent.services.embedding_factory import EmbeddingFactory
+from open_agent.core.config import get_settings
+from open_agent.services.embedding_factory import EmbeddingFactory
 from langchain_postgres import PGVector
 
 # 配置日志

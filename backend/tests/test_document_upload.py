@@ -10,8 +10,8 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from langchain.schema import Document
-from chat_agent.core.config import Settings
-from chat_agent.services.document_processor import DocumentProcessor
+from open_agent.core.config import Settings
+from open_agent.services.document_processor import DocumentProcessor
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

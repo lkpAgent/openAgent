@@ -3,11 +3,11 @@
 重置数据库用户并创建demo用户
 """
 
-from chat_agent.models.user import User
-from chat_agent.services.auth import AuthService
+from open_agent.models.user import User
+from open_agent.services.auth import AuthService
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from chat_agent.core.config import settings
+from open_agent.core.config import settings
 
 def reset_users():
     """清空所有用户并创建demo用户"""

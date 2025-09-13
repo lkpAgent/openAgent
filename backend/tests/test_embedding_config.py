@@ -14,7 +14,7 @@ if str(backend_dir) not in sys.path:
 from dotenv import load_dotenv
 load_dotenv()
 
-from chat_agent.core.config import get_settings
+from open_agent.core.config import get_settings
 
 def test_embedding_config():
     print("=== 测试Embedding配置加载 ===")

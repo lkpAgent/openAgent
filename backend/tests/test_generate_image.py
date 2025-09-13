@@ -8,8 +8,8 @@ import os
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.tools import GenerateImageTool
-from chat_agent.services.agent.agent_service import AgentService
+from open_agent.services.tools import GenerateImageTool
+from open_agent.services.agent.agent_service import AgentService
 
 
 async def test_generate_image_tool_directly():

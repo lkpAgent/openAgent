@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
-        <h1>ChatAgent</h1>
+        <h1>openAgent</h1>
         <p>智能对话系统</p>
       </div>
       

@@ -229,7 +229,7 @@ import os
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.tools import MyCustomTool
+from open_agent.services.tools import MyCustomTool
 
 
 async def test_custom_tool():

@@ -1,4 +1,4 @@
-# ChatAgent - 企业级智能体应用平台
+# openAgent - 企业级智能体应用平台
 
 
 🚀 **完全开源的大模型应用平台** 
@@ -253,7 +253,11 @@ MOONSHOT_BASE_URL=https://api.moonshot.cn/v1
 MOONSHOT_MODEL=moonshot-v1-8k
 MOONSHOT_EMBEDDING_MODEL=moonshot-embedding
 
-
+# 工具API配置
+## tavilySearch api
+TAVILY_API_KEY=your-tavily-api-key
+## 心知天气api
+WEATHER_API_KEY=your_xinzhi_api_key
 ```
 
 

@@ -11,9 +11,9 @@ load_dotenv(Path(".env"))
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.services.document_processor import document_processor
-from chat_agent.services.knowledge_base import KnowledgeBaseService
-from chat_agent.db.database import get_db
+from open_agent.services.document_processor import document_processor
+from open_agent.services.knowledge_base import KnowledgeBaseService
+from open_agent.db.database import get_db
 from sqlalchemy.orm import Session
 
 def test_vector_search():

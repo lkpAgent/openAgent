@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from chat_agent.core.config import Settings
+from open_agent.core.config import Settings
 
 def debug_config_loading():
     print("Debug configuration loading...")

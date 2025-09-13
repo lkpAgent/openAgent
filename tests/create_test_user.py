@@ -36,9 +36,9 @@ original_cwd = os.getcwd()
 # 设置工作目录为backend，以便找到.env文件
 os.chdir(backend_dir)
 
-from chat_agent.db.database import get_db, init_db
-from chat_agent.services.user import UserService
-from chat_agent.utils.schemas import UserCreate
+from open_agent.db.database import get_db, init_db
+from open_agent.services.user import UserService
+from open_agent.utils.schemas import UserCreate
 import asyncio
 
 async def create_database_tables():

@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from chat_agent.db.database import get_db
-from chat_agent.services.knowledge_chat import KnowledgeChatService
-from chat_agent.services.conversation import ConversationService
-from chat_agent.services.document_processor import get_document_processor
-from chat_agent.utils.logger import get_logger
-from chat_agent.core.config import settings
+from open_agent.db.database import get_db
+from open_agent.services.knowledge_chat import KnowledgeChatService
+from open_agent.services.conversation import ConversationService
+from open_agent.services.document_processor import get_document_processor
+from open_agent.utils.logger import get_logger
+from open_agent.core.config import settings
 from langchain.schema import Document
 
 logger = get_logger("test_chat_pgvector")
