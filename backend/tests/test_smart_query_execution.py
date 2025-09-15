@@ -24,7 +24,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputKeyToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
-# from chat_agent.core.config import get_settings
+# from open_agent.core.config import get_settings
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)

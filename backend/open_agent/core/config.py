@@ -355,7 +355,7 @@ class Settings(BaseSettings):
         
         # 如果配置文件不存在，尝试从backend目录查找
         if not config_file.exists():
-            # 获取当前文件所在目录（backend/chat_agent/core）
+            # 获取当前文件所在目录（backend/open_agent/core）
             current_dir = Path(__file__).parent
             # 向上两级到backend目录，然后找configs/settings.yaml
             backend_config_path = current_dir.parent.parent / "configs" / "settings.yaml"

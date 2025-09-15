@@ -20,7 +20,7 @@ def find_project_root():
 
     for root in possible_roots:
         backend_dir = os.path.join(root, 'backend')
-        if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'chat_agent')):
+        if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'open_agent')):
             return root, backend_dir
 
     raise FileNotFoundError("无法找到项目根目录和backend目录")

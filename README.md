@@ -155,9 +155,9 @@ cd backend/tests
 python init_db.py
 
 # 启动后端服务，默认8000端口
-python -m uvicorn chat_agent.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn open_agent.main:app --reload --host 0.0.0.0 --port 8000
 # 或者直接运行main.py
-# cd backend/chat_agent
+# cd backend/open_agent
 # python main.py
 
 ```
@@ -296,7 +296,7 @@ WEATHER_API_KEY=your_xinzhi_api_key
 ```
 chat-agent/
 ├── backend/                 # 后端代码
-│   ├── chat_agent/         # 主应用包
+│   ├── open_agent/         # 主应用包
 │   │   ├── api/            # API路由
 │   │   ├── core/           # 核心配置
 │   │   ├── db/             # 数据库相关

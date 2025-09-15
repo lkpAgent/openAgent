@@ -7,7 +7,7 @@ from typing import Optional
 
 
 def setup_logger(
-    name: str = "chat_agent",
+    name: str = "open_agent",
     level: str = "DEBUG",
     log_file: Optional[str] = None
 ) -> logging.Logger:
@@ -65,4 +65,4 @@ def get_logger(name: str) -> logging.Logger:
     Returns:
         Logger instance
     """
-    return logging.getLogger(f"chat_agent.{name}")
+    return logging.getLogger(f"open_agent.{name}")

@@ -21,7 +21,7 @@
 
 ### 步骤1: 创建工具文件
 
-在`backend/chat_agent/services/agent/tools/`目录下创建新的Python文件，例如`my_custom_tool.py`：
+在`backend/open_agent/services/agent/tools/`目录下创建新的Python文件，例如`my_custom_tool.py`：
 
 ```python
 """自定义工具示例。"""
@@ -125,7 +125,7 @@ class MyCustomTool(BaseTool):
 
 ### 步骤2: 注册工具
 
-在`backend/chat_agent/services/agent/tools/__init__.py`文件中导入并导出新工具：
+在`backend/open_agent/services/agent/tools/__init__.py`文件中导入并导出新工具：
 
 ```python
 from .my_custom_tool import MyCustomTool
@@ -142,7 +142,7 @@ __all__ = [
 
 ### 步骤3: 在Agent服务中注册
 
-在`backend/chat_agent/services/agent/agent_service.py`中注册工具：
+在`backend/open_agent/services/agent/agent_service.py`中注册工具：
 
 ```python
 from .tools import MyCustomTool
