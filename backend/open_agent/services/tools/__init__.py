@@ -4,6 +4,7 @@ from .weather import WeatherQueryTool
 from .search import TavilySearchTool
 from .datetime_tool import DateTimeTool
 from open_agent.services.mcp.postgresql_mcp import PostgreSQLMCPTool
+from open_agent.services.mcp.mysql_mcp import MySQLMCPTool
 
 
 # Try to import LangChain native tools if available
@@ -17,5 +18,6 @@ __all__ = [
     'TavilySearchTool',
     'DateTimeTool',
     'PostgreSQLMCPTool',
+    'MySQLMCPTool',
     'LANGCHAIN_NATIVE_TOOLS'
 ]

@@ -12,6 +12,8 @@ from ..models.database_config import DatabaseConfig
 from ..utils.logger import get_logger
 from ..utils.exceptions import ValidationError, NotFoundError
 from .postgresql_tool_manager import get_postgresql_tool
+from .mysql_tool_manager import get_mysql_tool
+import pymysql
 
 logger = get_logger("database_config_service")
 
@@ -22,12 +24,13 @@ class DatabaseConfigService:
     def __init__(self, db_session: Session):
         self.db = db_session
         self.postgresql_tool = get_postgresql_tool()
+        self.mysql_tool = get_mysql_tool()
         # 初始化加密密钥
         self.encryption_key = self._get_or_create_encryption_key()
         self.cipher = Fernet(self.encryption_key)
     def _get_or_create_encryption_key(self) -> bytes:
         """获取或创建加密密钥"""
-        key_file = "db_config_key.key"
+        key_file = "db/db_config_key.key"
         if os.path.exists(key_file):
             with open(key_file, 'rb') as f:
                 return f.read()
@@ -53,7 +56,8 @@ class DatabaseConfigService:
             for field in required_fields:
                 if field not in config_data:
                     raise ValidationError(f"缺少必需字段: {field}")
-            
+
+
             # 测试连接
             test_config = {
                 'host': config_data['host'],
@@ -62,15 +66,20 @@ class DatabaseConfigService:
                 'username': config_data['username'],
                 'password': config_data['password']
             }
-            
-            test_result = await self.postgresql_tool.execute(
-                operation="test_connection",
-                connection_config=test_config
-            )
-            
-            if not test_result.success:
-                raise ValidationError(f"数据库连接测试失败: {test_result.error}")
-            
+            if 'postgresql' == config_data['db_type']:
+                test_result = await self.postgresql_tool.execute(
+                    operation="test_connection",
+                    connection_config=test_config
+                )
+                if not test_result.success:
+                    raise ValidationError(f"数据库连接测试失败: {test_result.error}")
+            elif 'mysql' == config_data['db_type']:
+                test_result = await self.mysql_tool.execute(
+                    operation="test_connection",
+                    connection_config=test_config
+                )
+                if not test_result.success:
+                    raise ValidationError(f"数据库连接测试失败: {test_result.error}")
             # 如果设置为默认配置，先取消其他默认配置
             if config_data.get('is_default', False):
                 self.db.query(DatabaseConfig).filter(
@@ -165,13 +174,21 @@ class DatabaseConfigService:
             'username': config.username,
             'password': self._decrypt_password(config.password)
         }
-        
-        # 连接数据库
-        connect_result = await self.postgresql_tool.execute(
-            operation="connect",
-            connection_config=connection_config,
-            user_id=str(user_id)
-        )
+
+        if 'postgresql' == config.db_type:
+            # 连接数据库
+            connect_result = await self.postgresql_tool.execute(
+                operation="connect",
+                connection_config=connection_config,
+                user_id=str(user_id)
+            )
+        elif 'mysql' == config.db_type:
+            # 连接数据库
+            connect_result = await self.mysql_tool.execute(
+                operation="connect",
+                connection_config=connection_config,
+                user_id=str(user_id)
+            )
         
         if not connect_result.success:
             return {
@@ -185,11 +202,24 @@ class DatabaseConfigService:
             'config_name': config.name
         }
     
-    async def get_table_data(self, table_name: str, user_id: int, limit: int = 100) -> Dict[str, Any]:
+    async def get_table_data(self, table_name: str, user_id: int, db_type: str, limit: int = 100) -> Dict[str, Any]:
         """获取表数据预览（复用已建立的连接）"""
         try:
+            user_id_str = str(user_id)
+            
+            # 根据db_type选择相应的数据库工具
+            if db_type.lower() == 'postgresql':
+                db_tool = self.postgresql_tool
+            elif db_type.lower() == 'mysql':
+                db_tool = self.mysql_tool
+            else:
+                return {
+                    'success': False,
+                    'message': f'不支持的数据库类型: {db_type}'
+                }
+            
             # 检查是否已有连接
-            if str(user_id) not in self.postgresql_tool.connections:
+            if user_id_str not in db_tool.connections:
                 return {
                     'success': False,
                     'message': '数据库连接已断开，请重新连接数据库'
@@ -197,9 +227,9 @@ class DatabaseConfigService:
             
             # 直接使用已建立的连接执行查询
             sql_query = f"SELECT * FROM {table_name}"
-            result = await self.postgresql_tool.execute(
+            result = await db_tool.execute(
                 operation="execute_query",
-                user_id=str(user_id),
+                user_id=user_id_str,
                 sql_query=sql_query,
                 limit=limit
             )
@@ -212,7 +242,8 @@ class DatabaseConfigService:
             
             return {
                 'success': True,
-                'data': result.result
+                'data': result.result,
+                'db_type': db_type
             }
             
         except Exception as e:

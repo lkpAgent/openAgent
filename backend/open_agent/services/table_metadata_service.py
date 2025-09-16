@@ -11,6 +11,7 @@ from ..models.database_config import DatabaseConfig
 from ..utils.logger import get_logger
 from ..utils.exceptions import ValidationError, NotFoundError
 from .postgresql_tool_manager import get_postgresql_tool
+from .mysql_tool_manager import get_mysql_tool
 
 logger = get_logger("table_metadata_service")
 
@@ -21,6 +22,7 @@ class TableMetadataService:
     def __init__(self, db_session: Session):
         self.db = db_session
         self.postgresql_tool = get_postgresql_tool()
+        self.mysql_tool = get_mysql_tool()
     
     async def collect_and_save_table_metadata(
         self, 
@@ -38,9 +40,17 @@ class TableMetadataService:
             if not db_config:
                 raise NotFoundError("数据库配置不存在")
             
+            # 根据数据库类型选择相应的工具
+            if db_config.db_type.lower() == 'postgresql':
+                db_tool = self.postgresql_tool
+            elif db_config.db_type.lower() == 'mysql':
+                db_tool = self.mysql_tool
+            else:
+                raise Exception(f"不支持的数据库类型: {db_config.db_type}")
+            
             # 检查是否已有连接，如果没有则建立连接
             user_id_str = str(user_id)
-            if user_id_str not in self.postgresql_tool.connections:
+            if user_id_str not in db_tool.connections:
                 connection_config = {
                     'host': db_config.host,
                     'port': db_config.port,
@@ -50,7 +60,7 @@ class TableMetadataService:
                 }
                 
                 # 连接数据库
-                connect_result = await self.postgresql_tool.execute(
+                connect_result = await db_tool.execute(
                     operation="connect",
                     connection_config=connection_config,
                     user_id=user_id_str
@@ -59,9 +69,9 @@ class TableMetadataService:
                 if not connect_result.success:
                     raise Exception(f"数据库连接失败: {connect_result.error}")
                 
-                logger.info(f"为用户 {user_id} 建立了新的数据库连接")
+                logger.info(f"为用户 {user_id} 建立了新的{db_config.db_type}数据库连接")
             else:
-                logger.info(f"复用用户 {user_id} 的现有数据库连接")
+                logger.info(f"复用用户 {user_id} 的现有{db_config.db_type}数据库连接")
             
             collected_tables = []
             failed_tables = []
@@ -70,7 +80,7 @@ class TableMetadataService:
                 try:
                     # 收集表元数据
                     metadata = await self._collect_single_table_metadata(
-                        user_id, table_name
+                        user_id, table_name, db_config.db_type
                     )
                     
                     # 保存或更新元数据
@@ -111,12 +121,21 @@ class TableMetadataService:
     async def _collect_single_table_metadata(
         self, 
         user_id: int, 
-        table_name: str
+        table_name: str,
+        db_type: str
     ) -> Dict[str, Any]:
         """收集单个表的元数据"""
         
+        # 根据数据库类型选择相应的工具
+        if db_type.lower() == 'postgresql':
+            db_tool = self.postgresql_tool
+        elif db_type.lower() == 'mysql':
+            db_tool = self.mysql_tool
+        else:
+            raise Exception(f"不支持的数据库类型: {db_type}")
+        
         # 获取表结构
-        schema_result = await self.postgresql_tool.execute(
+        schema_result = await db_tool.execute(
             operation="describe_table",
             user_id=str(user_id),
             table_name=table_name
@@ -128,7 +147,7 @@ class TableMetadataService:
         schema_data = schema_result.result
         
         # 获取示例数据（前5条）
-        sample_result = await self.postgresql_tool.execute(
+        sample_result = await db_tool.execute(
             operation="execute_query",
             user_id=str(user_id),
             sql_query=f"SELECT * FROM {table_name} LIMIT 5",
@@ -140,7 +159,7 @@ class TableMetadataService:
             sample_data = sample_result.result.get('data', [])
         
         # 获取行数统计
-        count_result = await self.postgresql_tool.execute(
+        count_result = await db_tool.execute(
             operation="execute_query",
             user_id=str(user_id),
             sql_query=f"SELECT COUNT(*) as total_rows FROM {table_name}",
@@ -312,7 +331,8 @@ class TableMetadataService:
         
         if database_config_id:
             query = query.filter(TableMetadata.database_config_id == database_config_id)
-        
+        else:
+            raise NotFoundError("数据库配置不存在")
         return query.filter(TableMetadata.is_enabled_for_qa == True).all()
     
     def get_table_metadata_by_name(

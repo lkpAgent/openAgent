@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from open_agent.core.context import UserContext
 from .smart_query import DatabaseQueryService
 from .postgresql_tool_manager import get_postgresql_tool
+from .mysql_tool_manager import get_mysql_tool
 from .table_metadata_service import TableMetadataService
 from ..core.config import get_settings
 
@@ -44,11 +45,21 @@ class SmartDatabaseWorkflowManager:
         self.executor = ThreadPoolExecutor(max_workers=4)
         self.database_service = DatabaseQueryService()
         self.postgresql_tool = get_postgresql_tool()
+        self.mysql_tool = get_mysql_tool()
         self.db = db
         self.table_metadata_service = TableMetadataService(db) if db else None
         
         from ..core.llm import create_llm
         self.llm = create_llm()
+    
+    def _get_database_tool(self, db_type: str):
+        """根据数据库类型获取对应的数据库工具"""
+        if db_type.lower() == 'postgresql':
+            return self.postgresql_tool
+        elif db_type.lower() == 'mysql':
+            return self.mysql_tool
+        else:
+            raise ValueError(f"不支持的数据库类型: {db_type}")
     
     async def _run_in_executor(self, func, *args):
         """在线程池中运行阻塞函数"""
@@ -329,7 +340,7 @@ class SmartDatabaseWorkflowManager:
                 }
                 yield step_data
                 
-                query_result = await self._execute_database_query(user_id, sql_query)
+                query_result = await self._execute_database_query(user_id, sql_query, database_config_id)
                 
                 step_data.update({
                     'status': 'completed',
@@ -475,6 +486,12 @@ class SmartDatabaseWorkflowManager:
             if not config:
                 return {'success': False, 'message': '数据库配置不存在'}
             
+            # 根据数据库类型选择对应的工具
+            try:
+                db_tool = self._get_database_tool(config.db_type)
+            except ValueError as e:
+                return {'success': False, 'message': str(e)}
+            
             # 测试连接（如果已经有连接则直接复用）
             connection_config = {
                 'host': config.host,
@@ -485,17 +502,19 @@ class SmartDatabaseWorkflowManager:
             }
             
             try:
-                connection = self.postgresql_tool._test_connection(connection_config)
+                connection = db_tool._test_connection(connection_config)
                 if connection['success'] == True:
                     return {
                         'success': True,
                         'database_name': config.database,
+                        'db_type': config.db_type,
                         'message': '连接成功'
                     }
                 else:
                     return {
                         'success': False,
                         'database_name': config.database,
+                        'db_type': config.db_type,
                         'message': '连接失败'
                     }
             except Exception as e:
@@ -548,11 +567,25 @@ class SmartDatabaseWorkflowManager:
             logger.error(f"读取保存的表元数据异常: {str(e)}")
             raise TableSchemaError(f'读取表元数据失败: {str(e)}')
     
-    async def _get_table_schema(self, user_id: int, table_name: str) -> Dict[str, Any]:
+    async def _get_table_schema(self, user_id: int, table_name: str, database_config_id: int) -> Dict[str, Any]:
         """获取指定表结构"""
         try:
-            # 使用PostgreSQL MCP工具获取表结构
-            schema_result = await self.postgresql_tool.describe_table(table_name)
+            # 获取数据库配置
+            from ..services.database_config_service import DatabaseConfigService
+            config_service = DatabaseConfigService(self.db)
+            config = config_service.get_config_by_id(database_config_id, user_id)
+            
+            if not config:
+                raise TableSchemaError('数据库配置不存在')
+            
+            # 根据数据库类型选择对应的工具
+            try:
+                db_tool = self._get_database_tool(config.db_type)
+            except ValueError as e:
+                raise TableSchemaError(str(e))
+            
+            # 使用对应的数据库工具获取表结构
+            schema_result = await db_tool.describe_table(table_name)
             
             if schema_result.get('success'):
                 return schema_result.get('schema', {})
@@ -671,14 +704,29 @@ class SmartDatabaseWorkflowManager:
             logger.error(f"SQL生成异常: {str(e)}")
             raise SQLGenerationError(f'SQL生成失败: {str(e)}')
     
-    async def _execute_database_query(self, user_id: int, sql_query: str) -> Dict[str, Any]:
+    async def _execute_database_query(self, user_id: int, sql_query: str, database_config_id: int) -> Dict[str, Any]:
         """执行SQL语句"""
         try:
-            # 使用PostgreSQL MCP工具执行查询
-            if str(user_id) in self.postgresql_tool.connections:
-                query_result = self.postgresql_tool._execute_query(self.postgresql_tool.connections[str(user_id)]['connection'],sql_query)
+            # 获取数据库配置
+            from ..services.database_config_service import DatabaseConfigService
+            config_service = DatabaseConfigService(self.db)
+            config = config_service.get_config_by_id(database_config_id, user_id)
+            
+            if not config:
+                raise QueryExecutionError('数据库配置不存在')
+            
+            # 根据数据库类型选择对应的工具
+            try:
+                db_tool = self._get_database_tool(config.db_type)
+            except ValueError as e:
+                raise QueryExecutionError(str(e))
+            
+            # 使用对应的数据库工具执行查询
+            if str(user_id) in db_tool.connections:
+                query_result = db_tool._execute_query(db_tool.connections[str(user_id)]['connection'], sql_query)
             else:
                 raise QueryExecutionError('请重新进行数据库连接')
+            
             if query_result.get('success'):
                 data = query_result.get('data', [])
                 return {
@@ -793,7 +841,7 @@ class SmartDatabaseWorkflowManager:
             logger.info(f"SQL生成完成 - 目标表: {', '.join(target_tables)}")
             
             # 步骤4: 执行SQL查询
-            query_result = await self._execute_database_query(user_id, sql_query)
+            query_result = await self._execute_database_query(user_id, sql_query, database_config_id)
             logger.info("查询执行完成")
             
             # 步骤5: 查询数据后处理成表格形式

@@ -94,7 +94,9 @@ async def get_database_configs(
     try:
         service = DatabaseConfigService(db)
         configs = service.get_user_configs(current_user.id)
-        return [config.to_dict(include_password=True, decrypt_service=service) for config in configs]
+
+        config_list = [config.to_dict(include_password=True, decrypt_service=service) for config in configs]
+        return config_list
     except Exception as e:
         logger.error(f"获取数据库配置失败: {str(e)}")
         raise HTTPException(
@@ -143,13 +145,14 @@ async def connect_database(
 @router.get("/tables/{table_name}/data")
 async def get_table_data(
     table_name: str,
+    db_type: str,
     limit: int = 100,
     current_user: User = Depends(AuthService.get_current_user),
     service: DatabaseConfigService = Depends(get_database_service)
 ):
     """获取表数据预览"""
     try:
-        result = await service.get_table_data(table_name, current_user.id, limit)
+        result = await service.get_table_data(table_name, current_user.id, db_type, limit)
         return result
     except Exception as e:
         logger.error(f"获取表数据失败: {str(e)}")

@@ -110,16 +110,17 @@
               <div class="database-panel">
                 <div class="connection-section">
                   <h4>数据库配置</h4>
+                  
+
+                  
                   <el-form :model="dbConfig" label-width="60px" size="small">
                     <el-form-item label="配置名">
                       <el-input v-model="dbConfig.configName" placeholder="输入配置名称（可选）" />
                     </el-form-item>
                     <el-form-item label="类型">
-                      <el-select v-model="dbConfig.type" placeholder="选择数据库类型">
+                      <el-select v-model="dbConfig.type" placeholder="选择数据库类型" @change="handleDatabaseTypeChange">
                         <el-option label="PostgreSQL" value="postgresql" />
                         <el-option label="MySQL" value="mysql" />
-                        <el-option label="SQLite" value="sqlite" />
-                        <el-option label="SQL Server" value="sqlserver" />
                       </el-select>
                     </el-form-item>
                     <el-form-item label="主机">
@@ -775,9 +776,22 @@ const handleDataSourceChange = async (tab: string) => {
   }
   updateQuerySuggestions()
 
-  // 如果切换到数据库tab，自动连接第一个配置
+  // 如果切换到数据库tab，加载数据库配置列表并自动连接
   if (tab === 'database') {
-    await autoConnectFirstConfig()
+    await loadSavedConfigs()
+    
+    // 如果有配置，自动连接第一个配置
+    if (savedConfigs.value.length > 0 && selectedConfig.value) {
+      await connectDatabase()
+      
+      // 连接成功后自动收集表元数据（collectTableMetadata内部会调用refreshTableMetadata）
+      if (isConnected.value) {
+        await collectTableMetadata()
+      }
+    } else {
+      // 如果没有配置或连接失败，仍然加载现有的表元数据
+      await refreshTableMetadata()
+    }
   }
 }
 
@@ -1023,7 +1037,7 @@ const loadTablePreview = async (table: string) => {
   previewLoading.value = true
   try {
     // 调用后端API获取表格预览数据
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/tables/${encodeURIComponent(table)}/data?limit=100`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/tables/${encodeURIComponent(table)}/data?db_type=${dbConfig.value.type}&limit=100`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -1281,7 +1295,7 @@ const saveDbConfig = async () => {
     }
 
     // 使用现有的database-config API
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1349,7 +1363,7 @@ const loadDbConfig = async (configId) => {
 // 加载保存的配置列表
 const loadSavedConfigs = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -1368,9 +1382,54 @@ const loadSavedConfigs = async () => {
         username: config.username,
         created_at: config.created_at
       }))
+      
+      // 自动选择第一个配置并填充表单
+      if (savedConfigs.value.length > 0) {
+        const firstConfig = savedConfigs.value[0]
+        selectedConfig.value = firstConfig  // 设置为整个config对象，而不是ID
+        
+        // 填充表单数据（密码不回填）
+        dbConfig.value = {
+          configName: firstConfig.config_name || '',
+          type: firstConfig.db_type,
+          host: firstConfig.host,
+          port: firstConfig.port,
+          database: firstConfig.database,
+          username: firstConfig.username,
+          password: '' // 密码不回填
+        }
+      }
     }
   } catch (error) {
     console.error('加载配置列表失败:', error)
+  }
+}
+
+// 加载选中的配置到表单
+const loadSelectedConfig = (config) => {
+  if (config) {
+    dbConfig.value = {
+      type: config.db_type,
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      username: config.username,
+      password: '', // 密码不回填
+      configName: config.config_name
+    }
+    ElMessage.success(`已加载配置: ${config.config_name}`)
+  }
+}
+
+// 处理数据库类型变化
+const handleDatabaseTypeChange = async (dbType) => {
+  console.log('数据库类型已切换到:', dbType)
+  // 可以在这里添加其他逻辑，比如重置表单、加载对应类型的配置等
+  // 例如：重置端口为对应数据库的默认端口
+  if (dbType === 'postgresql') {
+    dbConfig.value.port = '5432'
+  } else if (dbType === 'mysql') {
+    dbConfig.value.port = '3306'
   }
 }
 
@@ -1559,7 +1618,14 @@ const collectTableMetadata = async () => {
 const refreshTableMetadata = async () => {
   loadingMetadata.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/`, {
+    // 构建查询参数
+    const params = new URLSearchParams()
+    if (selectedConfig.value && selectedConfig.value.id) {
+      params.append('database_config_id', selectedConfig.value.id)
+    }
+    
+    const url = `${import.meta.env.VITE_API_BASE_URL}/table-metadata/?${params.toString()}`
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -2278,16 +2344,7 @@ watch(() => dbConfig.value.type, async (newType) => {
 onMounted(async () => {
   updateQuerySuggestions()
   loadFileList()
-  // 加载保存的数据库配置
-  await loadSavedConfigs()
-
-  // 初始化时自动加载默认类型（PostgreSQL）的配置
-  if (dbConfig.value.type === 'postgresql') {
-    await loadConfigByType('postgresql')
-  }
-
-  // 初始化表元数据列表
-  await refreshTableMetadata()
+  // 页面初始化时只加载Excel相关功能，数据库相关操作在切换到数据库管理标签页时才执行
 })
 </script>
 

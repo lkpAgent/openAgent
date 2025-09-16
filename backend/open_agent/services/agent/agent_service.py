@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from .base import BaseTool, ToolRegistry, ToolResult
 from open_agent.services.tools import  WeatherQueryTool, TavilySearchTool, DateTimeTool
 from ..postgresql_tool_manager import get_postgresql_tool
+from ..mysql_tool_manager import get_mysql_tool
 from ...core.config import get_settings
 from ...utils.logger import get_logger
 from ..agent_config import AgentConfigService
@@ -80,7 +81,7 @@ class LangChainToolWrapper(LangChainBaseTool):
 class AgentConfig(BaseModel):
     """Agent configuration."""
     enabled_tools: List[str] = Field(default_factory=lambda: [
-        "calculator", "weather", "search", "datetime", "file", "generate_image", "postgresql_mcp"
+        "calculator", "weather", "search", "datetime", "file", "generate_image", "postgresql_mcp", "mysql_mcp"
     ])
     max_iterations: int = Field(default=10)
     temperature: float = Field(default=0.1)
@@ -111,7 +112,8 @@ class AgentService:
             WeatherQueryTool(),
             TavilySearchTool(),
             DateTimeTool(),
-            get_postgresql_tool()  # 使用单例PostgreSQL MCP工具
+            get_postgresql_tool(),  # 使用单例PostgreSQL MCP工具
+            get_mysql_tool()  # 使用单例MySQL MCP工具
         ]
         
         for tool in tools:
