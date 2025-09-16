@@ -10,8 +10,9 @@ passlib[bcrypt]>=1.7.4
 python-dotenv>=1.0.0
 
 # 数据库和向量数据库
-psycopg2-binary>=2.9.0  # PostgreSQL
+psycopg2-binary>=3.2.10  # PostgreSQL
 pgvector>=0.2.4  # PostgreSQL pgvector extension
+pymysql>=1.1.2   #mysql
 
 # Excel和数据分析（智能问数功能）
 pandas>=2.1.0
@@ -36,7 +37,7 @@ pypdf2>=3.0.0   # PDF文件处理
 python-docx>=0.8.11  # Word文档处理
 markdown>=3.5.0  # Markdown文件处理
 chardet>=5.2.0   # 文件编码检测
-
+pdfplumber>=0.11.7  #pdf内容提取
 # 工作流编排和智能体
 celery>=5.3.0    # 异步任务队列
 redis>=5.0.0     # Redis缓存和消息队列
@@ -47,7 +48,7 @@ aiofiles>=23.2.0  # 异步文件操作
 requests>=2.31.0
 httpx>=0.25.0
 pyyaml>=6.0  # YAML配置文件解析
-
+boto3>=1.40.30  #云对象存储
 # 开发和测试工具
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

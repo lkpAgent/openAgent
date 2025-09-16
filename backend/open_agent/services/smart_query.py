@@ -1,7 +1,6 @@
 import pandas as pd
 import pymysql
 import psycopg2
-import pyodbc
 import tempfile
 import os
 from typing import Dict, Any, List
@@ -318,18 +317,6 @@ class DatabaseQueryService(SmartQueryService):
                     password=config['password'],
                     database=config['database']
                 )
-
-            elif db_type == 'sqlserver':
-                connection_string = (
-                    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-                    f"SERVER={config['host']},{config['port']};"
-                    f"DATABASE={config['database']};"
-                    f"UID={config['username']};"
-                    f"PWD={config['password']}"
-                )
-                connection = pyodbc.connect(connection_string)
-            else:
-                raise Exception(f"不支持的数据库类型: {db_type}")
             
             return connection
             

@@ -7,10 +7,12 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // 从backend目录加载环境变量
-  const env = loadEnv(mode, resolve(__dirname, '../backend'), '')
-  
+  const env = loadEnv(mode, process.cwd(), '')
+  const base = process.argv.includes('--base')
+    ? process.argv[process.argv.indexOf('--base') + 1]
+    : '/'; // 默认值
   return {
+    base,
   plugins: [
     vue(),
     AutoImport({
@@ -54,8 +56,7 @@ export default defineConfig(({ mode }) => {
     rollupOptions: {
       output: {
         manualChunks: {
-          'element-plus': ['element-plus'],
-          'vue-vendor': ['vue', 'vue-router', 'pinia']
+          'vue-vendor': ['vue', 'vue-router', 'pinia', 'element-plus'],
         }
       }
     }

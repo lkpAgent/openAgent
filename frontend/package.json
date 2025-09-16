@@ -12,7 +12,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.1.0",
+    "@element-plus/icons-vue": "^2.3.2",
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
     "element-plus": "^2.4.2",

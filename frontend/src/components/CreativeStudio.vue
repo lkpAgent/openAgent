@@ -320,7 +320,6 @@ import {
   Clock,
   Document,
   VideoPlay,
-  Magic,
   UploadFilled,
   Download,
   Delete,
