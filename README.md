@@ -176,8 +176,10 @@ cp .env.example .env
 # 编辑.env文件，配置后端API地址
 VITE_API_BASE_URL = http://localhost:8000
 
-# 启动前端服务，默认端口3000
+# 开发环境，启动前端服务，默认端口3000
 npm run dev
+# 发布到生产环境，比如部署在{nginx_home}/html/yourdomain，则指定base路径编译
+# npm run build -- --base=yourdomain
 ```
 启动成功后，访问http://localhost:3000，会进入到登录页面，默认账号密码为test@example.com/123456
 
@@ -393,7 +395,9 @@ chat-agent/
 - 根据用户问题自动生成优化SQL查询语句
 - 支持多表关联查询和复杂数据检索
 
+基于Excel报表的智能问数
 ![智能问数界面](docs/images/smart_data.png) 
+基于数据库的智能问数
 ![智能问数界面](docs/images/smart_data_db.png) 
 ### 📚 知识库管理
 
@@ -435,7 +439,8 @@ chat-agent/
 - **角色定义**：自定义智能体的专业能力和知识领域
 - **任务分配**：智能分解复杂任务到合适的智能体
 - **结果整合**：汇总多个智能体的输出生成最终答案
-
+### 在线体验地址，可自己注册账号使用
+http://113.240.110.92:81/
 
 #### 💼 商业使用
 - ✅ 可用于商业项目

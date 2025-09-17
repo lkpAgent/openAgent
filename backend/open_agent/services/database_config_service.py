@@ -32,9 +32,12 @@ class DatabaseConfigService:
         """获取或创建加密密钥"""
         key_file = "db/db_config_key.key"
         if os.path.exists(key_file):
+            print('find db_config_key')
             with open(key_file, 'rb') as f:
                 return f.read()
+
         else:
+            print('not find db_config_key')
             key = Fernet.generate_key()
             with open(key_file, 'wb') as f:
                 f.write(key)

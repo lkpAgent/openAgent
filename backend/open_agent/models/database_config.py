@@ -43,6 +43,7 @@ class DatabaseConfig(BaseModel):
         
         # 如果需要包含密码且提供了解密服务
         if include_password and decrypt_service:
+            print('begin decrypt password')
             result["password"] = decrypt_service._decrypt_password(self.password)
         
         return result

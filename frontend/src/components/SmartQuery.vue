@@ -1345,7 +1345,7 @@ const loadDbConfig = async (configId) => {
         port: selectedConfig.value.port,
         database: selectedConfig.value.database,
         username: selectedConfig.value.username,
-        password: '', // 密码不回填
+        password: selectedConfig.value.password,
         configName: selectedConfig.value.config_name
       }
       ElMessage.success(`已加载配置: ${selectedConfig.value.config_name}`)
@@ -1380,7 +1380,8 @@ const loadSavedConfigs = async () => {
         port: config.port.toString(),
         database: config.database,
         username: config.username,
-        created_at: config.created_at
+        created_at: config.created_at,
+        password: config.password
       }))
       
       // 自动选择第一个配置并填充表单
@@ -1388,7 +1389,7 @@ const loadSavedConfigs = async () => {
         const firstConfig = savedConfigs.value[0]
         selectedConfig.value = firstConfig  // 设置为整个config对象，而不是ID
         
-        // 填充表单数据（密码不回填）
+        // 填充表单数据
         dbConfig.value = {
           configName: firstConfig.config_name || '',
           type: firstConfig.db_type,
@@ -1396,7 +1397,7 @@ const loadSavedConfigs = async () => {
           port: firstConfig.port,
           database: firstConfig.database,
           username: firstConfig.username,
-          password: '' // 密码不回填
+          password: firstConfig.password
         }
       }
     }
@@ -1414,7 +1415,7 @@ const loadSelectedConfig = (config) => {
       port: config.port,
       database: config.database,
       username: config.username,
-      password: '', // 密码不回填
+      password: config.password,
       configName: config.config_name
     }
     ElMessage.success(`已加载配置: ${config.config_name}`)
@@ -1507,7 +1508,7 @@ watch(() => dbConfig.value.type, async (newType) => {
 
 const connectDatabase = async () => {
   if (!selectedConfig.value?.id) {
-    ElMessage.error('请先选择数据库配置');
+    ElMessage.error('请先保存数据库配置');
     return;
   }
 
