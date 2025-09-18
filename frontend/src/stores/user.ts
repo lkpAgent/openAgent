@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { authApi, usersApi } from '@/api'
-import type { User, UserLogin, UserCreate, UserUpdate, LoginRequest } from '@/types'
+import { authApi, usersApi, rolesApi } from '@/api'
+import type { User, UserLogin, UserCreate, UserUpdate, LoginRequest, Role } from '@/types'
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -15,7 +15,16 @@ export const useUserStore = defineStore('user', () => {
   })
   
   const isAdmin = computed(() => {
-    return user.value?.is_superuser || false
+    if (!user.value) return false
+    
+    // Check if user has admin role
+    if (user.value.roles) {
+      return user.value.roles.some(role => 
+        role.is_active && (role.code === 'SUPER_ADMIN' || role.code === 'ADMIN')
+      )
+    }
+    
+    return false
   })
   
   // Actions
@@ -63,6 +72,12 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await authApi.getCurrentUser()
       user.value = response.data
+      
+      // Get user roles
+      if (user.value) {
+        await getUserRoles()
+      }
+      
       return user.value
     } catch (error: any) {
       console.error('Get current user failed:', error)
@@ -71,6 +86,20 @@ export const useUserStore = defineStore('user', () => {
       localStorage.removeItem('refresh_token')
       user.value = null
       throw error
+    }
+  }
+  
+  const getUserRoles = async () => {
+    try {
+      if (!user.value) return
+      
+      const response = await rolesApi.getUserRoles(user.value.id)
+      if (user.value) {
+        user.value.roles = response.data
+      }
+    } catch (error: any) {
+      console.error('Get user roles failed:', error)
+      // Don't throw error, just log it as roles are optional
     }
   }
   
@@ -166,6 +195,7 @@ export const useUserStore = defineStore('user', () => {
     login,
     register,
     getCurrentUser,
+    getUserRoles,
     updateProfile,
     logout,
     refreshToken,

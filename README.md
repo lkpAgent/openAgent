@@ -296,7 +296,7 @@ WEATHER_API_KEY=your_xinzhi_api_key
 
 ### 项目结构
 ```
-chat-agent/
+open-agent/
 ├── backend/                 # 后端代码
 │   ├── open_agent/         # 主应用包
 │   │   ├── api/            # API路由

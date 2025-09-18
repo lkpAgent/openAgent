@@ -56,12 +56,13 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     password: Optional[str] = Field(None, min_length=6)
     is_active: Optional[bool] = None
+    department_id: Optional[int] = None
 
 
 class UserResponse(BaseResponse, UserBase):
     """User response schema."""
     is_active: bool
-    is_superuser: bool
+    department_id: Optional[int] = None
 
 
 # Authentication schemas

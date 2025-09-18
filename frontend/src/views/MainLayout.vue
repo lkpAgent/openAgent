@@ -55,6 +55,60 @@
           <el-icon class="nav-icon"><DataAnalysis /></el-icon>
           <span>智能问数</span>
         </div>
+        
+        <div 
+          class="nav-item nav-item-expandable"
+          :class="{ active: activeModule === 'system', expanded: isSystemMenuExpanded }"
+          @click="toggleSystemMenu"
+        >
+          <el-icon class="nav-icon"><Setting /></el-icon>
+          <span>系统管理</span>
+          <el-icon class="expand-icon" :class="{ rotated: isSystemMenuExpanded }"><ArrowRight /></el-icon>
+        </div>
+        
+        <!-- 系统管理子菜单 -->
+        <div class="sub-menu" v-show="isSystemMenuExpanded">
+          <div 
+            class="sub-nav-item"
+            :class="{ active: activeSystemModule === 'user' }"
+            @click="setActiveSystemModule('user')"
+          >
+            <el-icon class="sub-nav-icon"><User /></el-icon>
+            <span>用户管理</span>
+          </div>
+          <div 
+            class="sub-nav-item"
+            :class="{ active: activeSystemModule === 'department' }"
+            @click="setActiveSystemModule('department')"
+          >
+            <el-icon class="sub-nav-icon"><OfficeBuilding /></el-icon>
+            <span>部门管理</span>
+          </div>
+          <div 
+            class="sub-nav-item"
+            :class="{ active: activeSystemModule === 'role' }"
+            @click="setActiveSystemModule('role')"
+          >
+            <el-icon class="sub-nav-icon"><UserFilled /></el-icon>
+            <span>角色管理</span>
+          </div>
+          <div 
+            class="sub-nav-item"
+            :class="{ active: activeSystemModule === 'permission' }"
+            @click="setActiveSystemModule('permission')"
+          >
+            <el-icon class="sub-nav-icon"><Key /></el-icon>
+            <span>权限管理</span>
+          </div>
+          <div 
+            class="sub-nav-item"
+            :class="{ active: activeSystemModule === 'llm' }"
+            @click="setActiveSystemModule('llm')"
+          >
+            <el-icon class="sub-nav-icon"><Cpu /></el-icon>
+            <span>大模型管理</span>
+          </div>
+        </div>
       </div>
       
       <!-- 历史对话列表 -->
@@ -124,6 +178,11 @@
           <SmartQuery />
         </div>
         
+        <!-- 系统管理模块 -->
+        <div v-else-if="activeModule === 'system'" style="flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%;">
+          <SystemManagement />
+        </div>
+        
         <!-- 其他模块的占位内容 -->
         <div v-else class="module-placeholder">
           <div class="placeholder-content">
@@ -191,7 +250,13 @@ import {
   Document,
   DataAnalysis,
   Expand,
-  Fold
+  Fold,
+  Setting,
+  ArrowRight,
+  UserFilled,
+  OfficeBuilding,
+  Key,
+  Cpu
 } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useKnowledgeStore } from '@/stores/knowledge'
@@ -202,6 +267,7 @@ import KnowledgeManagement from '@/components/KnowledgeManagement.vue'
 import WorkflowEditor from '@/components/WorkflowEditor.vue'
 import AgentManagement from '@/components/AgentManagement.vue'
 import SmartQuery from '@/views/SmartQuery.vue'
+import SystemManagement from '@/views/SystemManagement.vue'
 
 // Store
 const chatStore = useChatStore()
@@ -218,6 +284,8 @@ const selectedKnowledgeBaseId = ref<string | null>(null)
 const selectedAgentId = ref<string | null>(null)
 const messagesContainer = ref<HTMLElement>()
 const isSidebarCollapsed = ref(false) // 导航栏折叠状态
+const isSystemMenuExpanded = ref(false) // 系统管理菜单展开状态
+const activeSystemModule = ref('user') // 当前激活的系统管理模块
 
 // 计算属性
 const messages = computed(() => chatStore.messages)
@@ -283,6 +351,21 @@ const setActiveModule = (module: string) => {
   } else if (module === 'smart-query') {
     router.push('/smart-query')
   }
+}
+
+// 系统管理相关方法
+const toggleSystemMenu = () => {
+  isSystemMenuExpanded.value = !isSystemMenuExpanded.value
+  if (isSystemMenuExpanded.value) {
+    activeModule.value = 'system'
+  }
+}
+
+const setActiveSystemModule = (module: string) => {
+  activeSystemModule.value = module
+  activeModule.value = 'system'
+  // 根据系统模块进行路由跳转
+  router.push(`/system/${module}`)
 }
 
 const setChatMode = (mode: string) => {
@@ -551,6 +634,55 @@ watch(messages, () => {
 .nav-icon {
   margin-right: 12px;
   font-size: 18px;
+  color: inherit;
+}
+
+/* 可展开导航项 */
+.nav-item-expandable {
+  position: relative;
+}
+
+.expand-icon {
+  margin-left: auto;
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.rotated {
+  transform: rotate(90deg);
+}
+
+/* 子菜单样式 */
+.sub-menu {
+  background: rgba(15, 23, 42, 0.8);
+  border-left: 2px solid #6366f1;
+  margin-left: 20px;
+  border-radius: 0 8px 8px 0;
+}
+
+.sub-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.sub-nav-item:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: #e2e8f0;
+}
+
+.sub-nav-item.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+}
+
+.sub-nav-icon {
+  margin-right: 8px;
+  font-size: 16px;
   color: inherit;
 }
 

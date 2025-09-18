@@ -50,17 +50,45 @@
               <div class="nav-group-header">
                 <div v-if="!isCollapsed" class="nav-group-title">管理功能</div>
               </div>
-              <div 
-                v-for="item in lowerNavItems" 
-                :key="item.key"
-                :class="['nav-item', { active: activeModule === item.key }]"
-                @click="setActiveModule(item.key)"
-              >
-                <el-icon class="nav-icon">
-                  <component :is="item.icon" />
-                </el-icon>
-                <span class="nav-label">{{ item.label }}</span>
-              </div>
+              <template v-for="item in lowerNavItems" :key="item.key">
+                <!-- 主菜单项 -->
+                <div 
+                  :class="[
+                    'nav-item', 
+                    { 
+                      active: activeModule === item.key,
+                      'nav-item-expandable': item.expandable
+                    }
+                  ]"
+                  @click="setActiveModule(item.key)"
+                >
+                  <el-icon class="nav-icon">
+                    <component :is="item.icon" />
+                  </el-icon>
+                  <span v-if="!isCollapsed" class="nav-label">{{ item.label }}</span>
+                  <el-icon 
+                    v-if="item.expandable && !isCollapsed" 
+                    :class="['expand-icon', { expanded: expandedMenus.has(item.key) }]"
+                  >
+                    <ArrowRight />
+                  </el-icon>
+                </div>
+                
+                <!-- 子菜单 -->
+                <div 
+                  v-if="item.expandable && expandedMenus.has(item.key) && !isCollapsed"
+                  class="sub-menu"
+                >
+                  <div 
+                    v-for="child in item.children" 
+                    :key="child.key"
+                    :class="['sub-nav-item', { active: route.path === child.route }]"
+                    @click="setActiveModule(child.key, child.route)"
+                  >
+                    <span class="sub-nav-label">{{ child.label }}</span>
+                  </div>
+                </div>
+              </template>
             </div>
           </nav>
         </div>
@@ -171,7 +199,8 @@ import {
   Setting,
   Close,
   Expand,
-  Fold
+  Fold,
+  ArrowRight
 } from '@element-plus/icons-vue'
 import AgentWorkflow from './AgentWorkflow.vue'
 import { useChatStore } from '@/stores/chat'
@@ -193,6 +222,7 @@ const agentWorkflowRef = ref()
 const showHistoryPanel = ref(false)
 const showArchivedConversations = ref(false)
 const isCollapsed = ref(false)
+const expandedMenus = ref(new Set())
 
 // 上部分导航项配置
 const upperNavItems = [
@@ -246,7 +276,35 @@ const lowerNavItems = [
     key: 'system',
     label: '系统管理',
     icon: 'Setting',
-    route: '/system'
+    route: '/system',
+    expandable: true,
+    children: [
+      {
+        key: 'system-users',
+        label: '用户管理',
+        route: '/system/users'
+      },
+      {
+        key: 'system-departments',
+        label: '部门管理',
+        route: '/system/departments'
+      },
+      {
+        key: 'system-roles',
+        label: '角色管理',
+        route: '/system/roles'
+      },
+      {
+        key: 'system-permissions',
+        label: '权限管理',
+        route: '/system/permissions'
+      },
+      {
+        key: 'system-llm',
+        label: '大模型管理',
+        route: '/system/llm'
+      }
+    ]
   }
 ]
 
@@ -276,16 +334,39 @@ const filteredConversations = computed(() => {
 })
 
 // 方法
-const setActiveModule = (moduleKey: string) => {
+const setActiveModule = (moduleKey: string, route?: string) => {
   activeModule.value = moduleKey
+  
+  // 如果提供了具体路由，直接跳转
+  if (route) {
+    router.push(route)
+    return
+  }
+  
   const allNavItems = [...upperNavItems, ...lowerNavItems]
   const navItem = allNavItems.find(item => item.key === moduleKey)
+  
+  // 如果是可展开的菜单项，切换展开状态
+  if (navItem && navItem.expandable) {
+    toggleMenuExpansion(moduleKey)
+    return
+  }
+  
   if (navItem && navItem.route) {
     // 切换到智能聊天时清空当前会话
     if (moduleKey === 'chat') {
       chatStore.clearCurrentConversation()
     }
     router.push(navItem.route)
+  }
+}
+
+// 切换菜单展开状态
+const toggleMenuExpansion = (menuKey: string) => {
+  if (expandedMenus.value.has(menuKey)) {
+    expandedMenus.value.delete(menuKey)
+  } else {
+    expandedMenus.value.add(menuKey)
   }
 }
 
@@ -658,6 +739,67 @@ provide('isCollapsed', isCollapsed)
 .nav-label {
   font-size: 14px;
   font-weight: 500;
+  flex: 1;
+}
+
+/* 可展开导航项样式 */
+.nav-item-expandable {
+  position: relative;
+}
+
+.expand-icon {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+  color: #94a3b8;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+/* 子菜单样式 */
+.sub-menu {
+  margin-left: 50px;
+  border-left: 2px solid rgba(148, 163, 184, 0.2);
+  padding-left: 0;
+}
+
+.sub-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #94a3b8;
+  margin: 1px 8px 1px 0;
+  border-radius: 6px;
+  position: relative;
+}
+
+.sub-nav-item:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: #e2e8f0;
+}
+
+.sub-nav-item.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+}
+
+.sub-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #6366f1;
+  border-radius: 1px;
+}
+
+.sub-nav-label {
+  font-size: 13px;
+  font-weight: 400;
 }
 
 /* 历史对话面板（浮动显示） */
@@ -771,12 +913,14 @@ provide('isCollapsed', isCollapsed)
   flex: 1;
   display: flex;
   overflow: hidden;
+  background: #0f172a;
 }
 
 .main-content {
   flex: 1;
-  background: white;
-  overflow: hidden;
+  background: #0f172a;
+  overflow: auto;
+  min-height: 100%;
 }
 
 /* 右侧工作流面板 */

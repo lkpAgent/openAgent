@@ -13,11 +13,51 @@ export interface User {
   email: string
   full_name?: string
   is_active: boolean
-  is_superuser: boolean
+  is_admin: boolean
+  department_id?: number
   avatar_url?: string
   bio?: string
   created_at: string
   updated_at: string
+  roles?: Role[]
+}
+
+// Role Types
+export interface Role {
+  id: number
+  name: string
+  code: string
+  description?: string
+  is_active: boolean
+  permissions?: Permission[]
+}
+
+export interface Permission {
+  id: number
+  name: string
+  code: string
+  description?: string
+  category: string
+}
+
+// Department Types
+export interface Department {
+  id: number
+  name: string
+  code: string
+  description?: string
+  parent_id?: number
+  manager_id?: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  manager?: {
+    id: number
+    username: string
+    full_name?: string
+  }
+  children?: Department[]
+  user_count?: number
 }
 
 export interface UserCreate {

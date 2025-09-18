@@ -22,9 +22,9 @@ class BaseModel(Base):
     updated_by = Column(Integer, nullable=True)
 
     def __init__(self, **kwargs):
-        """Initialize ExcelFile and automatically set audit fields."""
+        """Initialize model with automatic audit fields setting."""
         super().__init__(**kwargs)
-        # Automatically set audit fields when creating new instance
+        # Set audit fields for new instances
         self.set_audit_fields()
     def set_audit_fields(self, user_id: Optional[int] = None, is_update: bool = False):
         """Set audit fields for create/update operations.

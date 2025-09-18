@@ -6,6 +6,10 @@ from .message import Message
 from .knowledge_base import KnowledgeBase, Document
 from .agent_config import AgentConfig
 from .excel_file import ExcelFile
+from .department import Department
+from .user_department import UserDepartment
+from .permission import Permission, Role, UserPermission
+from .llm_config import LLMConfig
 
 __all__ = [
     "User",
@@ -14,5 +18,11 @@ __all__ = [
     "KnowledgeBase",
     "Document",
     "AgentConfig",
-    "ExcelFile"
+    "ExcelFile",
+    "Department",
+    "UserDepartment",
+    "Permission",
+    "Role",
+    "UserPermission",
+    "LLMConfig"
 ]

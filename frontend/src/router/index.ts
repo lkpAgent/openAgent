@@ -64,6 +64,45 @@ const routes: Array<RouteRecordRaw> = [
         name: 'Profile',
         component: () => import('../views/Profile.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: 'system',
+        name: 'System',
+        component: () => import('../views/SystemManagement.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true },
+        redirect: '/system/users',
+        children: [
+          {
+            path: 'users',
+            name: 'SystemUsers',
+            component: () => import('../components/system/UserManagement.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true, title: '用户管理' }
+          },
+          {
+            path: 'departments',
+            name: 'SystemDepartments',
+            component: () => import('../components/system/DepartmentManagement.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true, title: '部门管理' }
+          },
+          {
+            path: 'roles',
+            name: 'SystemRoles',
+            component: () => import('../components/system/RoleManagement.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true, title: '角色管理' }
+          },
+          {
+            path: 'permissions',
+            name: 'SystemPermissions',
+            component: () => import('../components/system/PermissionManagement.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true, title: '权限管理' }
+          },
+          {
+            path: 'llm-configs',
+            name: 'SystemLLMConfigs',
+            component: () => import('../components/system/LLMConfigManagement.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true, title: '大模型管理' }
+          }
+        ]
       }
     ]
   },
@@ -102,6 +141,12 @@ router.beforeEach(async (to, from, next) => {
   // Check authentication requirement
   if (to.meta.requiresAuth && !userStore.isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
+    return
+  }
+  
+  // Check admin requirement
+  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    next({ name: 'Chat' })
     return
   }
   
