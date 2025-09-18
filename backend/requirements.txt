@@ -10,7 +10,7 @@ passlib[bcrypt]>=1.7.4
 python-dotenv>=1.0.0
 
 # 数据库和向量数据库
-psycopg2-binary>=3.2.10  # PostgreSQL
+psycopg2-binary>=2.9.7  # PostgreSQL
 pgvector>=0.2.4  # PostgreSQL pgvector extension
 pymysql>=1.1.2   #mysql
 
