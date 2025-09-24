@@ -277,7 +277,6 @@ async def assign_role_permissions(
                 role_id=role_id,
                 permission_id=permission_id
             )
-            role_permission.set_audit_fields(current_user.id)
             db.add(role_permission)
         
         db.commit()
@@ -317,7 +316,7 @@ async def get_role_permissions(
         ).filter(
             RolePermission.role_id == role_id
         ).all()
-        
+
         return [permission.to_dict() for permission in permissions]
         
     except HTTPException:
@@ -610,7 +609,6 @@ async def assign_user_roles(
                 user_id=assignment_data.user_id,
                 role_id=role_id
             )
-            user_role.set_audit_fields(current_user.id)
             db.add(user_role)
         
         db.commit()
@@ -634,7 +632,7 @@ async def assign_user_roles(
 async def get_user_roles(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_read)
+    # current_user: User = Depends(require_role_read)
 ):
     """获取用户角色列表."""
     try:

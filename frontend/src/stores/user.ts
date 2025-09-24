@@ -11,7 +11,10 @@ export const useUserStore = defineStore('user', () => {
   
   // Getters
   const isAuthenticated = computed(() => {
-    return !!user.value && !!localStorage.getItem('access_token')
+    // 主要检查token是否存在，用户信息可以稍后获取
+    const hasToken = !!localStorage.getItem('access_token')
+    console.log('检查认证状态:', { hasToken, hasUser: !!user.value })
+    return hasToken
   })
   
   const isAdmin = computed(() => {
@@ -20,7 +23,7 @@ export const useUserStore = defineStore('user', () => {
     // Check if user has admin role
     if (user.value.roles) {
       return user.value.roles.some(role => 
-        role.is_active && (role.code === 'SUPER_ADMIN' || role.code === 'ADMIN')
+        role.is_active && (role.code === 'SUPER_ADMIN' || role.code === 'ADMIN' || role.code === 'AAA')
       )
     }
     
@@ -31,18 +34,30 @@ export const useUserStore = defineStore('user', () => {
   const login = async (credentials: LoginRequest) => {
     try {
       isLoading.value = true
+      console.log('开始登录流程...')
+      
       const response = await authApi.login(credentials)
       const { access_token, token_type } = response.data
+      console.log('登录API调用成功，获取到token')
       
       // Store tokens
       localStorage.setItem('access_token', access_token)
       // Note: Backend doesn't return refresh_token yet, using access_token as placeholder
       localStorage.setItem('refresh_token', access_token)
+      console.log('Token已保存到localStorage')
       
       // Get user info
-      await getCurrentUser()
-      
-      return true
+      try {
+        await getCurrentUser()
+        console.log('用户信息获取成功，登录流程完成')
+        return true
+      } catch (userError: any) {
+        console.error('获取用户信息失败，但登录token有效:', userError)
+        // 即使获取用户信息失败，如果token有效，仍然认为登录成功
+        // 用户信息可以稍后重新获取
+        ElMessage.warning('登录成功，但获取用户信息失败，请刷新页面')
+        return true
+      }
     } catch (error: any) {
       console.error('Login failed:', error)
       ElMessage.error(error.response?.data?.detail || error.message || '登录失败')
@@ -81,10 +96,15 @@ export const useUserStore = defineStore('user', () => {
       return user.value
     } catch (error: any) {
       console.error('Get current user failed:', error)
-      // Clear invalid tokens
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      user.value = null
+      
+      // Don't clear tokens on any error, let the user re-login to update tokens
+      if (error.response && error.response.status === 401) {
+        console.log('Authentication failed, but keeping tokens for re-login')
+        user.value = null
+      } else {
+        console.log('Non-authentication error, keeping tokens and user state')
+      }
+      
       throw error
     }
   }

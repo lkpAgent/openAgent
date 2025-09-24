@@ -4,7 +4,7 @@ from sqlalchemy import Column, String, Text, Boolean, ForeignKey, Table, Integer
 from sqlalchemy.orm import relationship
 from typing import List, Dict, Any
 
-from ..db.base import BaseModel
+from ..db.base import BaseModel, Base
 
 
 # Note: Association tables are now defined as model classes below
@@ -97,7 +97,7 @@ class Role(BaseModel):
         return [perm.code for perm in self.permissions if perm.is_active]
 
 
-class RolePermission(BaseModel):
+class RolePermission(Base):
     """Role permission association model."""
     
     __tablename__ = "role_permissions"
@@ -113,7 +113,7 @@ class RolePermission(BaseModel):
         return f"<RolePermission(role_id={self.role_id}, permission_id={self.permission_id})>"
 
 
-class UserRole(BaseModel):
+class UserRole(Base):
     """User role association model."""
     
     __tablename__ = "user_roles"
@@ -129,13 +129,13 @@ class UserRole(BaseModel):
         return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
 
 
-class UserPermission(BaseModel):
+class UserPermission(Base):
     """User permission model for direct permission assignment."""
     
     __tablename__ = "user_permissions"
     
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    permission_id = Column(Integer, ForeignKey('permissions.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True,primary_key=True)
+    permission_id = Column(Integer, ForeignKey('permissions.id'), nullable=False, index=True,primary_key=True)
     granted = Column(Boolean, default=True, nullable=False)  # True=授予，False=拒绝
     
     # 关系

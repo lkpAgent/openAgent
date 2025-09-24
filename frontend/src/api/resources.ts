@@ -1,4 +1,4 @@
-import { request } from './request'
+import request from './request'
 
 // 资源相关接口
 export interface Resource {
@@ -88,41 +88,61 @@ export const resourcesApi = {
       total: number
       page: number
       size: number
-    }>('/api/admin/resources', { params })
+    }>('/admin/resources/', { params })
   },
 
   // 获取资源树
   getResourceTree: () => {
-    return request.get<ResourceTreeNode[]>('/api/admin/resources/tree')
+    return request.get<ResourceTreeNode[]>('/admin/resources/tree/')
   },
 
   // 获取资源详情
   getResource: (id: number) => {
-    return request.get<Resource>(`/api/admin/resources/${id}`)
+    return request.get<Resource>(`/admin/resources/${id}/`)
   },
 
   // 创建资源
   createResource: (data: ResourceCreate) => {
-    return request.post<Resource>('/api/admin/resources', data)
+    return request.post<Resource>('/admin/resources/', data)
   },
 
   // 更新资源
   updateResource: (id: number, data: ResourceUpdate) => {
-    return request.put<Resource>(`/api/admin/resources/${id}`, data)
+    return request.put<Resource>(`/admin/resources/${id}`, data)
   },
 
   // 删除资源
   deleteResource: (id: number) => {
-    return request.delete(`/api/admin/resources/${id}`)
+    return request.delete(`/admin/resources/${id}`)
   },
 
   // 分配角色资源
   assignRoleResources: (data: RoleResourceAssign) => {
-    return request.post('/api/admin/resources/assign-role', data)
+    return request.post('/admin/resources/assign-role/', data)
+  },
+
+  // 获取当前用户可访问的菜单资源
+  getUserMenuResources: () => {
+    return request.get<ResourceTreeNode[]>('/admin/resources/user/menu')
   },
 
   // 获取角色资源列表
   getRoleResources: (roleId: number) => {
-    return request.get<RoleResource[]>(`/api/admin/resources/role/${roleId}`)
+    return request.get<RoleResource[]>(`/admin/resources/role/${roleId}/`)
+  },
+
+  // 批量删除资源
+  batchDeleteResources: (resourceIds: number[]) => {
+    return request.delete('/admin/resources/batch/', {
+      data: { resource_ids: resourceIds }
+    })
+  },
+
+  // 批量更新资源状态
+  batchUpdateResourceStatus: (resourceIds: number[], isActive: boolean) => {
+    return request.put('/admin/resources/batch/status/', {
+      resource_ids: resourceIds,
+      is_active: isActive
+    })
   }
 }

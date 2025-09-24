@@ -44,7 +44,7 @@ def init_permissions(db: Session) -> None:
         {"name": "更新权限", "code": Permissions.PERMISSION_UPDATE, "resource": "permission", "action": "update", "description": "更新权限信息"},
         {"name": "删除权限", "code": Permissions.PERMISSION_DELETE, "resource": "permission", "action": "delete", "description": "删除权限"},
         {"name": "权限管理", "code": Permissions.PERMISSION_MANAGE, "resource": "permission", "action": "manage", "description": "权限管理权限"},
-        {"name": "分配权限", "code": Permissions.PERMISSION_ASSIGN, "resource": "permission", "action": "assign", "description": "分配权限给角色或用户"}
+        {"name": "分配权限", "code": Permissions.PERMISSION_ASSIGN, "resource": "permission", "action": "assign", "description": "分配权限给角色或用户"},
         
         # 大模型管理
         {"name": "创建大模型配置", "code": Permissions.LLM_CONFIG_CREATE, "resource": "llm_config", "action": "create", "description": "创建大模型配置"},

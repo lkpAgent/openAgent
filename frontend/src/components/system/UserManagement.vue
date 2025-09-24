@@ -50,100 +50,105 @@
         </div>
       </div>
 
-      <!-- 用户表格 -->
-      <el-table
-        v-loading="loading"
-        :data="filteredUsers"
-        style="width: 100%"
-        max-height="500px"
-        row-key="id"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        
-        <el-table-column prop="username" label="用户名" width="120">
-          <template #default="{ row }">
-            <div class="user-info">
-              <el-avatar :size="32" :src="row.avatar">
-                {{ row.username && row.username.length > 0 ? row.username.charAt(0).toUpperCase() : '?' }}
-              </el-avatar>
-              <span class="username">{{ row.username }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="full_name" label="姓名" width="120">
-          <template #default="{ row }">
-            <span>{{ row.full_name || '-' }}</span>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="email" label="邮箱" width="200" />
-        
-        <el-table-column prop="department" label="部门" width="150">
-          <template #default="{ row }">
-            <span>{{ getDepartmentName(row.department_id) }}</span>
-          </template>
-        </el-table-column>
-        
+      <!-- 表格容器 -->
+      <div class="table-container">
+        <!-- 用户表格 -->
+        <div class="table-wrapper">
+          <el-table
+            v-loading="loading"
+            :data="filteredUsers"
+            style="width: 100%"
+            height="100%"
+            row-key="id"
+            @selection-change="handleSelectionChange"
+          >
+            <el-table-column type="selection" width="55" />
+            
+            <el-table-column prop="username" label="用户名" width="120">
+              <template #default="{ row }">
+                <div class="user-info">
+                  <el-avatar :size="32" :src="row.avatar">
+                    {{ row.username && row.username.length > 0 ? row.username.charAt(0).toUpperCase() : '?' }}
+                  </el-avatar>
+                  <span class="username">{{ row.username }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="full_name" label="姓名" width="120">
+              <template #default="{ row }">
+                <span>{{ row.full_name || '-' }}</span>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="email" label="邮箱" width="200" />
+            
+            <el-table-column prop="department" label="部门" width="150">
+              <template #default="{ row }">
+                <span>{{ getDepartmentName(row.department_id) }}</span>
+              </template>
+            </el-table-column>
+            
 
-        
-        <el-table-column prop="is_active" label="状态" width="100">
-          <template #default="{ row }">
-            <el-switch
-              v-model="row.is_active"
-              @change="handleStatusChange(row)"
-            />
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="last_login_at" label="最后登录" width="160">
-          <template #default="{ row }">
-            <span v-if="row.last_login_at">
-              {{ formatDateTime(row.last_login_at) }}
-            </span>
-            <span v-else class="text-muted">从未登录</span>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="created_at" label="创建时间" width="160">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleEdit(row)"
-            >
-              编辑
-            </el-button>
+            
+            <el-table-column prop="is_active" label="状态" width="100">
+              <template #default="{ row }">
+                <el-switch
+                  v-model="row.is_active"
+                  @change="handleStatusChange(row)"
+                />
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="last_login_at" label="最后登录" width="160">
+              <template #default="{ row }">
+                <span v-if="row.last_login_at">
+                  {{ formatDateTime(row.last_login_at) }}
+                </span>
+                <span v-else class="text-muted">从未登录</span>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="created_at" label="创建时间" width="160">
+              <template #default="{ row }">
+                {{ formatDateTime(row.created_at) }}
+              </template>
+            </el-table-column>
+            
+            <el-table-column label="操作" width="200" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
 
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+                <el-button
+                  type="danger"
+                  size="small"
+                  @click="handleDelete(row)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <!-- 分页 -->
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
+        </div>
       </div>
     </el-card>
 
@@ -567,7 +572,24 @@ onMounted(async () => {
 
 <style scoped>
 .user-management {
-  height: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-wrapper {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
 }
 
 .page-header {

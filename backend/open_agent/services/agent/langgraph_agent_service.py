@@ -9,13 +9,14 @@ from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
 from .base import ToolRegistry
-from open_agent.services.tools import  WeatherQueryTool, TavilySearchTool, DateTimeTool
+from open_agent.services.tools import WeatherQueryTool, TavilySearchTool, DateTimeTool
 from ..postgresql_tool_manager import get_postgresql_tool
 from ...core.config import get_settings
 from ...utils.logger import get_logger
 from ..agent_config import AgentConfigService
 
 logger = get_logger("langgraph_agent_service")
+
 
 
 class LangGraphAgentConfig(BaseModel):

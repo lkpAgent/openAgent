@@ -64,7 +64,7 @@ export const chatApi = {
   
   // Stream chat (for Server-Sent Events)
   sendMessageStream(data: ChatRequest) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
     const token = localStorage.getItem('access_token')
     
     return new EventSource(`${baseURL}/chat/stream`, {

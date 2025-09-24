@@ -65,6 +65,9 @@ class UserContextMiddleware(BaseHTTPMiddleware):
         
         logging.info(f"[MIDDLEWARE] Processing authenticated request: {path}")
         
+        # Always clear any existing user context to ensure fresh authentication
+        UserContext.clear_current_user()
+        
         # Initialize context token
         user_token = None
         
@@ -73,9 +76,14 @@ class UserContextMiddleware(BaseHTTPMiddleware):
             # Get authorization header
             authorization = request.headers.get("Authorization")
             if not authorization or not authorization.startswith("Bearer "):
-                # No token provided, continue without setting user context
-                response = await call_next(request)
-                return response
+                # No token provided, return 401 error
+                from fastapi import HTTPException, status
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Missing or invalid authorization header"},
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
             
             # Extract token
             token = authorization.split(" ")[1]
@@ -83,30 +91,57 @@ class UserContextMiddleware(BaseHTTPMiddleware):
             # Verify token
             payload = AuthService.verify_token(token)
             if payload is None:
-                # Invalid token, continue without setting user context
-                response = await call_next(request)
-                return response
+                # Invalid token, return 401 error
+                from fastapi import HTTPException, status
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid or expired token"},
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
             
             # Get username from token
             username = payload.get("sub")
             if not username:
-                response = await call_next(request)
-                return response
+                from fastapi import HTTPException, status
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid token payload"},
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
             
             # Get user from database
             db = get_db_session()
             try:
                 from ..models.user import User
                 user = db.query(User).filter(User.username == username).first()
-                if user and user.is_active:
-                    # Set user in context using token mechanism
-                    user_token = UserContext.set_current_user_with_token(user)
-                    import logging
-                    logging.info(f"User {user.username} (ID: {user.id}) authenticated and set in context")
-                    
-                    # Verify context is set correctly
-                    current_user_id = UserContext.get_current_user_id()
-                    logging.info(f"Verified current user ID in context: {current_user_id}")
+                if not user:
+                    from fastapi import HTTPException, status
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "User not found"},
+                        headers={"WWW-Authenticate": "Bearer"}
+                    )
+                
+                if not user.is_active:
+                    from fastapi import HTTPException, status
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "User account is inactive"},
+                        headers={"WWW-Authenticate": "Bearer"}
+                    )
+                
+                # Set user in context using token mechanism
+                user_token = UserContext.set_current_user_with_token(user)
+                import logging
+                logging.info(f"User {user.username} (ID: {user.id}) authenticated and set in context")
+                
+                # Verify context is set correctly
+                current_user_id = UserContext.get_current_user_id()
+                logging.info(f"Verified current user ID in context: {current_user_id}")
             finally:
                 db.close()
             
@@ -115,11 +150,11 @@ class UserContextMiddleware(BaseHTTPMiddleware):
             import logging
             logging.warning(f"Error setting user context: {e}")
         
+        # Continue with request
         try:
-            # Continue with request
             response = await call_next(request)
             return response
         finally:
-            # Clean up context using token
-            if user_token is not None:
-                UserContext.reset_current_user_token(user_token)
+            # Always clear user context after request processing
+            UserContext.clear_current_user()
+            logging.debug(f"[MIDDLEWARE] Cleared user context after processing request: {path}")

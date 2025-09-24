@@ -3,16 +3,16 @@
 from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 
-from ..db.base import BaseModel
+from ..db.base import Base
 
 
-class UserDepartment(BaseModel):
+class UserDepartment(Base):
     """User Department association model."""
     
     __tablename__ = "user_departments"
     
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    department_id = Column(Integer, ForeignKey('departments.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, primary_key=True)
+    department_id = Column(Integer, ForeignKey('departments.id'), nullable=False, index=True, primary_key=True)
     is_primary = Column(Boolean, default=True, nullable=False)  # 是否为主要部门
     is_active = Column(Boolean, default=True, nullable=False)   # 是否激活
     

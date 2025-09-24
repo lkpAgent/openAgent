@@ -10,7 +10,7 @@ from ...models.user import User
 from ...models.resource import Resource, RoleResource
 from ...models.permission import Role
 from ...core.permissions import (
-    require_admin, require_system_admin,
+    require_admin, require_system_admin, require_superuser,
     Permissions
 )
 from ...services.auth import AuthService
@@ -19,9 +19,21 @@ from ...schemas.resource import (
     ResourceCreate, ResourceUpdate, ResourceResponse, ResourceTreeNode,
     RoleResourceAssign
 )
+from pydantic import BaseModel
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/resources", tags=["resources"])
+
+
+class BatchDeleteRequest(BaseModel):
+    """批量删除请求模型."""
+    resource_ids: List[int]
+
+
+class BatchStatusUpdateRequest(BaseModel):
+    """批量状态更新请求模型."""
+    resource_ids: List[int]
+    is_active: bool
 
 
 @router.get("/", response_model=List[ResourceResponse])
@@ -32,9 +44,10 @@ async def get_resources(
     type: Optional[str] = Query(None),
     parent_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_superuser)
 ):
     """获取资源列表."""
+    
     try:
         query = db.query(Resource)
         
@@ -278,7 +291,7 @@ async def delete_resource(
         )
 
 
-@router.post("/roles/assign")
+@router.post("/assign-role")
 async def assign_role_resources(
     assignment: RoleResourceAssign,
     db: Session = Depends(get_db),
@@ -329,7 +342,7 @@ async def assign_role_resources(
         )
 
 
-@router.get("/roles/{role_id}", response_model=List[ResourceResponse])
+@router.get("/role/{role_id}", response_model=List[ResourceResponse])
 async def get_role_resources(
     role_id: int,
     db: Session = Depends(get_db),
@@ -361,4 +374,160 @@ async def get_role_resources(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取角色资源失败"
+        )
+
+
+@router.delete("/batch")
+async def batch_delete_resources(
+    request: BatchDeleteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_system_admin)
+):
+    """批量删除资源."""
+    try:
+        # 检查资源是否存在
+        resources = db.query(Resource).filter(Resource.id.in_(request.resource_ids)).all()
+        if len(resources) != len(request.resource_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="部分资源不存在"
+            )
+        
+        # 检查是否有子资源
+        for resource in resources:
+            children_count = db.query(Resource).filter(Resource.parent_id == resource.id).count()
+            if children_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"资源 {resource.name} 存在子资源，无法删除"
+                )
+        
+        # 删除资源
+        db.query(Resource).filter(Resource.id.in_(request.resource_ids)).delete(synchronize_session=False)
+        db.commit()
+        
+        logger.info(f"Batch deleted resources: {request.resource_ids} by user {current_user.username}")
+        return {"message": f"成功删除 {len(request.resource_ids)} 个资源"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error batch deleting resources: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="批量删除资源失败"
+        )
+
+
+@router.put("/batch/status")
+async def batch_update_resource_status(
+    request: BatchStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_system_admin)
+):
+    """批量更新资源状态."""
+    try:
+        # 检查资源是否存在
+        resources = db.query(Resource).filter(Resource.id.in_(request.resource_ids)).all()
+        if len(resources) != len(request.resource_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="部分资源不存在"
+            )
+        
+        # 更新状态
+        db.query(Resource).filter(Resource.id.in_(request.resource_ids)).update(
+            {"is_active": request.is_active}, synchronize_session=False
+        )
+        db.commit()
+        
+        status_text = "启用" if request.is_active else "禁用"
+        logger.info(f"Batch updated resource status: {request.resource_ids} to {request.is_active} by user {current_user.username}")
+        return {"message": f"成功{status_text} {len(request.resource_ids)} 个资源"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error batch updating resource status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="批量更新资源状态失败"
+        )
+
+
+@router.get("/user/menu", response_model=List[ResourceTreeNode])
+async def get_user_menu_resources(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(AuthService.get_current_active_user)
+):
+    """获取当前用户可访问的菜单资源."""
+    try:
+        # 获取用户的所有角色
+        user_roles = [role.code for role in current_user.roles if role.is_active]
+        
+        # 如果用户没有角色，返回基础菜单
+        if not user_roles:
+            base_resources = db.query(Resource).filter(
+                and_(
+                    Resource.type == 'menu',
+                    Resource.is_active == True,
+                    Resource.requires_auth == True,
+                    Resource.requires_admin == False
+                )
+            ).order_by(Resource.sort_order, Resource.id).all()
+            
+            return [resource.to_tree_node() for resource in base_resources if resource.parent_id is None]
+        
+        # 检查是否为管理员
+        is_admin = any(role in ['SUPER_ADMIN', 'ADMIN', 'AAA'] for role in user_roles)
+        
+        # 构建查询条件
+        if is_admin:
+            # 管理员可以访问所有菜单
+            query = db.query(Resource).filter(
+                and_(
+                    Resource.type == 'menu',
+                    Resource.is_active == True,
+                    Resource.requires_auth == True
+                )
+            )
+        else:
+            # 普通用户只能访问不需要管理员权限的菜单
+            query = db.query(Resource).filter(
+                and_(
+                    Resource.type == 'menu',
+                    Resource.is_active == True,
+                    Resource.requires_auth == True,
+                    Resource.requires_admin == False
+                )
+            )
+        
+        # 获取所有符合条件的资源
+        all_resources = query.order_by(Resource.sort_order, Resource.id).all()
+        
+        # 构建树形结构
+        def build_tree(resources, parent_id=None):
+            tree = []
+            for resource in resources:
+                if resource.parent_id == parent_id:
+                    node = resource.to_tree_node()
+                    children = build_tree(resources, resource.id)
+                    if children:
+                        node['children'] = children
+                    tree.append(node)
+            return tree
+        
+        menu_tree = build_tree(all_resources)
+        
+        logger.info(f"User {current_user.username} accessed menu resources, roles: {user_roles}")
+        
+        return menu_tree
+        
+    except Exception as e:
+        logger.error(f"Error getting user menu resources for user {current_user.username}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取用户菜单资源失败"
         )

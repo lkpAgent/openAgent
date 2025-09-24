@@ -8,7 +8,7 @@ from .agent_config import AgentConfig
 from .excel_file import ExcelFile
 from .department import Department
 from .user_department import UserDepartment
-from .permission import Permission, Role, UserPermission
+from .permission import Permission, Role, UserPermission,RolePermission,UserRole
 from .llm_config import LLMConfig
 
 __all__ = [
@@ -24,5 +24,7 @@ __all__ = [
     "Permission",
     "Role",
     "UserPermission",
+    "RolePermission",
+    "UserRole",
     "LLMConfig"
 ]

@@ -1,9 +1,12 @@
 """Pydantic schemas for API requests and responses."""
 
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, TYPE_CHECKING
 from datetime import datetime
 from pydantic import BaseModel, Field
 from enum import Enum
+
+if TYPE_CHECKING:
+    from ..schemas.permission import RoleResponse
 
 
 class MessageRole(str, Enum):
@@ -63,6 +66,38 @@ class UserResponse(BaseResponse, UserBase):
     """User response schema."""
     is_active: bool
     department_id: Optional[int] = None
+    roles: Optional[List['RoleResponse']] = Field(default=[], description="用户角色列表")
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """从ORM对象创建响应对象，安全处理关系属性."""
+        # 获取基本字段
+        data = {
+            'id': obj.id,
+            'username': obj.username,
+            'email': obj.email,
+            'full_name': obj.full_name,
+            'is_active': obj.is_active,
+            'department_id': obj.department_id,
+            'created_at': obj.created_at,
+            'updated_at': obj.updated_at,
+            'created_by': obj.created_by,
+            'updated_by': obj.updated_by,
+        }
+        
+        # 安全处理roles关系
+        try:
+            # 尝试访问roles，如果成功则包含，否则使用空列表
+            if hasattr(obj, 'roles') and obj.roles is not None:
+                from ..schemas.permission import RoleResponse
+                data['roles'] = [RoleResponse.from_orm(role) for role in obj.roles]
+            else:
+                data['roles'] = []
+        except Exception:
+            # 如果访问roles失败（DetachedInstanceError），使用空列表
+            data['roles'] = []
+        
+        return cls(**data)
 
 
 # Authentication schemas
@@ -289,3 +324,18 @@ class FileListResponse(BaseModel):
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
+
+
+# 解决前向引用问题
+def rebuild_models():
+    """重建模型以解决前向引用问题."""
+    try:
+        from ..schemas.permission import RoleResponse
+        UserResponse.model_rebuild()
+    except ImportError:
+        # 如果无法导入RoleResponse，跳过重建
+        pass
+
+
+# 在模块加载时尝试重建模型
+rebuild_models()

@@ -71,7 +71,6 @@ class UserContext:
         
         # Try ContextVar first
         user = current_user_context.get()
-        print('user==',user)
         if user:
             logging.debug(f"Got user from ContextVar: {user.username} (ID: {user.id})")
             return user
@@ -82,7 +81,7 @@ class UserContext:
             logging.debug(f"Got user from thread-local: {user.username} (ID: {user.id})")
             return user
         
-        logging.warning("No user found in context (neither ContextVar nor thread-local)")
+        logging.debug("No user found in context (neither ContextVar nor thread-local)")
         return None
     
     @staticmethod
@@ -104,7 +103,8 @@ class UserContext:
     @staticmethod
     def require_current_user() -> User:
         """Get current user from context, raise exception if not found."""
-        user = current_user_context.get()
+        # Use the same logic as get_current_user to check both ContextVar and thread-local
+        user = UserContext.get_current_user()
         if user is None:
             from fastapi import HTTPException, status
             raise HTTPException(

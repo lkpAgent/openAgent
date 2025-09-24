@@ -97,6 +97,12 @@ const routes: Array<RouteRecordRaw> = [
             meta: { requiresAuth: true, requiresAdmin: true, title: '权限管理' }
           },
           {
+            path: 'resources',
+            name: 'SystemResources',
+            component: () => import('../components/system/ResourceManagement.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true, title: '资源管理' }
+          },
+          {
             path: 'llm-configs',
             name: 'SystemLLMConfigs',
             component: () => import('../components/system/LLMConfigManagement.vue'),
@@ -151,7 +157,8 @@ router.beforeEach(async (to, from, next) => {
   }
   
   // Redirect authenticated users away from login/register
-  if ((to.name === 'Login' || to.name === 'Register') && userStore.isAuthenticated) {
+  // 但如果是因为token过期跳转过来的，则允许访问登录页面
+  if ((to.name === 'Login' || to.name === 'Register') && userStore.isAuthenticated && !to.query.expired) {
     next({ name: 'Chat' })
     return
   }

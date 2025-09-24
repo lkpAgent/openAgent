@@ -6,6 +6,7 @@ export { knowledgeApi } from './knowledge'
 export { rolesApi } from './roles'
 export { departmentsApi } from './departments'
 export { userDepartmentsApi } from './userDepartments'
+export { resourcesApi } from './resources'
 export { api } from './request'
 
 // Re-export request instance as default

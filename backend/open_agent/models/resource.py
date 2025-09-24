@@ -71,9 +71,8 @@ class RoleResource(Base):
     """角色资源关联模型."""
     __tablename__ = "role_resources"
 
-    id = Column(Integer, primary_key=True, index=True)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False, comment="角色ID")
-    resource_id = Column(Integer, ForeignKey("resources.id"), nullable=False, comment="资源ID")
+    role_id = Column(Integer, ForeignKey("roles.id"), primary_key=True, comment="角色ID")
+    resource_id = Column(Integer, ForeignKey("resources.id"), primary_key=True, comment="资源ID")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), comment="创建时间")
 
     # 关系
@@ -83,7 +82,6 @@ class RoleResource(Base):
     def to_dict(self):
         """转换为字典."""
         return {
-            "id": self.id,
             "role_id": self.role_id,
             "resource_id": self.resource_id,
             "created_at": self.created_at.isoformat() if self.created_at else None

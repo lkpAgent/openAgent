@@ -22,7 +22,7 @@
             <!-- 上部分导航 -->
             <div class="nav-group">
               <div class="nav-group-header">
-                <div v-if="!isCollapsed" class="nav-group-title">核心功能</div>
+                <div v-if="!isCollapsed" class="nav-group-title"></div>
                 <el-button 
                   class="collapse-btn" 
                   @click="toggleSidebar" 
@@ -48,7 +48,7 @@
             <!-- 下部分导航 -->
             <div class="nav-group">
               <div class="nav-group-header">
-                <div v-if="!isCollapsed" class="nav-group-title">管理功能</div>
+                <div v-if="!isCollapsed" class="nav-group-title"></div>
               </div>
               <template v-for="item in lowerNavItems" :key="item.key">
                 <!-- 主菜单项 -->
@@ -205,6 +205,7 @@ import {
 import AgentWorkflow from './AgentWorkflow.vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
+import { useMenuStore } from '@/stores/menu'
 
 // 路由
 const router = useRouter()
@@ -213,6 +214,7 @@ const route = useRoute()
 // Stores
 const chatStore = useChatStore()
 const userStore = useUserStore()
+const menuStore = useMenuStore()
 
 // 响应式数据
 const activeModule = ref('chat')
@@ -224,89 +226,17 @@ const showArchivedConversations = ref(false)
 const isCollapsed = ref(false)
 const expandedMenus = ref(new Set())
 
-// 上部分导航项配置
-const upperNavItems = [
-  {
-    key: 'chat',
-    label: '智能问答',
-    icon: 'ChatDotRound',
-    route: '/chat'
-  },
-  {
-    key: 'smart-query',
-    label: '智能问数',
-    icon: 'DataAnalysis',
-    route: '/smart-query'
-  },
-  {
-    key: 'creation',
-    label: '智能创作',
-    icon: 'EditPen',
-    route: '/creation'
-  },
-  {
-    key: 'market',
-    label: '智能体市场',
-    icon: 'Shop',
-    route: '/market'
-  }
-]
-
-// 下部分导航项配置
-const lowerNavItems = [
-  {
-    key: 'knowledge',
-    label: '知识库',
-    icon: 'Collection',
-    route: '/knowledge'
-  },
-  {
-    key: 'workflow',
-    label: '工作流编排',
-    icon: 'Connection',
-    route: '/workflow'
-  },
-  {
-    key: 'agent',
-    label: '智能体管理',
-    icon: 'User',
-    route: '/agent'
-  },
-  {
-    key: 'system',
-    label: '系统管理',
-    icon: 'Setting',
-    route: '/system',
-    expandable: true,
-    children: [
-      {
-        key: 'system-users',
-        label: '用户管理',
-        route: '/system/users'
-      },
-      {
-        key: 'system-departments',
-        label: '部门管理',
-        route: '/system/departments'
-      },
-      {
-        key: 'system-roles',
-        label: '角色管理',
-        route: '/system/roles'
-      },
-      {
-        key: 'system-permissions',
-        label: '权限管理',
-        route: '/system/permissions'
-      },
-      {
-        key: 'system-llm',
-        label: '大模型管理',
-        route: '/system/llm'
-      }
-    ]
-  }
-]
+// 动态菜单配置
+const upperNavItems = computed(() => menuStore.upperNavItems)
+const lowerNavItems = computed(() => {
+  // 过滤掉需要管理员权限但用户不是管理员的菜单项
+  return menuStore.lowerNavItems.filter(item => {
+    if (item.requires_admin && !userStore.isAdmin) {
+      return false
+    }
+    return true
+  })
+})
 
 // 计算属性 - 使用chat store的数据
 const conversations = computed(() => {
@@ -343,7 +273,7 @@ const setActiveModule = (moduleKey: string, route?: string) => {
     return
   }
   
-  const allNavItems = [...upperNavItems, ...lowerNavItems]
+  const allNavItems = [...upperNavItems.value, ...lowerNavItems.value]
   const navItem = allNavItems.find(item => item.key === moduleKey)
   
   // 如果是可展开的菜单项，切换展开状态
@@ -525,7 +455,21 @@ onMounted(async () => {
     }
   }
   
+  // 初始化菜单
+  if (userStore.isAuthenticated) {
+    await menuStore.fetchUserMenuResources()
+  }
+  
   await loadConversations()
+})
+
+// 监听用户认证状态变化，刷新菜单
+watch(() => userStore.isAuthenticated, async (isAuthenticated) => {
+  if (isAuthenticated) {
+    await menuStore.fetchUserMenuResources()
+  } else {
+    menuStore.clearMenuResources()
+  }
 })
 
 // 暴露给子组件使用
@@ -586,9 +530,16 @@ provide('isCollapsed', isCollapsed)
   width: 60px;
 }
 
+.sidebar.collapsed {
+  width: 60px;
+}
+
 /* 主导航 */
 .main-nav {
-  flex-shrink: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .nav-header {
@@ -685,6 +636,28 @@ provide('isCollapsed', isCollapsed)
 
 .nav-menu {
   padding: 16px 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 导航菜单滚动条样式 */
+.nav-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nav-menu::-webkit-scrollbar-track {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.nav-menu::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 3px;
+}
+
+.nav-menu::-webkit-scrollbar-thumb:hover {
+  background: #8b5cf6;
 }
 
 .nav-group {

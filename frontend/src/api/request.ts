@@ -28,6 +28,9 @@ request.interceptors.request.use(
   }
 )
 
+// 防止重复处理401错误的标志
+let isHandling401 = false
+
 // Response interceptor
 request.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
@@ -51,11 +54,20 @@ request.interceptors.response.use(
       
       switch (status) {
         case 401:
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          ElMessage.error('登录已过期，请重新登录')
-          router.push('/login')
+          // 防止重复处理401错误
+          if (!isHandling401) {
+            isHandling401 = true
+            
+            // 延迟处理，避免并发请求重复跳转
+            setTimeout(() => {
+              console.log('认证失败，跳转到登录页面')
+              ElMessage.error('登录已过期，请重新登录')
+              
+              // 强制跳转到登录页面，添加expired参数标识token过期
+              router.replace('/login?expired=true')
+              isHandling401 = false
+            }, 100)
+          }
           break
           
         case 403:

@@ -40,11 +40,15 @@ class User(BaseModel):
     @property
     def is_admin(self) -> bool:
         """检查用户是否为管理员."""
-        return any(
-            role.code in ['ADMIN', 'SUPER_ADMIN'] 
-            for role in self.roles 
-            if role.is_active
-        )
+        try:
+            return any(
+                role.code in ['ADMIN', 'SUPER_ADMIN'] 
+                for role in self.roles 
+                if role.is_active
+            )
+        except Exception:
+            # 如果对象已分离，使用has_role方法
+            return self.has_role('ADMIN') or self.has_role('SUPER_ADMIN')
     
     def to_dict(self, include_sensitive=False, include_permissions=False, include_department=False):
         """Convert to dictionary, optionally excluding sensitive data."""
@@ -119,9 +123,36 @@ class User(BaseModel):
     
     def has_role(self, role_code: str) -> bool:
         """检查用户是否拥有指定角色."""
-        return any(role.code == role_code and role.is_active for role in self.roles)
+        try:
+            return any(role.code == role_code and role.is_active for role in self.roles)
+        except Exception:
+            # 如果对象已分离，使用数据库查询
+            from sqlalchemy.orm import object_session
+            from .permission import Role, UserRole
+            
+            session = object_session(self)
+            if session is None:
+                # 如果没有会话，创建新的会话
+                from ..db.database import SessionLocal
+                session = SessionLocal()
+                try:
+                    user_role = session.query(UserRole).join(Role).filter(
+                        UserRole.user_id == self.id,
+                        Role.code == role_code,
+                        Role.is_active == True
+                    ).first()
+                    return user_role is not None
+                finally:
+                    session.close()
+            else:
+                user_role = session.query(UserRole).join(Role).filter(
+                    UserRole.user_id == self.id,
+                    Role.code == role_code,
+                    Role.is_active == True
+                ).first()
+                return user_role is not None
     
-    def is_admin(self) -> bool:
+    def is_admin_user(self) -> bool:
         """检查用户是否为管理员."""
         return self.has_role('ADMIN') or self.has_role('SUPER_ADMIN')
     

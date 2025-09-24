@@ -52,123 +52,128 @@
         </div>
       </div>
 
-      <!-- 角色表格 -->
-      <el-table
-        v-loading="loading"
-        :data="filteredRoles"
-        style="width: 100%"
-        max-height="500px"
-        row-key="id"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        
-        <el-table-column prop="name" label="角色名称" width="150">
-          <template #default="{ row }">
-            <div class="role-name">
-              <el-icon class="role-icon" :style="{ color: getRoleColor(row.code) }">
-                <Star v-if="row.code === 'SUPER_ADMIN'" />
-                <Key v-else-if="row.code === 'ADMIN'" />
-                <User v-else />
-              </el-icon>
-              <span class="name-text">{{ row.name }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="code" label="角色编码" width="150">
-          <template #default="{ row }">
-            <el-tag :type="getRoleTagType(row.code)" size="small">
-              {{ row.code }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="description" label="描述" min-width="200">
-          <template #default="{ row }">
-            <span v-if="row.description">{{ row.description }}</span>
-            <span v-else class="text-muted">暂无描述</span>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="permissions" label="权限数量" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag type="info" size="small">
-              {{ row.permissions?.length || 0 }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="user_count" label="用户数量" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag type="success" size="small">
-              {{ row.user_count || 0 }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="is_active" label="状态" width="100">
-          <template #default="{ row }">
-            <el-switch
-              v-model="row.is_active"
-              @change="handleStatusChange(row)"
-              :disabled="row.code === 'SUPER_ADMIN'"
-            />
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="created_at" label="创建时间" width="160">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="320" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleEdit(row)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              type="warning"
-              size="small"
-              @click="handlePermissions(row)"
-            >
-              权限配置
-            </el-button>
-            <el-button
-              type="info"
-              size="small"
-              @click="handleUsers(row)"
-            >
-              用户列表
-            </el-button>
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
-              :disabled="row.code === 'SUPER_ADMIN' || row.user_count > 0"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 表格容器 -->
+      <div class="table-container">
+        <!-- 角色表格 -->
+        <div class="table-wrapper">
+          <el-table
+            v-loading="loading"
+            :data="filteredRoles"
+            style="width: 100%"
+            height="100%"
+            row-key="id"
+            @selection-change="handleSelectionChange"
+          >
+            <el-table-column type="selection" width="55" />
+            
+            <el-table-column prop="name" label="角色名称" width="150">
+              <template #default="{ row }">
+                <div class="role-name">
+                  <el-icon class="role-icon" :style="{ color: getRoleColor(row.code) }">
+                    <Star v-if="row.code === 'SUPER_ADMIN'" />
+                    <Key v-else-if="row.code === 'ADMIN'" />
+                    <User v-else />
+                  </el-icon>
+                  <span class="name-text">{{ row.name }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="code" label="角色编码" width="150">
+              <template #default="{ row }">
+                <el-tag :type="getRoleTagType(row.code)" size="small">
+                  {{ row.code }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="description" label="描述" min-width="200">
+              <template #default="{ row }">
+                <span v-if="row.description">{{ row.description }}</span>
+                <span v-else class="text-muted">暂无描述</span>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="permissions" label="权限数量" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag type="info" size="small">
+                  {{ row.permissions?.length || 0 }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="user_count" label="用户数量" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag type="success" size="small">
+                  {{ row.user_count || 0 }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="is_active" label="状态" width="100">
+              <template #default="{ row }">
+                <el-switch
+                  v-model="row.is_active"
+                  @change="handleStatusChange(row)"
+                  :disabled="row.code === 'SUPER_ADMIN'"
+                />
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="created_at" label="创建时间" width="160">
+              <template #default="{ row }">
+                {{ formatDateTime(row.created_at) }}
+              </template>
+            </el-table-column>
+            
+            <el-table-column label="操作" width="320" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  type="warning"
+                  size="small"
+                  @click="handlePermissions(row)"
+                >
+                  权限配置
+                </el-button>
+                <el-button
+                  type="info"
+                  size="small"
+                  @click="handleUsers(row)"
+                >
+                  用户列表
+                </el-button>
+                <el-button
+                  type="danger"
+                  size="small"
+                  @click="handleDelete(row)"
+                  :disabled="row.code === 'SUPER_ADMIN' || row.user_count > 0"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <!-- 分页 -->
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -382,7 +387,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import {
   UserFilled,
@@ -561,7 +566,14 @@ const handlePermissions = async (row: any) => {
   currentRole.value = row
   try {
     const response = await rolesApi.getRolePermissions(row.id)
-    selectedPermissions.value = response.data?.map((p: any) => p.id) || []
+    const rolePermissionIds = response.data?.map((p: any) => p.id) || []
+    selectedPermissions.value = rolePermissionIds
+    
+    // 等待下一个tick确保树组件已渲染
+    await nextTick()
+    if (permissionTreeRef.value) {
+      permissionTreeRef.value.setCheckedKeys(rolePermissionIds)
+    }
   } catch (error) {
     console.error('加载角色权限失败:', error)
     selectedPermissions.value = []
@@ -616,17 +628,19 @@ const handleUnassignUser = async (user: any) => {
 
 const selectAllPermissions = () => {
   if (permissionTreeRef.value) {
-    const allKeys = []
-    const collectKeys = (nodes: any[]) => {
+    const permissionKeys = []
+    const collectPermissionKeys = (nodes: any[]) => {
       nodes.forEach(node => {
-        allKeys.push(node.id)
+        if (node.type === 'permission') {
+          permissionKeys.push(node.id)
+        }
         if (node.children) {
-          collectKeys(node.children)
+          collectPermissionKeys(node.children)
         }
       })
     }
-    collectKeys(permissionTree.value)
-    permissionTreeRef.value.setCheckedKeys(allKeys)
+    collectPermissionKeys(permissionTree.value)
+    permissionTreeRef.value.setCheckedKeys(permissionKeys)
   }
 }
 
@@ -638,7 +652,11 @@ const clearAllPermissions = () => {
 
 const handlePermissionCheck = () => {
   if (permissionTreeRef.value) {
-    selectedPermissions.value = permissionTreeRef.value.getCheckedKeys()
+    const checkedKeys = permissionTreeRef.value.getCheckedKeys()
+    // 只保留权限节点的ID，过滤掉资源节点
+    selectedPermissions.value = checkedKeys.filter(key => 
+      typeof key === 'number' || !key.toString().startsWith('resource_')
+    )
   }
 }
 
@@ -680,11 +698,9 @@ const handlePermissionSubmit = async () => {
   try {
     submitting.value = true
     
-    // 获取选中的权限ID
-    const checkedKeys = permissionTreeRef.value?.getCheckedKeys() || []
-    
+    // 使用已过滤的权限ID（只包含权限节点，不包含资源节点）
     await rolesApi.assignRolePermissions(currentRole.value.id, {
-      permission_ids: checkedKeys
+      permission_ids: selectedPermissions.value
     })
     
     ElMessage.success('权限配置成功')
@@ -808,11 +824,79 @@ const loadAvailableUsers = async () => {
 const loadPermissions = async () => {
   try {
     const response = await permissionsApi.getPermissions()
-    permissionTree.value = response.data || []
+    console.log('权限API响应:', response)
+    
+    // 确保获取到的是数组数据
+    let permissions = []
+    if (response.data) {
+      if (Array.isArray(response.data)) {
+        permissions = response.data
+      } else if (Array.isArray(response.data.items)) {
+        permissions = response.data.items
+      } else if (Array.isArray(response.data.permissions)) {
+        permissions = response.data.permissions
+      } else if (Array.isArray(response.data.data)) {
+        permissions = response.data.data
+      }
+    }
+    
+    console.log('处理后的权限数据:', permissions)
+    
+    // 将平铺的权限数据转换为树形结构
+    permissionTree.value = buildPermissionTree(permissions)
   } catch (error) {
     console.error('加载权限列表失败:', error)
     ElMessage.error('加载权限列表失败')
+    permissionTree.value = []
   }
+}
+
+// 构建权限树形结构
+const buildPermissionTree = (permissions: any[]) => {
+  const resourceMap = new Map()
+  
+  // 按资源分组
+  permissions.forEach(permission => {
+    // 从code字段解析资源和操作，格式如 'user:create' 或 'system:admin'
+    const codeParts = permission.code.split(':')
+    const resource = codeParts[0] || 'other'
+    const action = codeParts[1] || 'unknown'
+    
+    if (!resourceMap.has(resource)) {
+      resourceMap.set(resource, {
+        id: `resource_${resource}`,
+        name: getResourceName(resource),
+        code: resource,
+        type: 'module',
+        children: []
+      })
+    }
+    
+    // 添加权限到对应资源下
+    resourceMap.get(resource).children.push({
+      id: permission.id,
+      name: permission.name,
+      code: permission.code,
+      type: 'permission',
+      description: permission.description,
+      resource: resource,
+      action: action
+    })
+  })
+  
+  return Array.from(resourceMap.values())
+}
+
+// 获取资源显示名称
+const getResourceName = (resource: string) => {
+  const resourceNames = {
+    'user': '用户管理',
+    'role': '角色管理', 
+    'permission': '权限管理',
+    'department': '部门管理',
+    'system': '系统管理'
+  }
+  return resourceNames[resource] || resource
 }
 
 // 生命周期
@@ -824,11 +908,12 @@ onMounted(() => {
 
 <style scoped>
 .role-management {
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #1e293b;
   padding: 20px;
+  overflow: hidden;
 }
 
 .page-header {
@@ -866,6 +951,20 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-wrapper {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
 }
 
 .search-bar {

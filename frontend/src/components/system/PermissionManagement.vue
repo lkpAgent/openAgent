@@ -72,103 +72,108 @@
         </div>
       </div>
 
-      <!-- 权限表格 -->
-      <el-table
-        v-loading="loading"
-        :data="permissions"
-        style="width: 100%"
-        max-height="500px"
-        row-key="id"
-        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-        :default-expand-all="false"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        
-        <el-table-column prop="name" label="权限名称" width="200">
-          <template #default="{ row }">
-            <div class="permission-name">
-              <el-icon class="permission-icon" style="color: #409eff">
-                <Lock />
-              </el-icon>
-              <span class="name-text">{{ row.name }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="code" label="权限编码" width="200">
-          <template #default="{ row }">
-            <el-tag type="info" size="small">
-              {{ row.code }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="resource" label="资源标识" width="150">
-          <template #default="{ row }">
-            <el-tag type="info" size="small">
-              {{ row.resource }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="description" label="描述" min-width="200">
-          <template #default="{ row }">
-            <span v-if="row.description">{{ row.description }}</span>
-            <span v-else class="text-muted">暂无描述</span>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="action" label="操作类型" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getActionTagType(row.action)" size="small">
-              {{ getActionText(row.action) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
+      <!-- 表格容器 -->
+      <div class="table-container">
+        <!-- 权限表格 -->
+        <div class="table-wrapper">
+          <el-table
+            v-loading="loading"
+            :data="permissions"
+            style="width: 100%"
+            height="100%"
+            row-key="id"
+            :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+            :default-expand-all="false"
+            @selection-change="handleSelectionChange"
+          >
+            <el-table-column type="selection" width="55" />
+            
+            <el-table-column prop="name" label="权限名称" width="200">
+              <template #default="{ row }">
+                <div class="permission-name">
+                  <el-icon class="permission-icon" style="color: #409eff">
+                    <Lock />
+                  </el-icon>
+                  <span class="name-text">{{ row.name }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="code" label="权限编码" width="200">
+              <template #default="{ row }">
+                <el-tag type="info" size="small">
+                  {{ row.code }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="resource" label="资源标识" width="150">
+              <template #default="{ row }">
+                <el-tag type="info" size="small">
+                  {{ row.resource }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="description" label="描述" min-width="200">
+              <template #default="{ row }">
+                <span v-if="row.description">{{ row.description }}</span>
+                <span v-else class="text-muted">暂无描述</span>
+              </template>
+            </el-table-column>
+            
+            <el-table-column prop="action" label="操作类型" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getActionTagType(row.action)" size="small">
+                  {{ getActionText(row.action) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            
 
-        
+            
 
-        
-        <el-table-column prop="created_at" label="创建时间" width="160">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="280" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleEdit(row)"
-            >
-              编辑
-            </el-button>
+            
+            <el-table-column prop="created_at" label="创建时间" width="160">
+              <template #default="{ row }">
+                {{ formatDateTime(row.created_at) }}
+              </template>
+            </el-table-column>
+            
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
 
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+                <el-button
+                  type="danger"
+                  size="small"
+                  @click="handleDelete(row)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <!-- 分页 -->
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -568,11 +573,26 @@ onMounted(() => {
 
 <style scoped>
 .permission-management {
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #1e293b;
   padding: 20px;
+  overflow: hidden;
+}
+
+.table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-wrapper {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
 }
 
 .page-header {

@@ -198,11 +198,11 @@ class DepartmentChecker:
 
 
 # 常用权限依赖项
-def require_admin(
-    current_user: User = Depends(AuthService.get_current_active_user)
-) -> User:
+def require_admin() -> User:
     """要求管理员权限."""
-    if not current_user.is_admin():
+    from .context import UserContext
+    current_user = UserContext.require_current_user()
+    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="需要管理员权限"
@@ -210,10 +210,10 @@ def require_admin(
     return current_user
 
 
-def require_superuser(
-    current_user: User = Depends(AuthService.get_current_active_user)
-) -> User:
+def require_superuser() -> User:
     """要求超级管理员权限."""
+    from .context import UserContext
+    current_user = UserContext.require_current_user()
     # 检查用户是否为超级管理员
     if not current_user.has_role('SUPER_ADMIN'):
         raise HTTPException(

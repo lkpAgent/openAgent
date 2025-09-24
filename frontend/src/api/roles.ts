@@ -93,6 +93,19 @@ export const rolesApi = {
   // Assign roles to user
   assignUserRoles(data: UserRoleAssign) {
     return api.post('/admin/roles/user-roles/assign', data)
+  },
+  
+  // Get role resources
+  getRoleResources(roleId: number) {
+    return api.get(`/admin/resources/role/${roleId}/`)
+  },
+  
+  // Assign resources to role
+  assignRoleResources(roleId: number, resourceIds: number[]) {
+    return api.post('/admin/resources/assign-role/', {
+      role_id: roleId,
+      resource_ids: resourceIds
+    })
   }
 }
 
