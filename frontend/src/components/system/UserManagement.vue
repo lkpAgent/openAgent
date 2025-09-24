@@ -588,7 +588,7 @@ onMounted(async () => {
 .table-wrapper {
   flex: 1;
   min-height: 0;
-  max-height: calc(100vh - 300px);
+  max-height: calc(100vh - 320px);
   overflow: auto;
 }
 

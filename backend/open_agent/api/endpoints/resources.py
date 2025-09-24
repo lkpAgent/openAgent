@@ -17,7 +17,7 @@ from ...services.auth import AuthService
 from ...utils.logger import get_logger
 from ...schemas.resource import (
     ResourceCreate, ResourceUpdate, ResourceResponse, ResourceTreeNode,
-    RoleResourceAssign
+    RoleResourceAssign, ResourcePaginatedResponse
 )
 from pydantic import BaseModel
 
@@ -36,10 +36,10 @@ class BatchStatusUpdateRequest(BaseModel):
     is_active: bool
 
 
-@router.get("/", response_model=List[ResourceResponse])
+@router.get("/", response_model=ResourcePaginatedResponse)
 async def get_resources(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
     search: Optional[str] = Query(None),
     type: Optional[str] = Query(None),
     parent_id: Optional[int] = Query(None),
@@ -72,10 +72,19 @@ async def get_resources(
         # 排序
         query = query.order_by(Resource.sort_order, Resource.id)
         
-        # 分页
-        resources = query.offset(skip).limit(limit).all()
+        # 获取总数
+        total = query.count()
         
-        return [resource.to_dict() for resource in resources]
+        # 分页
+        skip = (page - 1) * size
+        resources = query.offset(skip).limit(size).all()
+        
+        return ResourcePaginatedResponse(
+            items=[resource.to_dict() for resource in resources],
+            total=total,
+            page=page,
+            size=size
+        )
         
     except Exception as e:
         logger.error(f"Error getting resources: {str(e)}")

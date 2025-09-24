@@ -15,7 +15,7 @@
           <el-icon><Delete /></el-icon>
           批量删除
         </el-button>
-        <el-button type="warning" @click="showRoleAssignDialog = true">
+        <el-button type="warning" @click="openRoleAssignDialog">
           角色资源分配
         </el-button>
         <el-button 
@@ -60,7 +60,13 @@
           </el-select>
         </el-form-item>
         <el-form-item label="父级资源">
-          <el-select v-model="filters.parent_id" placeholder="请选择父级资源" clearable @change="loadResources">
+          <el-select 
+            v-model="filters.parent_id" 
+            placeholder="请选择父级资源" 
+            clearable 
+            @change="loadResources"
+            @focus="loadParentResourcesIfNeeded"
+          >
             <el-option label="无" :value="null" />
             <el-option 
               v-for="resource in parentResources" 
@@ -94,7 +100,6 @@
           row-key="id"
           default-expand-all
           :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-          height="100%"
         >
           <el-table-column type="selection" width="55" />
           <el-table-column prop="name" label="资源名称" min-width="150" />
@@ -154,8 +159,8 @@
         </el-table>
       </div>
 
-      <!-- 分页 -->
-      <div class="pagination">
+      <!-- 分页区域 -->
+      <div style="background: #1e293b; padding: 20px; margin: 20px 0; border-radius: 4px; display: flex; justify-content: center; align-items: center; min-height: 60px;">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -195,7 +200,12 @@
           </el-select>
         </el-form-item>
         <el-form-item label="父级资源" prop="parent_id">
-          <el-select v-model="form.parent_id" placeholder="请选择父级资源" clearable>
+          <el-select 
+            v-model="form.parent_id" 
+            placeholder="请选择父级资源" 
+            clearable
+            @focus="loadParentResourcesIfNeeded"
+          >
             <el-option label="无" :value="null" />
             <el-option 
               v-for="resource in parentResources" 
@@ -383,26 +393,17 @@ const getTypeLabel = (type: string) => {
 
 // 方法
 const loadResources = async () => {
+  loading.value = true
   try {
-    loading.value = true
     const params = {
       ...filters,
       page: pagination.page,
       size: pagination.size
     }
     const response = await resourcesApi.getResources(params)
-    // 后端直接返回资源数组，不是分页对象
-    if (Array.isArray(response.data)) {
-      resources.value = response.data
-      pagination.total = response.data.length
-    } else if (response.data.items) {
-      // 如果后端返回分页对象格式
-      resources.value = response.data.items
-      pagination.total = response.data.total
-    } else {
-      resources.value = []
-      pagination.total = 0
-    }
+    // 后端现在返回标准分页格式
+    resources.value = response.data.items
+    pagination.total = response.data.total
   } catch (error) {
     console.error('加载资源列表失败:', error)
     ElMessage.error('加载资源列表失败')
@@ -413,17 +414,36 @@ const loadResources = async () => {
 
 const loadParentResources = async () => {
   try {
-    const response = await resourcesApi.getResources({ type: 'menu' })
-    // 后端直接返回资源数组，不是分页对象
-    if (Array.isArray(response.data)) {
-      parentResources.value = response.data
-    } else if (response.data.items) {
-      parentResources.value = response.data.items
-    } else {
-      parentResources.value = []
-    }
+    const response = await resourcesApi.getResources({ 
+      type: 'menu',
+      page: 1,
+      size: 100  // 获取足够多的菜单项
+    })
+    parentResources.value = response.data.items
   } catch (error) {
     console.error('加载父级资源失败:', error)
+  }
+}
+
+// 懒加载父级资源
+const loadParentResourcesIfNeeded = () => {
+  if (parentResources.value.length === 0) {
+    loadParentResources()
+  }
+}
+
+// 打开角色资源分配对话框
+const openRoleAssignDialog = async () => {
+  try {
+    // 同时加载角色和资源树数据
+    await Promise.all([
+      loadRoles(),
+      loadResourceTree()
+    ])
+    showRoleAssignDialog.value = true
+  } catch (error) {
+    console.error('加载角色资源分配数据失败:', error)
+    ElMessage.error('加载数据失败')
   }
 }
 
@@ -582,7 +602,10 @@ const loadRoles = async () => {
 
 const loadResourceTree = async () => {
   try {
-    const response = await resourcesApi.getResources({})
+    const response = await resourcesApi.getResources({
+      page: 1,
+      size: 1000  // 获取所有资源用于树形结构
+    })
     resourceTreeData.value = response.data.items
   } catch (error) {
     ElMessage.error('加载资源树失败')
@@ -631,16 +654,12 @@ const getResourceTypeColor = (type: string) => {
 // 生命周期
 onMounted(() => {
   loadResources()
-  loadParentResources()
-  loadRoles()
-  loadResourceTree()
+  // 只在需要时才加载父级资源和资源树
 })
 </script>
 
 <style scoped>
 .resource-management {
-  padding: 20px;
-  background-color: #0f172a;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -657,7 +676,7 @@ onMounted(() => {
 .table-wrapper {
   flex: 1;
   min-height: 0;
-  max-height: calc(100vh - 300px);
+  max-height: calc(100vh - 360px);
   overflow: auto;
 }
 
@@ -688,10 +707,10 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.pagination {
+.pagination-container {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #334155;
 }

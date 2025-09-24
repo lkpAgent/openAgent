@@ -1,8 +1,10 @@
 """Resource management schemas."""
 
-from typing import List, Optional
+from typing import List, Optional, Generic, TypeVar
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+T = TypeVar('T')
 
 
 class ResourceBase(BaseModel):
@@ -71,6 +73,19 @@ class RoleResourceAssign(BaseModel):
     """角色资源分配模型."""
     role_id: int = Field(..., description="角色ID")
     resource_ids: List[int] = Field(..., description="资源ID列表")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """分页响应模型."""
+    items: List[T] = Field(..., description="数据列表")
+    total: int = Field(..., description="总数")
+    page: int = Field(..., description="当前页码")
+    size: int = Field(..., description="每页大小")
+
+
+class ResourcePaginatedResponse(PaginatedResponse[ResourceResponse]):
+    """资源分页响应模型."""
+    pass
 
 
 # 更新前向引用

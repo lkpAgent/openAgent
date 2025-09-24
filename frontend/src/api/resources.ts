@@ -73,22 +73,26 @@ export interface RoleResource {
   resource: Resource
 }
 
+export interface GetResourcesParams {
+  page?: number
+  size?: number
+  search?: string
+  type?: string
+  parent_id?: number
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+}
+
 // 资源管理API
 export const resourcesApi = {
   // 获取资源列表
-  getResources: (params?: {
-    type?: string
-    parent_id?: number
-    requires_admin?: boolean
-    page?: number
-    size?: number
-  }) => {
-    return request.get<{
-      items: Resource[]
-      total: number
-      page: number
-      size: number
-    }>('/admin/resources/', { params })
+  getResources: (params?: GetResourcesParams) => {
+    return request.get<PaginatedResponse<Resource>>('/admin/resources/', { params })
   },
 
   // 获取资源树

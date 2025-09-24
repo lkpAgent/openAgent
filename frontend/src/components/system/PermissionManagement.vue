@@ -163,7 +163,7 @@
         </div>
 
         <!-- 分页 -->
-        <div class="pagination-container">
+        <div style="background: #334155; padding: 20px; margin: 20px 0; border-radius: 4px; display: flex; justify-content: center; align-items: center; min-height: 60px; border: 1px solid #475569;">
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
@@ -591,7 +591,7 @@ onMounted(() => {
 .table-wrapper {
   flex: 1;
   min-height: 0;
-  max-height: calc(100vh - 300px);
+  max-height: calc(100vh - 410px);
   overflow: auto;
 }
 
@@ -806,6 +806,41 @@ onMounted(() => {
 :deep(.el-button--default:hover) {
   background-color: #64748b !important;
   border-color: #64748b !important;
+}
+
+/* 分页组件深色主题 */
+:deep(.el-pagination) {
+  color: #f1f5f9 !important;
+}
+
+:deep(.el-pagination .el-pager li) {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #475569 !important;
+}
+
+:deep(.el-pagination .el-pager li:hover) {
+  color: #3b82f6 !important;
+}
+
+:deep(.el-pagination .el-pager li.is-active) {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+:deep(.el-pagination button) {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #475569 !important;
+}
+
+:deep(.el-pagination button:hover) {
+  color: #3b82f6 !important;
+}
+
+:deep(.el-pagination .el-select .el-input__wrapper) {
+  background-color: #334155 !important;
+  border: 1px solid #475569 !important;
 }
 
 /* 响应式设计 */

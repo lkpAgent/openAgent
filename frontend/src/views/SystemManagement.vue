@@ -1,9 +1,6 @@
 <template>
   <div class="system-management">
-    <div class="system-header">
-      <h1>系统管理</h1>
-      <p class="system-description">管理系统用户、部门、角色权限和大模型配置</p>
-    </div>
+
     
     <div class="system-content">
       <router-view />
