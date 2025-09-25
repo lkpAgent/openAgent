@@ -78,6 +78,12 @@ request.interceptors.response.use(
           ElMessage.error('请求的资源不存在')
           break
           
+        case 400:
+          // Bad request errors - 支持detail字段
+          const badRequestMsg = data?.detail || data?.message || data?.error || '请求参数错误'
+          ElMessage.error(badRequestMsg)
+          break
+          
         case 422:
           // Validation errors
           const errorMessage = data?.detail?.[0]?.msg || data?.message || '请求参数错误'

@@ -18,6 +18,11 @@ export const usersApi = {
     return api.delete('/users/profile')
   },
   
+  // Change password
+  changePassword(data: { current_password: string; new_password: string }) {
+    return api.put('/users/change-password', data)
+  },
+  
   // Admin: Get all users with pagination and filters
   getUsers(params?: {
     skip?: number
@@ -67,5 +72,10 @@ export const usersApi = {
   // Admin: Update user status
   updateUserStatus(userId: number, is_active: boolean) {
     return api.put<User>(`/users/${userId}`, { is_active })
+  },
+
+  // Admin: Reset user password
+  resetUserPassword(userId: number, newPassword: string) {
+    return api.put(`/users/${userId}/reset-password`, { new_password: newPassword })
   }
 }

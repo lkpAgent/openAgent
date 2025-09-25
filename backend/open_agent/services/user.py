@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
 
 from ..models.user import User
-from ..models.user_department import UserDepartment
 from ..utils.schemas import UserCreate, UserUpdate
 from ..utils.exceptions import DatabaseError, ValidationError
 from ..utils.logger import get_logger
@@ -34,9 +33,7 @@ class UserService:
             # Use options to avoid loading problematic relationships
             from sqlalchemy.orm import noload
             return self.db.query(User).options(
-                noload(User.user_departments),
-                noload(User.roles),
-                noload(User.direct_permissions)
+                noload(User.roles)
             ).filter(User.id == user_id).first()
         except Exception as e:
             logger.error(f"Error getting user by ID {user_id}: {e}")
@@ -108,18 +105,11 @@ class UserService:
             # Update fields
             update_data = user_update.dict(exclude_unset=True)
             
-            # Handle department_id separately
-            department_id = update_data.pop("department_id", None)
-            
             if "password" in update_data:
                 update_data["hashed_password"] = self.get_password_hash(update_data.pop("password"))
             
             for field, value in update_data.items():
                 setattr(user, field, value)
-            
-            # Handle department association if department_id is provided
-            if department_id is not None:
-                self._update_user_department(user_id, department_id)
             
             # Skip audit fields for now due to database schema mismatch
             # user.set_audit_fields(is_update=True)
@@ -148,7 +138,6 @@ class UserService:
         skip: int = 0, 
         limit: int = 100,
         search: Optional[str] = None,
-        department_id: Optional[int] = None,
         role_id: Optional[int] = None,
         is_active: Optional[bool] = None
     ) -> Tuple[List[User], int]:
@@ -166,9 +155,6 @@ class UserService:
                         User.full_name.ilike(search_term)
                     )
                 )
-            
-            if department_id is not None:
-                query = query.filter(User.department_id == department_id)
             
             if role_id is not None:
                 from ..models.permission import UserRole
@@ -199,14 +185,8 @@ class UserService:
             # Manually delete related records to avoid cascade issues
             from sqlalchemy import text
             
-            # Delete user_departments records
-            self.db.execute(text("DELETE FROM user_departments WHERE user_id = :user_id"), {"user_id": user_id})
-            
             # Delete user_roles records
             self.db.execute(text("DELETE FROM user_roles WHERE user_id = :user_id"), {"user_id": user_id})
-            
-            # Delete user_permissions records
-            self.db.execute(text("DELETE FROM user_permissions WHERE user_id = :user_id"), {"user_id": user_id})
             
             # Now delete the user
             self.db.delete(user)
@@ -239,42 +219,62 @@ class UserService:
             logger.error(f"Error authenticating user {username}: {e}")
             return None
     
-    def _update_user_department(self, user_id: int, department_id: int) -> None:
-        """Update user's primary department association."""
+    def change_password(self, user_id: int, current_password: str, new_password: str) -> bool:
+        """Change user password."""
         try:
-            # Remove existing primary department association
-            existing_primary = self.db.query(UserDepartment).filter(
-                and_(
-                    UserDepartment.user_id == user_id,
-                    UserDepartment.is_primary == True
-                )
-            ).first()
+            user = self.get_user_by_id(user_id)
+            if not user:
+                raise ValidationError("User not found")
             
-            if existing_primary:
-                existing_primary.is_primary = False
+            # Verify current password
+            if not self.verify_password(current_password, user.hashed_password):
+                raise ValidationError("Current password is incorrect")
             
-            # Check if user already has association with the new department
-            existing_dept = self.db.query(UserDepartment).filter(
-                and_(
-                    UserDepartment.user_id == user_id,
-                    UserDepartment.department_id == department_id
-                )
-            ).first()
+            # Validate new password
+            if len(new_password) < 6:
+                raise ValidationError("New password must be at least 6 characters long")
             
-            if existing_dept:
-                # Make existing association primary
-                existing_dept.is_primary = True
-            else:
-                # Create new primary department association
-                new_dept = UserDepartment(
-                    user_id=user_id,
-                    department_id=department_id,
-                    is_primary=True
-                )
-                self.db.add(new_dept)
+            # Hash new password
+            hashed_password = self.get_password_hash(new_password)
             
-            logger.info(f"Updated primary department for user {user_id} to department {department_id}")
+            # Update password
+            user.hashed_password = hashed_password
+            self.db.commit()
             
+            logger.info(f"Password changed successfully for user: {user.username}")
+            return True
+            
+        except ValidationError:
+            raise
         except Exception as e:
-            logger.error(f"Error updating user department: {e}")
-            raise DatabaseError(f"Failed to update user department: {str(e)}")
+            self.db.rollback()
+            logger.error(f"Error changing password for user {user_id}: {e}")
+            raise DatabaseError(f"Failed to change password: {str(e)}")
+    
+    def reset_password(self, user_id: int, new_password: str) -> bool:
+        """Reset user password (admin only, no current password required)."""
+        try:
+            user = self.get_user_by_id(user_id)
+            if not user:
+                raise ValidationError("User not found")
+            
+            # Validate new password
+            if len(new_password) < 6:
+                raise ValidationError("New password must be at least 6 characters long")
+            
+            # Hash new password
+            hashed_password = self.get_password_hash(new_password)
+            
+            # Update password
+            user.hashed_password = hashed_password
+            self.db.commit()
+            
+            logger.info(f"Password reset successfully for user: {user.username}")
+            return True
+            
+        except ValidationError:
+            raise
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error resetting password for user {user_id}: {e}")
+            raise DatabaseError(f"Failed to reset password: {str(e)}")

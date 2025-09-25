@@ -67,6 +67,8 @@ class UserResponse(BaseResponse, UserBase):
     is_active: bool
     department_id: Optional[int] = None
     roles: Optional[List['RoleResponse']] = Field(default=[], description="用户角色列表")
+    permissions: Optional[List[Dict[str, Any]]] = Field(default=[], description="用户权限列表")
+    is_superuser: Optional[bool] = Field(default=False, description="是否为超级管理员")
     
     @classmethod
     def from_orm(cls, obj):
@@ -96,6 +98,38 @@ class UserResponse(BaseResponse, UserBase):
         except Exception:
             # 如果访问roles失败（DetachedInstanceError），使用空列表
             data['roles'] = []
+        
+        # 添加权限信息
+        try:
+            # 获取数据库会话
+            from sqlalchemy.orm import object_session
+            session = object_session(obj)
+            
+            if obj.has_role('SUPER_ADMIN'):
+                # 超级管理员拥有所有权限
+                if session:
+                    from ..models.permission import Permission
+                    all_permissions = session.query(Permission).filter(Permission.is_active == True).all()
+                    data['permissions'] = [{'code': perm.code, 'name': perm.name} for perm in all_permissions]
+                else:
+                    data['permissions'] = [{'code': '*', 'name': '所有权限'}]
+            else:
+                # 从角色获取权限
+                permissions = set()
+                for role in obj.roles:
+                    if role.is_active:
+                        for perm in role.permissions:
+                            if perm.is_active:
+                                permissions.add((perm.code, perm.name))
+                data['permissions'] = [{'code': code, 'name': name} for code, name in permissions]
+        except Exception as e:
+            data['permissions'] = []
+        
+        # 添加超级管理员状态
+        try:
+            data['is_superuser'] = obj.is_superuser()
+        except Exception:
+            data['is_superuser'] = False
         
         return cls(**data)
 

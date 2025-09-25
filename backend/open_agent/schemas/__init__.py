@@ -1,37 +1,16 @@
-"""Schemas for API serialization."""
+"""Schemas package initialization."""
 
-# Import only existing schema modules
-from .department import (
-    DepartmentCreate, DepartmentUpdate, DepartmentResponse,
-    DepartmentTreeResponse
-)
-from .user_department import (
-    UserDepartmentCreate, UserDepartmentUpdate, UserDepartmentResponse,
-    UserDepartmentWithDetails, DepartmentUserList, UserDepartmentList,
-    SetPrimaryDepartmentRequest, BulkUserDepartmentCreate, BulkUserDepartmentResponse
-)
+from .user import UserCreate, UserUpdate, UserResponse
 from .permission import (
-    PermissionCreate, PermissionUpdate, PermissionResponse,
     RoleCreate, RoleUpdate, RoleResponse,
-    UserRoleAssign, RolePermissionAssign, UserPermissionResponse
+    UserRoleAssign
 )
-from .llm_config import LLMConfigCreate, LLMConfigUpdate, LLMConfigResponse
 
 __all__ = [
-    # Department schemas
-    "DepartmentCreate", "DepartmentUpdate", "DepartmentResponse",
-    "DepartmentTreeResponse",
-    
-    # User department schemas
-    "UserDepartmentCreate", "UserDepartmentUpdate", "UserDepartmentResponse",
-    "UserDepartmentWithDetails", "DepartmentUserList", "UserDepartmentList",
-    "SetPrimaryDepartmentRequest", "BulkUserDepartmentCreate", "BulkUserDepartmentResponse",
+    # User schemas
+    "UserCreate", "UserUpdate", "UserResponse",
     
     # Permission schemas
-    "PermissionCreate", "PermissionUpdate", "PermissionResponse",
     "RoleCreate", "RoleUpdate", "RoleResponse",
-    "UserRoleAssign", "RolePermissionAssign", "UserPermissionResponse",
-    
-    # LLM config schemas
-    "LLMConfigCreate", "LLMConfigUpdate", "LLMConfigResponse"
+    "UserRoleAssign",
 ]

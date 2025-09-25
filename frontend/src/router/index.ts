@@ -90,18 +90,7 @@ const routes: Array<RouteRecordRaw> = [
             component: () => import('../components/system/RoleManagement.vue'),
             meta: { requiresAuth: true, requiresAdmin: true, title: '角色管理' }
           },
-          {
-            path: 'permissions',
-            name: 'SystemPermissions',
-            component: () => import('../components/system/PermissionManagement.vue'),
-            meta: { requiresAuth: true, requiresAdmin: true, title: '权限管理' }
-          },
-          {
-            path: 'resources',
-            name: 'SystemResources',
-            component: () => import('../components/system/ResourceManagement.vue'),
-            meta: { requiresAuth: true, requiresAdmin: true, title: '资源管理' }
-          },
+
           {
             path: 'llm-configs',
             name: 'SystemLLMConfigs',

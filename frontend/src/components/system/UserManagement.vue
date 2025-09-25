@@ -24,20 +24,7 @@
             </template>
           </el-input>
           
-          <el-select
-            v-model="filterDepartment"
-            placeholder="选择部门"
-            style="width: 200px; margin-left: 16px"
-            clearable
-            @change="handleFilter"
-          >
-            <el-option
-              v-for="dept in departments"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
-          </el-select>
+
           
 
         </div>
@@ -83,11 +70,7 @@
             
             <el-table-column prop="email" label="邮箱" width="200" />
             
-            <el-table-column prop="department" label="部门" width="150">
-              <template #default="{ row }">
-                <span>{{ getDepartmentName(row.department_id) }}</span>
-              </template>
-            </el-table-column>
+
             
 
             
@@ -115,7 +98,7 @@
               </template>
             </el-table-column>
             
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column label="操作" width="280" >
               <template #default="{ row }">
                 <el-button
                   type="primary"
@@ -123,6 +106,14 @@
                   @click="handleEdit(row)"
                 >
                   编辑
+                </el-button>
+
+                <el-button
+                  type="warning"
+                  size="small"
+                  @click="handleResetPassword(row)"
+                >
+                  重置密码
                 </el-button>
 
                 <el-button
@@ -151,6 +142,54 @@
         </div>
       </div>
     </el-card>
+
+    <!-- 重置密码对话框 -->
+    <el-dialog
+      v-model="resetPasswordDialogVisible"
+      title="重置用户密码"
+      width="400px"
+      @close="handleResetPasswordDialogClose"
+    >
+      <el-form
+        ref="resetPasswordFormRef"
+        :model="resetPasswordForm"
+        :rules="resetPasswordRules"
+        label-width="100px"
+      >
+        <el-form-item label="用户">
+          <span>{{ resetPasswordUser?.username }} ({{ resetPasswordUser?.email }})</span>
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input
+            v-model="resetPasswordForm.newPassword"
+            type="password"
+            placeholder="请输入新密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input
+            v-model="resetPasswordForm.confirmPassword"
+            type="password"
+            placeholder="请再次输入新密码"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="resetPasswordDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            :loading="resetPasswordSubmitting"
+            @click="handleResetPasswordSubmit"
+          >
+            确认重置
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
 
     <!-- 用户表单对话框 -->
     <el-dialog
@@ -186,21 +225,7 @@
           />
         </el-form-item>
         
-        <el-form-item label="部门" prop="department_id">
-          <el-select
-            v-model="formData.department_id"
-            placeholder="请选择部门"
-            style="width: 100%"
-            clearable
-          >
-            <el-option
-              v-for="dept in departments"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
-          </el-select>
-        </el-form-item>
+
         
         <el-form-item label="状态">
           <el-switch v-model="formData.is_active" />
@@ -229,8 +254,8 @@ import {
   Refresh
 } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/date'
-import { usersApi, departmentsApi, rolesApi, userDepartmentsApi } from '@/api'
-import type { User as UserType, Department, Role } from '@/types'
+import { usersApi, rolesApi } from '@/api'
+import type { User as UserType, Role } from '@/types'
 
 // 响应式数据
 const loading = ref(false)
@@ -240,9 +265,18 @@ const isEdit = ref(false)
 const currentUser = ref<UserType | null>(null)
 const selectedUsers = ref<UserType[]>([])
 
+// 重置密码相关
+const resetPasswordDialogVisible = ref(false)
+const resetPasswordSubmitting = ref(false)
+const resetPasswordUser = ref<UserType | null>(null)
+const resetPasswordFormRef = ref<FormInstance>()
+const resetPasswordForm = reactive({
+  newPassword: '',
+  confirmPassword: ''
+})
+
 // 搜索和筛选
 const searchQuery = ref('')
-const filterDepartment = ref<number | null>(null)
 const filterStatus = ref('')
 
 // 分页
@@ -257,13 +291,11 @@ const formData = reactive({
   email: '',
   password: '',
   full_name: '',
-  department_id: null as number | null,
   is_active: true
 })
 
 // 数据
 const users = ref<UserType[]>([])
-const departments = ref<Department[]>([])
 const roles = ref<Role[]>([])
 
 // 表单验证规则
@@ -285,6 +317,27 @@ const formRules = {
   ]
 }
 
+// 重置密码表单验证规则
+const resetPasswordRules = {
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少 6 个字符', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (value !== resetPasswordForm.newPassword) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
 // 计算属性
 const dialogTitle = computed(() => {
   return isEdit.value ? '编辑用户' : '新增用户'
@@ -302,20 +355,10 @@ const filteredUsers = computed(() => {
     )
   }
   
-  // 部门过滤
-  if (filterDepartment.value) {
-    result = result.filter(user => user.department_id === filterDepartment.value)
-  }
-  
   return result
 })
 
 // 方法
-const getDepartmentName = (departmentId: number | null) => {
-  if (!departmentId) return '-'
-  const department = departments.value.find(d => d.id === departmentId)
-  return department?.name || '-'
-}
 
 const handleSearch = () => {
   // 搜索逻辑已在计算属性中处理
@@ -347,30 +390,12 @@ const handleEdit = async (user: UserType) => {
   isEdit.value = true
   currentUser.value = user
   
-  // 获取用户的部门信息
-  let userDepartmentId = user.department_id
-  if (!userDepartmentId && user.id) {
-    try {
-      const response = await userDepartmentsApi.getUserDepartments(user.id, true)
-      const primaryDept = response.data.departments?.find(dept => dept.is_primary)
-      if (primaryDept) {
-        userDepartmentId = primaryDept.department_id
-      } else if (response.data.departments?.length > 0) {
-        // 如果没有主要部门，使用第一个部门
-        userDepartmentId = response.data.departments[0].department_id
-      }
-    } catch (error) {
-      console.warn('获取用户部门信息失败:', error)
-    }
-  }
-  
   // 填充表单数据
   Object.assign(formData, {
     username: user.username,
     email: user.email,
     password: '', // 编辑时密码为空
     full_name: user.full_name || '',
-    department_id: userDepartmentId,
     is_active: user.is_active
   })
   
@@ -402,6 +427,39 @@ const handleDelete = async (user: UserType) => {
   }
 }
 
+const handleResetPassword = (user: UserType) => {
+  resetPasswordUser.value = user
+  resetPasswordForm.newPassword = ''
+  resetPasswordForm.confirmPassword = ''
+  resetPasswordDialogVisible.value = true
+}
+
+const handleResetPasswordSubmit = async () => {
+  if (!resetPasswordFormRef.value || !resetPasswordUser.value) return
+  
+  try {
+    await resetPasswordFormRef.value.validate()
+    resetPasswordSubmitting.value = true
+    
+    await usersApi.resetUserPassword(resetPasswordUser.value.id, resetPasswordForm.newPassword)
+    ElMessage.success('密码重置成功')
+    resetPasswordDialogVisible.value = false
+  } catch (error: any) {
+    ElMessage.error(error.message || '密码重置失败')
+  } finally {
+    resetPasswordSubmitting.value = false
+  }
+}
+
+const handleResetPasswordDialogClose = () => {
+  if (resetPasswordFormRef.value) {
+    resetPasswordFormRef.value.resetFields()
+  }
+  resetPasswordForm.newPassword = ''
+  resetPasswordForm.confirmPassword = ''
+  resetPasswordUser.value = null
+}
+
 const handleStatusChange = async (user: UserType) => {
   try {
     await usersApi.updateUserStatus(user.id, user.is_active)
@@ -428,65 +486,13 @@ const handleSubmit = async () => {
       if (!updateData.password) {
         delete updateData.password // 如果密码为空，不更新密码
       }
-      // 移除部门ID，因为部门关联通过单独的API处理
-      const departmentId = updateData.department_id
-      delete updateData.department_id
       
       await usersApi.updateUserById(currentUser.value.id, updateData)
-      
-      // 处理部门关联更新
-      if (departmentId !== currentUser.value.department_id) {
-        try {
-          // 获取用户当前的部门关联
-          const currentDepts = await userDepartmentsApi.getUserDepartments(currentUser.value.id, true)
-          
-          // 移除当前的主要部门关联
-          if (currentDepts.data.departments?.length > 0) {
-            const primaryDept = currentDepts.data.departments.find(dept => dept.is_primary)
-            if (primaryDept) {
-              await userDepartmentsApi.removeUserFromDepartment(currentUser.value.id, primaryDept.department_id)
-            }
-          }
-          
-          // 如果选择了新部门，创建新的关联
-          if (departmentId) {
-            await userDepartmentsApi.createUserDepartment({
-              user_id: currentUser.value.id,
-              department_id: departmentId,
-              is_primary: true,
-              is_active: true
-            })
-          }
-        } catch (deptError: any) {
-          console.warn('部门关联更新失败:', deptError)
-          ElMessage.warning('用户信息更新成功，但部门关联更新失败')
-        }
-      }
-      
       ElMessage.success('更新成功')
     } else {
       // 创建用户
       const createData = { ...formData }
-      const departmentId = createData.department_id
-      delete createData.department_id
-      
-      const newUser = await usersApi.createUser(createData)
-      
-      // 如果选择了部门，创建部门关联
-      if (departmentId && newUser.data.id) {
-        try {
-          await userDepartmentsApi.createUserDepartment({
-            user_id: newUser.data.id,
-            department_id: departmentId,
-            is_primary: true,
-            is_active: true
-          })
-        } catch (deptError: any) {
-          console.warn('部门关联创建失败:', deptError)
-          ElMessage.warning('用户创建成功，但部门关联创建失败')
-        }
-      }
-      
+      await usersApi.createUser(createData)
       ElMessage.success('创建成功')
     }
     
@@ -514,7 +520,6 @@ const resetForm = () => {
     email: '',
     password: '',
     full_name: '',
-    department_id: null,
     is_active: true
   })
 }
@@ -537,7 +542,6 @@ const loadUsers = async () => {
       page: currentPage.value,
       size: pageSize.value,
       search: searchQuery.value,
-      department_id: filterDepartment.value,
       is_active: filterStatus.value !== '' ? filterStatus.value : undefined
     })
     // 修正数据解析：API返回的是{users: [...], total: ...}格式
@@ -551,22 +555,9 @@ const loadUsers = async () => {
   }
 }
 
-const loadDepartments = async () => {
-  try {
-    const response = await departmentsApi.getDepartments()
-    // 根据API响应格式，直接使用response.data
-    departments.value = response.data || []
-  } catch (error: any) {
-    console.error('加载部门列表失败:', error)
-  }
-}
-
 // 生命周期
 onMounted(async () => {
-  await Promise.all([
-    loadUsers(),
-    loadDepartments()
-  ])
+  await loadUsers()
 })
 </script>
 

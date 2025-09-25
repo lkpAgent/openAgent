@@ -23,25 +23,7 @@ export interface UserRoleAssign {
   role_ids: number[]
 }
 
-export interface RolePermissionAssign {
-  permission_ids: number[]
-}
 
-export interface PermissionCreate {
-  name: string
-  code: string
-  description?: string
-  category?: string
-  sort_order?: number
-}
-
-export interface PermissionUpdate {
-  name?: string
-  code?: string
-  description?: string
-  category?: string
-  sort_order?: number
-}
 
 // Roles API
 export const rolesApi = {
@@ -95,52 +77,4 @@ export const rolesApi = {
     return api.post('/admin/roles/user-roles/assign', data)
   },
   
-  // Get role resources
-  getRoleResources(roleId: number) {
-    return api.get(`/admin/resources/role/${roleId}/`)
-  },
-  
-  // Assign resources to role
-  assignRoleResources(roleId: number, resourceIds: number[]) {
-    return api.post('/admin/resources/assign-role/', {
-      role_id: roleId,
-      resource_ids: resourceIds
-    })
-  }
-}
-
-// Permissions API
-export const permissionsApi = {
-  // Get all permissions
-  getPermissions(params?: {
-    page?: number
-    page_size?: number
-    search?: string
-    resource?: string
-    action?: string
-  }) {
-    return api.get('/admin/permissions/', { params })
-  },
-  
-
-  
-  // Get permission by ID
-  getPermission(permissionId: number) {
-    return api.get(`/admin/permissions/${permissionId}`)
-  },
-  
-  // Create permission
-  createPermission(data: PermissionCreate) {
-    return api.post('/admin/permissions/', data)
-  },
-  
-  // Update permission
-  updatePermission(permissionId: number, data: PermissionUpdate) {
-    return api.put(`/admin/permissions/${permissionId}`, data)
-  },
-  
-  // Delete permission
-  deletePermission(permissionId: number) {
-    return api.delete(`/admin/permissions/${permissionId}`)
-  }
 }

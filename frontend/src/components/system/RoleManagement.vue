@@ -94,13 +94,7 @@
               </template>
             </el-table-column>
             
-            <el-table-column prop="permissions" label="权限数量" width="100" align="center">
-              <template #default="{ row }">
-                <el-tag type="info" size="small">
-                  {{ row.permissions?.length || 0 }}
-                </el-tag>
-              </template>
-            </el-table-column>
+
             
             <el-table-column prop="user_count" label="用户数量" width="100" align="center">
               <template #default="{ row }">
@@ -135,13 +129,7 @@
                 >
                   编辑
                 </el-button>
-                <el-button
-                  type="warning"
-                  size="small"
-                  @click="handlePermissions(row)"
-                >
-                  权限配置
-                </el-button>
+
                 <el-button
                   type="info"
                   size="small"
@@ -227,59 +215,7 @@
       </template>
     </el-dialog>
 
-    <!-- 权限配置对话框 -->
-    <el-dialog
-      v-model="permissionDialogVisible"
-      title="权限配置"
-      width="800px"
-    >
-      <div class="permission-config">
-        <div class="config-header">
-          <h4>{{ currentRole?.name }} - 权限配置</h4>
-          <div class="config-actions">
-            <el-button size="small" @click="selectAllPermissions">
-              全选
-            </el-button>
-            <el-button size="small" @click="clearAllPermissions">
-              清空
-            </el-button>
-          </div>
-        </div>
-        
-        <div class="permission-tree">
-          <el-tree
-            ref="permissionTreeRef"
-            :data="permissionTree"
-            :props="{ label: 'name', children: 'children' }"
-            show-checkbox
-            node-key="id"
-            :default-checked-keys="selectedPermissions"
-            @check="handlePermissionCheck"
-          >
-            <template #default="{ node, data }">
-              <div class="permission-node">
-                <el-icon class="permission-icon">
-                  <Folder v-if="data.type === 'module'" />
-                  <Document v-else />
-                </el-icon>
-                <span class="permission-name">{{ data.name }}</span>
-                <span class="permission-code">{{ data.code }}</span>
-                <span v-if="data.description" class="permission-desc">
-                  {{ data.description }}
-                </span>
-              </div>
-            </template>
-          </el-tree>
-        </div>
-      </div>
-      
-      <template #footer>
-        <el-button @click="permissionDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handlePermissionSubmit" :loading="submitting">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+
 
     <!-- 用户列表对话框 -->
     <el-dialog
@@ -387,7 +323,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import {
   UserFilled,
@@ -401,20 +337,18 @@ import {
   Document
 } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/date'
-import { rolesApi, permissionsApi, type RoleCreate, type RoleUpdate } from '@/api/roles'
+import { rolesApi, type RoleCreate, type RoleUpdate } from '@/api/roles'
 import { usersApi } from '@/api/users'
 
 // 响应式数据
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
-const permissionDialogVisible = ref(false)
 const userDialogVisible = ref(false)
 const assignUserDialogVisible = ref(false)
 const isEdit = ref(false)
 const currentRole = ref(null)
 const selectedRoles = ref([])
-const selectedPermissions = ref([])
 const selectedUserIds = ref([])
 
 // 搜索和筛选
@@ -428,7 +362,6 @@ const total = ref(0)
 
 // 表单
 const formRef = ref<FormInstance>()
-const permissionTreeRef = ref()
 const formData = reactive({
   name: '',
   code: '',
@@ -438,7 +371,6 @@ const formData = reactive({
 
 // 数据
 const roles = ref([])
-const permissionTree = ref([])
 
 const roleUsers = ref([])
 const availableUsers = ref([])
@@ -562,24 +494,7 @@ const handleStatusChange = async (row: any) => {
   }
 }
 
-const handlePermissions = async (row: any) => {
-  currentRole.value = row
-  try {
-    const response = await rolesApi.getRolePermissions(row.id)
-    const rolePermissionIds = response.data?.map((p: any) => p.id) || []
-    selectedPermissions.value = rolePermissionIds
-    
-    // 等待下一个tick确保树组件已渲染
-    await nextTick()
-    if (permissionTreeRef.value) {
-      permissionTreeRef.value.setCheckedKeys(rolePermissionIds)
-    }
-  } catch (error) {
-    console.error('加载角色权限失败:', error)
-    selectedPermissions.value = []
-  }
-  permissionDialogVisible.value = true
-}
+
 
 const handleUsers = (row: any) => {
   currentRole.value = row
@@ -626,39 +541,7 @@ const handleUnassignUser = async (user: any) => {
   }
 }
 
-const selectAllPermissions = () => {
-  if (permissionTreeRef.value) {
-    const permissionKeys = []
-    const collectPermissionKeys = (nodes: any[]) => {
-      nodes.forEach(node => {
-        if (node.type === 'permission') {
-          permissionKeys.push(node.id)
-        }
-        if (node.children) {
-          collectPermissionKeys(node.children)
-        }
-      })
-    }
-    collectPermissionKeys(permissionTree.value)
-    permissionTreeRef.value.setCheckedKeys(permissionKeys)
-  }
-}
 
-const clearAllPermissions = () => {
-  if (permissionTreeRef.value) {
-    permissionTreeRef.value.setCheckedKeys([])
-  }
-}
-
-const handlePermissionCheck = () => {
-  if (permissionTreeRef.value) {
-    const checkedKeys = permissionTreeRef.value.getCheckedKeys()
-    // 只保留权限节点的ID，过滤掉资源节点
-    selectedPermissions.value = checkedKeys.filter(key => 
-      typeof key === 'number' || !key.toString().startsWith('resource_')
-    )
-  }
-}
 
 const handleSubmit = async () => {
   if (!formRef.value) return
@@ -692,27 +575,7 @@ const handleSubmit = async () => {
   }
 }
 
-const handlePermissionSubmit = async () => {
-  if (!currentRole.value) return
-  
-  try {
-    submitting.value = true
-    
-    // 使用已过滤的权限ID（只包含权限节点，不包含资源节点）
-    await rolesApi.assignRolePermissions(currentRole.value.id, {
-      permission_ids: selectedPermissions.value
-    })
-    
-    ElMessage.success('权限配置成功')
-    permissionDialogVisible.value = false
-    loadRoles()
-  } catch (error) {
-    console.error('权限配置失败:', error)
-    ElMessage.error('权限配置失败')
-  } finally {
-    submitting.value = false
-  }
-}
+
 
 const handleAssignUserSubmit = async () => {
   if (selectedUserIds.value.length === 0) {
@@ -820,89 +683,13 @@ const loadAvailableUsers = async () => {
   }
 }
 
-// 加载权限数据
-const loadPermissions = async () => {
-  try {
-    const response = await permissionsApi.getPermissions()
-    console.log('权限API响应:', response)
-    
-    // 确保获取到的是数组数据
-    let permissions = []
-    if (response.data) {
-      if (Array.isArray(response.data)) {
-        permissions = response.data
-      } else if (Array.isArray(response.data.items)) {
-        permissions = response.data.items
-      } else if (Array.isArray(response.data.permissions)) {
-        permissions = response.data.permissions
-      } else if (Array.isArray(response.data.data)) {
-        permissions = response.data.data
-      }
-    }
-    
-    console.log('处理后的权限数据:', permissions)
-    
-    // 将平铺的权限数据转换为树形结构
-    permissionTree.value = buildPermissionTree(permissions)
-  } catch (error) {
-    console.error('加载权限列表失败:', error)
-    ElMessage.error('加载权限列表失败')
-    permissionTree.value = []
-  }
-}
 
-// 构建权限树形结构
-const buildPermissionTree = (permissions: any[]) => {
-  const resourceMap = new Map()
-  
-  // 按资源分组
-  permissions.forEach(permission => {
-    // 从code字段解析资源和操作，格式如 'user:create' 或 'system:admin'
-    const codeParts = permission.code.split(':')
-    const resource = codeParts[0] || 'other'
-    const action = codeParts[1] || 'unknown'
-    
-    if (!resourceMap.has(resource)) {
-      resourceMap.set(resource, {
-        id: `resource_${resource}`,
-        name: getResourceName(resource),
-        code: resource,
-        type: 'module',
-        children: []
-      })
-    }
-    
-    // 添加权限到对应资源下
-    resourceMap.get(resource).children.push({
-      id: permission.id,
-      name: permission.name,
-      code: permission.code,
-      type: 'permission',
-      description: permission.description,
-      resource: resource,
-      action: action
-    })
-  })
-  
-  return Array.from(resourceMap.values())
-}
 
-// 获取资源显示名称
-const getResourceName = (resource: string) => {
-  const resourceNames = {
-    'user': '用户管理',
-    'role': '角色管理', 
-    'permission': '权限管理',
-    'department': '部门管理',
-    'system': '系统管理'
-  }
-  return resourceNames[resource] || resource
-}
+
 
 // 生命周期
 onMounted(() => {
   loadRoles()
-  loadPermissions()
 })
 </script>
 

@@ -43,7 +43,7 @@
           :class="{ active: activeModule === 'agent' }"
           @click="setActiveModule('agent')"
         >
-          <el-icon class="nav-icon"><Robot /></el-icon>
+          <el-icon class="nav-icon"><Cpu /></el-icon>
           <span>智能体管理</span>
         </div>
         
@@ -242,7 +242,6 @@ import {
   ChatDotRound,
   FolderOpened,
   Connection,
-  Robot,
   Plus,
   Search,
   User,

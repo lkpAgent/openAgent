@@ -9,7 +9,8 @@ from ...core.config import get_settings
 from ...db.database import get_db
 from ...services.auth import AuthService
 from ...services.user import UserService
-from ...utils.schemas import Token, UserCreate, UserResponse, LoginRequest
+from ...schemas.user import UserResponse, UserCreate
+from ...utils.schemas import Token, LoginRequest
 
 router = APIRouter()
 settings = get_settings()

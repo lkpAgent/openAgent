@@ -675,7 +675,7 @@ const loadDepartments = async () => {
     const response = await departmentsApi.getDepartmentTree()
     departments.value = response.data
     
-    ElMessage.success('部门数据加载成功')
+    // ElMessage.success('部门数据加载成功')
   } catch (error: any) {
     console.error('加载部门数据失败:', error)
     ElMessage.error(error.message || '加载部门数据失败')

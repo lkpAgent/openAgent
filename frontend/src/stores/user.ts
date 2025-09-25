@@ -139,6 +139,22 @@ export const useUserStore = defineStore('user', () => {
       isLoading.value = false
     }
   }
+
+  const changePassword = async (passwordData: { current_password: string; new_password: string }) => {
+    try {
+      isLoading.value = true
+      await usersApi.changePassword(passwordData)
+      
+      ElMessage.success('密码修改成功')
+      return true
+    } catch (error: any) {
+      console.error('Change password failed:', error)
+      // API拦截器已经处理了错误消息显示，这里不需要重复显示
+      throw error // 重新抛出错误，让调用方知道操作失败
+    } finally {
+      isLoading.value = false
+    }
+  }
   
   const logout = async () => {
     try {
@@ -217,6 +233,7 @@ export const useUserStore = defineStore('user', () => {
     getCurrentUser,
     getUserRoles,
     updateProfile,
+    changePassword,
     logout,
     refreshToken,
     deleteAccount,

@@ -10,7 +10,7 @@
               <h1 class="app-title">智能对话平台</h1>
             </div>
             <div v-if="!isCollapsed" class="user-actions">
-            <span class="username">{{ userStore.user?.username }}</span>
+            <span class="username" @click="showProfileDialog = true" title="点击修改个人信息">{{ userStore.user?.username }}</span>
             <a href="#" @click.prevent="logout" class="logout-link">
               <el-icon><SwitchButton /></el-icon>
               注销
@@ -22,7 +22,7 @@
             <!-- 上部分导航 -->
             <div class="nav-group">
               <div class="nav-group-header">
-                <div v-if="!isCollapsed" class="nav-group-title"></div>
+                <div v-if="!isCollapsed" class="nav-group-title">核心功能</div>
                 <el-button 
                   class="collapse-btn" 
                   @click="toggleSidebar" 
@@ -48,7 +48,7 @@
             <!-- 下部分导航 -->
             <div class="nav-group">
               <div class="nav-group-header">
-                <div v-if="!isCollapsed" class="nav-group-title"></div>
+                <div v-if="!isCollapsed" class="nav-group-title">管理功能</div>
               </div>
               <template v-for="item in lowerNavItems" :key="item.key">
                 <!-- 主菜单项 -->
@@ -176,6 +176,9 @@
         <router-view />
       </div>
     </div>
+    
+    <!-- 个人信息对话框 -->
+    <ProfileDialog v-model="showProfileDialog" />
   </div>
 </template>
 
@@ -183,6 +186,7 @@
 import { ref, computed, onMounted, watch, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import ProfileDialog from './ProfileDialog.vue'
 import {
   ChatDotRound,
   Collection,
@@ -225,6 +229,7 @@ const showHistoryPanel = ref(false)
 const showArchivedConversations = ref(false)
 const isCollapsed = ref(false)
 const expandedMenus = ref(new Set())
+const showProfileDialog = ref(false)
 
 // 动态菜单配置
 const upperNavItems = computed(() => menuStore.upperNavItems)
@@ -455,21 +460,12 @@ onMounted(async () => {
     }
   }
   
-  // 初始化菜单
-  if (userStore.isAuthenticated) {
-    await menuStore.fetchUserMenuResources()
-  }
-  
   await loadConversations()
 })
 
-// 监听用户认证状态变化，刷新菜单
+// 监听用户认证状态变化
 watch(() => userStore.isAuthenticated, async (isAuthenticated) => {
-  if (isAuthenticated) {
-    await menuStore.fetchUserMenuResources()
-  } else {
-    menuStore.clearMenuResources()
-  }
+  // 菜单现在基于用户状态自动生成，无需额外操作
 })
 
 // 暴露给子组件使用
@@ -617,6 +613,15 @@ provide('isCollapsed', isCollapsed)
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 120px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.username:hover {
+  color: #3498db;
+  background-color: rgba(52, 152, 219, 0.1);
 }
 
 .logout-link {

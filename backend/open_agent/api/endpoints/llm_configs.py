@@ -8,10 +8,7 @@ from sqlalchemy import or_
 from ...db.database import get_db
 from ...models.user import User
 from ...models.llm_config import LLMConfig
-from ...core.permissions import (
-    require_llm_config_read, require_llm_config_manage,
-    Permissions
-)
+from ...core.simple_permissions import require_super_admin, require_authenticated_user
 from ...services.auth import AuthService
 from ...utils.logger import get_logger
 from ...schemas.llm_config import (
@@ -31,7 +28,7 @@ async def get_llm_configs(
     provider: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_read)
+    current_user: User = Depends(require_authenticated_user)
 ):
     """获取大模型配置列表."""
     try:
@@ -74,7 +71,7 @@ async def get_llm_configs(
 @router.get("/providers")
 async def get_llm_providers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_read)
+    current_user: User = Depends(require_authenticated_user)
 ):
     """获取支持的大模型服务商列表."""
     try:
@@ -92,7 +89,7 @@ async def get_llm_providers(
 @router.get("/active", response_model=List[LLMConfigResponse])
 async def get_active_llm_configs(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_read)
+    current_user: User = Depends(require_authenticated_user)
 ):
     """获取激活的大模型配置列表."""
     try:
@@ -114,7 +111,7 @@ async def get_active_llm_configs(
 async def get_llm_config(
     config_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_read)
+    current_user: User = Depends(require_authenticated_user)
 ):
     """获取大模型配置详情."""
     try:
@@ -141,7 +138,7 @@ async def get_llm_config(
 async def create_llm_config(
     config_data: LLMConfigCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_manage)
+    current_user: User = Depends(require_super_admin)
 ):
     """创建大模型配置."""
     try:
@@ -200,7 +197,7 @@ async def update_llm_config(
     config_id: int,
     config_data: LLMConfigUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_manage)
+    current_user: User = Depends(require_super_admin)
 ):
     """更新大模型配置."""
     try:
@@ -251,7 +248,7 @@ async def update_llm_config(
 async def delete_llm_config(
     config_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_manage)
+    current_user: User = Depends(require_super_admin)
 ):
     """删除大模型配置."""
     try:
@@ -286,7 +283,7 @@ async def test_llm_config(
     config_id: int,
     test_data: LLMConfigTest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_manage)
+    current_user: User = Depends(require_super_admin)
 ):
     """测试大模型配置."""
     try:
@@ -357,7 +354,7 @@ async def test_llm_config(
 async def toggle_llm_config_status(
     config_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_llm_config_manage)
+    current_user: User = Depends(require_super_admin)
 ):
     """切换大模型配置状态."""
     try:
