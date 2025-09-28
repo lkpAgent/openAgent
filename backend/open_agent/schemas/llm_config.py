@@ -11,19 +11,18 @@ class LLMConfigBase(BaseModel):
     provider: str = Field(..., min_length=1, max_length=50, description="服务商")
     model_name: str = Field(..., min_length=1, max_length=100, description="模型名称")
     api_key: str = Field(..., min_length=1, description="API密钥")
-    api_base: Optional[str] = Field(None, description="API基础URL")
-    api_version: Optional[str] = Field(None, description="API版本")
+    base_url: Optional[str] = Field(None, description="API基础URL")
     max_tokens: Optional[int] = Field(4096, ge=1, le=32000, description="最大令牌数")
     temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="温度参数")
     top_p: Optional[float] = Field(1.0, ge=0.0, le=1.0, description="Top-p参数")
     frequency_penalty: Optional[float] = Field(0.0, ge=-2.0, le=2.0, description="频率惩罚")
     presence_penalty: Optional[float] = Field(0.0, ge=-2.0, le=2.0, description="存在惩罚")
-    timeout: Optional[int] = Field(60, ge=1, le=300, description="超时时间（秒）")
-    max_retries: Optional[int] = Field(3, ge=0, le=10, description="最大重试次数")
     description: Optional[str] = Field(None, max_length=500, description="配置描述")
-    sort_order: Optional[int] = Field(0, ge=0, description="排序")
+
     is_active: bool = Field(True, description="是否激活")
-    extra_params: Optional[Dict[str, Any]] = Field(None, description="额外参数")
+    is_default: bool = Field(False, description="是否为默认配置")
+    is_embedding: bool = Field(False, description="是否为嵌入模型")
+    extra_config: Optional[Dict[str, Any]] = Field(None, description="额外配置")
 
 
 class LLMConfigCreate(LLMConfigBase):
@@ -34,7 +33,7 @@ class LLMConfigCreate(LLMConfigBase):
         allowed_providers = [
             'openai', 'azure', 'anthropic', 'google', 'baidu', 
             'alibaba', 'tencent', 'zhipu', 'moonshot', 'deepseek',
-            'ollama', 'custom'
+            'ollama', 'custom', "doubao"
         ]
         if v.lower() not in allowed_providers:
             raise ValueError(f'不支持的服务商: {v}，支持的服务商: {", ".join(allowed_providers)}')
@@ -53,19 +52,18 @@ class LLMConfigUpdate(BaseModel):
     provider: Optional[str] = Field(None, min_length=1, max_length=50, description="服务商")
     model_name: Optional[str] = Field(None, min_length=1, max_length=100, description="模型名称")
     api_key: Optional[str] = Field(None, min_length=1, description="API密钥")
-    api_base: Optional[str] = Field(None, description="API基础URL")
-    api_version: Optional[str] = Field(None, description="API版本")
+    base_url: Optional[str] = Field(None, description="API基础URL")
     max_tokens: Optional[int] = Field(None, ge=1, le=32000, description="最大令牌数")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0, description="温度参数")
     top_p: Optional[float] = Field(None, ge=0.0, le=1.0, description="Top-p参数")
     frequency_penalty: Optional[float] = Field(None, ge=-2.0, le=2.0, description="频率惩罚")
     presence_penalty: Optional[float] = Field(None, ge=-2.0, le=2.0, description="存在惩罚")
-    timeout: Optional[int] = Field(None, ge=1, le=300, description="超时时间（秒）")
-    max_retries: Optional[int] = Field(None, ge=0, le=10, description="最大重试次数")
     description: Optional[str] = Field(None, max_length=500, description="配置描述")
-    sort_order: Optional[int] = Field(None, ge=0, description="排序")
+
     is_active: Optional[bool] = Field(None, description="是否激活")
-    extra_params: Optional[Dict[str, Any]] = Field(None, description="额外参数")
+    is_default: Optional[bool] = Field(None, description="是否为默认配置")
+    is_embedding: Optional[bool] = Field(None, description="是否为嵌入模型")
+    extra_config: Optional[Dict[str, Any]] = Field(None, description="额外配置")
     
     @validator('provider')
     def validate_provider(cls, v):
@@ -73,7 +71,7 @@ class LLMConfigUpdate(BaseModel):
             allowed_providers = [
                 'openai', 'azure', 'anthropic', 'google', 'baidu', 
                 'alibaba', 'tencent', 'zhipu', 'moonshot', 'deepseek',
-                'ollama', 'custom'
+                'ollama', 'custom',"doubao"
             ]
             if v.lower() not in allowed_providers:
                 raise ValueError(f'不支持的服务商: {v}，支持的服务商: {", ".join(allowed_providers)}')
@@ -93,19 +91,19 @@ class LLMConfigResponse(BaseModel):
     name: str
     provider: str
     model_name: str
-    api_base: Optional[str] = None
-    api_version: Optional[str] = None
+    api_key: Optional[str] = None  # 完整的API密钥（仅在include_sensitive=True时返回）
+    base_url: Optional[str] = None
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     frequency_penalty: Optional[float] = None
     presence_penalty: Optional[float] = None
-    timeout: Optional[int] = None
-    max_retries: Optional[int] = None
     description: Optional[str] = None
-    sort_order: Optional[int] = None
+
     is_active: bool
-    extra_params: Optional[Dict[str, Any]] = None
+    is_default: bool
+    is_embedding: bool
+    extra_config: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[int] = None

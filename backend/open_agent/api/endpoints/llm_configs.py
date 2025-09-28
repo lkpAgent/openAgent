@@ -15,7 +15,7 @@ from ...schemas.llm_config import (
     LLMConfigCreate, LLMConfigUpdate, LLMConfigResponse,
     LLMConfigTest
 )
-
+from open_agent.services.document_processor import get_document_processor
 logger = get_logger(__name__)
 router = APIRouter(prefix="/llm-configs", tags=["llm-configs"])
 
@@ -27,6 +27,7 @@ async def get_llm_configs(
     search: Optional[str] = Query(None),
     provider: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
+    is_embedding: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_authenticated_user)
 ):
@@ -52,13 +53,17 @@ async def get_llm_configs(
         if is_active is not None:
             query = query.filter(LLMConfig.is_active == is_active)
         
+        # 模型类型筛选
+        if is_embedding is not None:
+            query = query.filter(LLMConfig.is_embedding == is_embedding)
+        
         # 排序
-        query = query.order_by(LLMConfig.sort_order, LLMConfig.name)
+        query = query.order_by(LLMConfig.name)
         
         # 分页
         configs = query.offset(skip).limit(limit).all()
         
-        return [config.to_dict() for config in configs]
+        return [config.to_dict(include_sensitive=True) for config in configs]
         
     except Exception as e:
         logger.error(f"Error getting LLM configs: {str(e)}")
@@ -88,22 +93,59 @@ async def get_llm_providers(
 
 @router.get("/active", response_model=List[LLMConfigResponse])
 async def get_active_llm_configs(
+    is_embedding: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_authenticated_user)
 ):
-    """获取激活的大模型配置列表."""
+    """获取所有激活的大模型配置."""
     try:
-        configs = db.query(LLMConfig).filter(
-            LLMConfig.is_active == True
-        ).order_by(LLMConfig.sort_order, LLMConfig.name).all()
+        query = db.query(LLMConfig).filter(LLMConfig.is_active == True)
         
-        return [config.to_dict() for config in configs]
+        if is_embedding is not None:
+            query = query.filter(LLMConfig.is_embedding == is_embedding)
+        
+        configs = query.order_by(LLMConfig.created_at).all()
+        
+        return [config.to_dict(include_sensitive=True) for config in configs]
         
     except Exception as e:
         logger.error(f"Error getting active LLM configs: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取激活配置列表失败"
+        )
+
+
+@router.get("/default", response_model=LLMConfigResponse)
+async def get_default_llm_config(
+    is_embedding: bool = Query(False, description="是否获取嵌入模型默认配置"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user)
+):
+    """获取默认大模型配置."""
+    try:
+        config = db.query(LLMConfig).filter(
+            LLMConfig.is_default == True,
+            LLMConfig.is_embedding == is_embedding,
+            LLMConfig.is_active == True
+        ).first()
+        
+        if not config:
+            model_type = "嵌入模型" if is_embedding else "对话模型"
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"未找到默认{model_type}配置"
+            )
+        
+        return config.to_dict(include_sensitive=True)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting default LLM config: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取默认配置失败"
         )
 
 
@@ -122,7 +164,7 @@ async def get_llm_config(
                 detail="大模型配置不存在"
             )
         
-        return config.to_dict()
+        return config.to_dict(include_sensitive=True)
         
     except HTTPException:
         raise
@@ -152,25 +194,56 @@ async def create_llm_config(
                 detail="配置名称已存在"
             )
         
+        # 创建临时配置对象进行验证
+        temp_config = LLMConfig(
+            name=config_data.name,
+            provider=config_data.provider,
+            model_name=config_data.model_name,
+            api_key=config_data.api_key,
+            base_url=config_data.base_url,
+            max_tokens=config_data.max_tokens,
+            temperature=config_data.temperature,
+            top_p=config_data.top_p,
+            frequency_penalty=config_data.frequency_penalty,
+            presence_penalty=config_data.presence_penalty,
+            description=config_data.description,
+            is_active=config_data.is_active,
+            is_default=config_data.is_default,
+            is_embedding=config_data.is_embedding,
+            extra_config=config_data.extra_config or {}
+        )
+        
+        # 验证配置
+        validation_result = temp_config.validate_config()
+        if not validation_result['valid']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=validation_result['error']
+            )
+        
+        # 如果设为默认，取消同类型的其他默认配置
+        if config_data.is_default:
+            db.query(LLMConfig).filter(
+                LLMConfig.is_embedding == config_data.is_embedding
+            ).update({"is_default": False})
+        
         # 创建配置
         config = LLMConfig(
             name=config_data.name,
             provider=config_data.provider,
             model_name=config_data.model_name,
             api_key=config_data.api_key,
-            api_base=config_data.api_base,
-            api_version=config_data.api_version,
+            base_url=config_data.base_url,
             max_tokens=config_data.max_tokens,
             temperature=config_data.temperature,
             top_p=config_data.top_p,
             frequency_penalty=config_data.frequency_penalty,
             presence_penalty=config_data.presence_penalty,
-            timeout=config_data.timeout,
-            max_retries=config_data.max_retries,
             description=config_data.description,
-            sort_order=config_data.sort_order or 0,
             is_active=config_data.is_active,
-            extra_params=config_data.extra_params or {}
+            is_default=config_data.is_default,
+            is_embedding=config_data.is_embedding,
+            extra_config=config_data.extra_config or {}
         )
         config.set_audit_fields(current_user.id)
         
@@ -219,6 +292,15 @@ async def update_llm_config(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="配置名称已存在"
                 )
+        
+        # 如果设为默认，取消同类型的其他默认配置
+        if config_data.is_default is True:
+            # 获取当前配置的embedding类型，如果更新中包含is_embedding则使用新值
+            is_embedding = config_data.is_embedding if config_data.is_embedding is not None else config.is_embedding
+            db.query(LLMConfig).filter(
+                LLMConfig.is_embedding == is_embedding,
+                LLMConfig.id != config_id
+            ).update({"is_default": False})
         
         # 更新字段
         update_data = config_data.dict(exclude_unset=True)
@@ -388,4 +470,59 @@ async def toggle_llm_config_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="切换配置状态失败"
+        )
+
+
+@router.post("/{config_id}/set-default")
+async def set_default_llm_config(
+    config_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """设置默认大模型配置."""
+    try:
+        config = db.query(LLMConfig).filter(LLMConfig.id == config_id).first()
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="大模型配置不存在"
+            )
+        
+        # 检查配置是否激活
+        if not config.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="只能将激活的配置设为默认"
+            )
+        
+        # 取消同类型的其他默认配置
+        db.query(LLMConfig).filter(
+            LLMConfig.is_embedding == config.is_embedding,
+            LLMConfig.id != config_id
+        ).update({"is_default": False})
+        
+        # 设置当前配置为默认
+        config.is_default = True
+        config.set_audit_fields(current_user.id, is_update=True)
+        
+        db.commit()
+        db.refresh(config)
+        
+        model_type = "嵌入模型" if config.is_embedding else "对话模型"
+        logger.info(f"Default LLM config set: {config.name} ({model_type}) by user {current_user.username}")
+        # 更新文档处理器默认embedding
+        get_document_processor()._init_embeddings()
+        return {
+            "message": f"已将 {config.name} 设为默认{model_type}配置",
+            "is_default": config.is_default
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error setting default LLM config {config_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="设置默认配置失败"
         )

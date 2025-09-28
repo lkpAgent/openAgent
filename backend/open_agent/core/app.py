@@ -123,18 +123,30 @@ def setup_exception_handlers(app: FastAPI) -> None:
             }
         )
     
+    def make_json_serializable(obj):
+        """递归地将对象转换为JSON可序列化的格式"""
+        if obj is None or isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, bytes):
+            return obj.decode('utf-8')
+        elif isinstance(obj, (ValueError, Exception)):
+            return str(obj)
+        elif isinstance(obj, dict):
+            return {k: make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [make_json_serializable(item) for item in obj]
+        else:
+            # For any other object, convert to string
+            return str(obj)
+
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request, exc):
-        # Convert any bytes objects to strings in error details
-        errors = []
-        for error in exc.errors():
-            clean_error = {}
-            for key, value in error.items():
-                if isinstance(value, bytes):
-                    clean_error[key] = value.decode('utf-8')
-                else:
-                    clean_error[key] = value
-            errors.append(clean_error)
+        # Convert any non-serializable objects to strings in error details
+        try:
+            errors = make_json_serializable(exc.errors())
+        except Exception as e:
+            # Fallback: if even our conversion fails, use a simple error message
+            errors = [{"type": "serialization_error", "msg": f"Error processing validation details: {str(e)}"}]
         
         return JSONResponse(
             status_code=422,

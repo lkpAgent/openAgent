@@ -25,8 +25,11 @@ class UserContextMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/api/auth/login",
-            "/api/auth/register",
+            "/api/auth/register", 
             "/api/auth/login-oauth",
+            "/auth/login",
+            "/auth/register",
+            "/auth/login-oauth",
             "/health",
             "/test"
         ]

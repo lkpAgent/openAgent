@@ -18,6 +18,10 @@ from .endpoints import roles
 from .endpoints import llm_configs
 from .endpoints import users
 
+# Workflow endpoints
+from .endpoints import workflow
+from .v1 import websocket
+
 # Create main API router
 router = APIRouter()
 
@@ -85,7 +89,18 @@ router.include_router(
     tags=["users"]
 )
 
-# Basic test endpoint
+router.include_router(
+    workflow.router,
+    prefix="/workflows",
+    tags=["workflows"]
+)
+
+router.include_router(
+    websocket.router,
+    tags=["websocket"]
+)
+
+# Test endpoint
 @router.get("/test")
 async def test_endpoint():
     return {"message": "API test is working"}

@@ -101,7 +101,7 @@ class DocumentProcessor:
         self.pgvector_pool = None
         
         # PostgreSQL pgvector连接配置
-        print('settings.vector_db.type=============',settings.vector_db.type)
+        print('settings.vector_db.type=============', settings.vector_db.type)
         if settings.vector_db.type == "pgvector":
             # 新版本PGVector使用psycopg3连接字符串
             # 对密码进行URL编码以处理特殊字符（如@符号）

@@ -89,7 +89,29 @@ class LLMSettings(BaseSettings):
     }
     
     def get_current_config(self) -> dict:
-        """获取当前选择的提供商配置."""
+        """获取当前选择的提供商配置 - 优先从数据库读取默认配置."""
+        try:
+            # 尝试从数据库读取默认聊天模型配置
+            from open_agent.services.llm_config_service import LLMConfigService
+            llm_service = LLMConfigService()
+            db_config = llm_service.get_default_chat_config()
+            
+            if db_config:
+                # 如果数据库中有默认配置，使用数据库配置
+                config = {
+                    "api_key": db_config.api_key,
+                    "base_url": db_config.base_url,
+                    "model": db_config.model_name,
+                    "max_tokens": self.max_tokens,
+                    "temperature": self.temperature
+                }
+                return config
+        except Exception as e:
+            # 如果数据库读取失败，记录错误并回退到环境变量
+            import logging
+            logging.warning(f"Failed to read LLM config from database, falling back to env vars: {e}")
+        
+        # 回退到原有的环境变量配置
         provider_configs = {
             "openai": {
                 "api_key": self.openai_api_key,
@@ -163,7 +185,27 @@ class EmbeddingSettings(BaseSettings):
     }
     
     def get_current_config(self) -> dict:
-        """获取当前选择的embedding提供商配置."""
+        """获取当前选择的embedding提供商配置 - 优先从数据库读取默认配置."""
+        try:
+            # 尝试从数据库读取默认嵌入模型配置
+            from open_agent.services.llm_config_service import LLMConfigService
+            llm_service = LLMConfigService()
+            db_config = llm_service.get_default_embedding_config()
+            
+            if db_config:
+                # 如果数据库中有默认配置，使用数据库配置
+                config = {
+                    "api_key": db_config.api_key,
+                    "base_url": db_config.base_url,
+                    "model": db_config.model_name
+                }
+                return config
+        except Exception as e:
+            # 如果数据库读取失败，记录错误并回退到环境变量
+            import logging
+            logging.warning(f"Failed to read embedding config from database, falling back to env vars: {e}")
+        
+        # 回退到原有的环境变量配置
         provider_configs = {
             "openai": {
                 "api_key": self.openai_api_key,

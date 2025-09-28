@@ -499,14 +499,14 @@ provide('isCollapsed', isCollapsed)
 /* 响应式设计 */
 @media (min-width: 1440px) {
   .main-layout {
-    padding: 40px;
+    padding: 0;
   }
   
   .layout-container {
-    max-width: 1800px;
-    height: calc(100vh - 80px);
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 

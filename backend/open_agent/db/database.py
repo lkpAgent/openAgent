@@ -48,7 +48,7 @@ async def init_db():
         create_database_engine()
     
     # Import all models to ensure they are registered
-    from ..models import user, conversation, message, knowledge_base, permission
+    from ..models import user, conversation, message, knowledge_base, permission, workflow
     
     # Create all tables
     Base.metadata.create_all(bind=engine)

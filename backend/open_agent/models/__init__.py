@@ -8,6 +8,7 @@ from .agent_config import AgentConfig
 from .excel_file import ExcelFile
 from .permission import Role, UserRole
 from .llm_config import LLMConfig
+from .workflow import Workflow, WorkflowExecution, NodeExecution
 
 __all__ = [
     "User",
@@ -19,5 +20,8 @@ __all__ = [
     "ExcelFile",
     "Role",
     "UserRole",
-    "LLMConfig"
+    "LLMConfig",
+    "Workflow",
+    "WorkflowExecution",
+    "NodeExecution"
 ]

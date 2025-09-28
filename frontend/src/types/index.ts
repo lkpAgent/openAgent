@@ -362,6 +362,61 @@ export interface DocumentItemProps {
   document: Document
 }
 
+// Workflow Types
+export interface NodeParameter {
+  name: string
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array'
+  description?: string
+  required: boolean
+  default_value?: any
+  source?: 'input' | 'node' | 'variable'
+  source_node_id?: string
+  source_field?: string
+}
+
+export interface NodeInputOutput {
+  inputs: NodeParameter[]
+  outputs: NodeParameter[]
+}
+
+export interface WorkflowNode {
+  id: string
+  type: string
+  name: string
+  description?: string
+  x: number
+  y: number
+  config: Record<string, any>
+  parameters?: NodeInputOutput
+  result?: {
+    success: boolean
+    data?: any
+    error?: string
+  }
+}
+
+export interface WorkflowConnection {
+  id: string
+  from: string
+  to: string
+  fromPoint: string
+  toPoint: string
+}
+
+export interface Workflow {
+  id: number
+  name: string
+  description?: string
+  definition: {
+    nodes: WorkflowNode[]
+    connections: WorkflowConnection[]
+  }
+  status: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 // Utility Types
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
 

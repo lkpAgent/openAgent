@@ -38,8 +38,22 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'workflow',
         name: 'Workflow',
-        component: () => import('../components/WorkflowEditor.vue'),
-        meta: { requiresAuth: true }
+        redirect: '/workflow/list',
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: 'list',
+            name: 'WorkflowList',
+            component: () => import('../views/WorkflowList.vue'),
+            meta: { requiresAuth: true }
+          },
+          {
+            path: 'editor/:id?',
+            name: 'WorkflowEditor',
+            component: () => import('../components/WorkflowEditor.vue'),
+            meta: { requiresAuth: true }
+          }
+        ]
       },
       {
         path: 'agent',

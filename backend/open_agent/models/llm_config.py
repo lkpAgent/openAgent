@@ -14,7 +14,7 @@ class LLMConfig(BaseModel):
     __tablename__ = "llm_configs"
     
     name = Column(String(100), nullable=False, index=True)  # 配置名称
-    provider = Column(String(50), nullable=False, index=True)  # 服务商：openai, deepseek, doubao, zhipu, moonshot
+    provider = Column(String(50), nullable=False, index=True)  # 服务商：openai, deepseek, doubao, zhipu, moonshot, baidu
     model_name = Column(String(100), nullable=False)  # 模型名称
     api_key = Column(String(500), nullable=False)  # API密钥（加密存储）
     base_url = Column(String(200), nullable=True)  # API基础URL
@@ -98,27 +98,27 @@ class LLMConfig(BaseModel):
             
         return config
     
-    def validate_config(self) -> tuple[bool, Optional[str]]:
+    def validate_config(self) -> Dict[str, Any]:
         """验证配置是否有效."""
         if not self.name or not self.name.strip():
-            return False, "配置名称不能为空"
+            return {"valid": False, "error": "配置名称不能为空"}
             
-        if not self.provider or self.provider not in ['openai', 'deepseek', 'doubao', 'zhipu', 'moonshot']:
-            return False, "不支持的服务商"
+        if not self.provider or self.provider not in ['openai', 'deepseek', 'doubao', 'zhipu', 'moonshot', 'baidu']:
+            return {"valid": False, "error": "不支持的服务商"}
             
         if not self.model_name or not self.model_name.strip():
-            return False, "模型名称不能为空"
+            return {"valid": False, "error": "模型名称不能为空"}
             
         if not self.api_key or not self.api_key.strip():
-            return False, "API密钥不能为空"
+            return {"valid": False, "error": "API密钥不能为空"}
             
         if self.max_tokens <= 0 or self.max_tokens > 32000:
-            return False, "最大令牌数必须在1-32000之间"
+            return {"valid": False, "error": "最大令牌数必须在1-32000之间"}
             
         if self.temperature < 0 or self.temperature > 2:
-            return False, "温度参数必须在0-2之间"
+            return {"valid": False, "error": "温度参数必须在0-2之间"}
             
-        return True, None
+        return {"valid": True, "error": None}
     
     def increment_usage(self):
         """增加使用次数."""
