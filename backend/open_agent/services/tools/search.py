@@ -28,7 +28,7 @@ class SearchInput(BaseModel):
 
 
 class TavilySearchTool(BaseTool):
-    name:ClassVar[str] = "网页搜索工具"
+    name:ClassVar[str] = "tavily_search_tool"
     description:ClassVar[str]  = """使用Tavily搜索引擎进行网络搜索，可以获取最新信息。
     输入应该包含搜索查询(query)，可选参数包括max_results和topic。"""  # 替代get_description()
     args_schema: Type[BaseModel] = SearchInput  # 用Pydantic模型定义参数

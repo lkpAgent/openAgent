@@ -20,7 +20,7 @@ from .endpoints import users
 
 # Workflow endpoints
 from .endpoints import workflow
-from .v1 import websocket
+
 
 # Create main API router
 router = APIRouter()
@@ -93,11 +93,6 @@ router.include_router(
     workflow.router,
     prefix="/workflows",
     tags=["workflows"]
-)
-
-router.include_router(
-    websocket.router,
-    tags=["websocket"]
 )
 
 # Test endpoint

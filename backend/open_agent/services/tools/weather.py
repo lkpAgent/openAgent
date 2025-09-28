@@ -16,8 +16,8 @@ class WeatherInput(BaseModel):
 
 class WeatherQueryTool(BaseTool):
     """心知天气API查询工具（LangChain标准版）"""
-    name: ClassVar[str] = "天气API查询工具"
-    description: ClassVar[str] = """通过心知天气API查询实时天气数据。 name = "天气API查询工具"  # 工具唯一标识 """
+    name: ClassVar[str] = "weather_query_tool"
+    description: ClassVar[str] = """通过心知天气API查询实时天气数据。获取指定城市的当前天气信息，包括温度、湿度、天气状况等。"""
     args_schema: Type[BaseModel] = WeatherInput  # 参数规范
     # 使用PrivateAttr声明不参与验证的私有属性
     _api_key: str = PrivateAttr()

@@ -41,11 +41,11 @@
           清空
         </el-button>
         
-        <!-- WebSocket连接状态指示器 -->
-        <div class="websocket-status">
-          <el-tooltip :content="isWebSocketConnected ? '实时连接已建立' : '实时连接未建立'">
+        <!-- SSE连接状态指示器 -->
+        <div class="sse-status">
+          <el-tooltip :content="isSSEConnected ? '实时连接已建立' : '实时连接未建立'">
             <el-icon 
-              :class="['connection-indicator', { 'connected': isWebSocketConnected, 'disconnected': !isWebSocketConnected }]"
+              :class="['connection-indicator', { 'connected': isSSEConnected, 'disconnected': !isSSEConnected }]"
             >
               <Connection />
             </el-icon>
@@ -697,9 +697,8 @@ const workflowId = computed(() => {
 // 用户store
 const userStore = useUserStore()
 
-// WebSocket相关状态
-const isWebSocketConnected = ref(false)
-const webSocketConnectionId = ref<string | null>(null)
+// SSE连接状态
+const isSSEConnected = ref(false)
 
 // 节点类型定义
 interface NodeType {
@@ -1506,7 +1505,7 @@ const getToolParameters = (nodeType: string) => {
   return toolParams[nodeType] || []
 }
 
-// WebSocket初始化和回调处理
+// SSE初始化和回调处理
 const initializeSSE = async () => {
   try {
     const userStore = useUserStore()
@@ -1527,14 +1526,14 @@ const initializeSSE = async () => {
         completedNodes.value = []
         errorNodes.value = []
         nodeExecutions.value = []
-        isWebSocketConnected.value = true // 重用这个状态表示SSE连接
+        isSSEConnected.value = true
       },
       
       onWorkflowCompleted: (data) => {
         console.log('工作流执行完成:', data)
         executionStatus.value = 'completed'
         runningNodes.value = []
-        isWebSocketConnected.value = false
+        isSSEConnected.value = false
         ElMessage.success('工作流执行完成')
       },
       
@@ -1542,7 +1541,7 @@ const initializeSSE = async () => {
         console.log('工作流执行失败:', data)
         executionStatus.value = 'failed'
         runningNodes.value = []
-        isWebSocketConnected.value = false
+        isSSEConnected.value = false
         ElMessage.error(`工作流执行失败: ${data.error_message || data.error}`)
       },
       
@@ -1616,7 +1615,7 @@ const initializeSSE = async () => {
       
       onError: (error) => {
         console.error('SSE错误:', error)
-        isWebSocketConnected.value = false
+        isSSEConnected.value = false
         ElMessage.error(`实时连接错误: ${error}`)
       }
     }
@@ -2725,7 +2724,7 @@ onUnmounted(() => {
   document.removeEventListener('click', handleGlobalClick)
   
   // 清理SSE连接
-  if (isWebSocketConnected.value) {
+  if (isSSEConnected.value) {
     workflowSSEService.disconnect()
   }
 })
@@ -3620,8 +3619,8 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
-/* WebSocket状态指示器样式 */
-.websocket-status {
+/* SSE状态指示器样式 */
+.sse-status {
   display: flex;
   align-items: center;
   margin-left: 16px;

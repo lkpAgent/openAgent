@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..models.workflow import Workflow, WorkflowExecution, NodeExecution, ExecutionStatus, NodeType
 from ..models.llm_config import LLMConfig
 from ..services.llm_service import LLMService
-from ..services.websocket_manager import get_connection_manager
+
 from ..db.database import get_db
 from ..utils.logger import get_logger
 
@@ -23,7 +23,7 @@ class WorkflowEngine:
     def __init__(self, db: Session):
         self.db = db
         self.llm_service = LLMService()
-        self.websocket_manager = get_connection_manager()
+
     
     async def execute_workflow(self, workflow: Workflow, input_data: Optional[Dict[str, Any]] = None, 
                              user_id: int = None, db: Session = None) -> 'WorkflowExecutionResponse':
@@ -47,16 +47,7 @@ class WorkflowEngine:
         self.db.commit()
         self.db.refresh(execution)
         
-        # 发送工作流开始执行的WebSocket通知
-        await self.websocket_manager.send_workflow_status(
-            execution_id=execution.id,
-            status="started",
-            data={
-                "workflow_id": workflow.id,
-                "workflow_name": workflow.name,
-                "input_data": input_data or {}
-            }
-        )
+
         
         try:
             # 解析工作流定义
@@ -75,15 +66,7 @@ class WorkflowEngine:
             execution.output_data = result
             execution.completed_at = datetime.now().isoformat()
             
-            # 发送工作流完成的WebSocket通知
-            await self.websocket_manager.send_workflow_status(
-                execution_id=execution.id,
-                status="completed",
-                data={
-                    "output_data": result,
-                    "completed_at": execution.completed_at
-                }
-            )
+
             
         except Exception as e:
             logger.error(f"工作流执行失败: {str(e)}")
@@ -91,15 +74,7 @@ class WorkflowEngine:
             execution.error_message = str(e)
             execution.completed_at = datetime.now().isoformat()
             
-            # 发送工作流失败的WebSocket通知
-            await self.websocket_manager.send_workflow_status(
-                execution_id=execution.id,
-                status="failed",
-                data={
-                    "error_message": str(e),
-                    "completed_at": execution.completed_at
-                }
-            )
+
             
         execution.set_audit_fields(user_id, is_update=True)
         self.db.commit()
@@ -445,18 +420,7 @@ class WorkflowEngine:
             node_execution.input_data = display_input_data
             self.db.commit()
             
-            # 发送节点开始执行的WebSocket通知（包含输入数据）
-            await self.websocket_manager.send_node_status(
-                execution_id=execution.id,
-                node_id=node_id,
-                status="started",
-                data={
-                    "node_name": node_name,
-                    "node_type": node_type,
-                    "started_at": node_execution.started_at,
-                    "input_data": display_input_data
-                }
-            )
+
             
             # 根据节点类型执行
             if node_type == 'start':
@@ -483,19 +447,7 @@ class WorkflowEngine:
             
             self.db.commit()
             
-            # 发送节点完成的WebSocket通知
-            await self.websocket_manager.send_node_status(
-                execution_id=execution.id,
-                node_id=node_id,
-                status="completed",
-                data={
-                    "node_name": node_name,
-                    "node_type": node_type,
-                    "output_data": output_data,
-                    "completed_at": node_execution.completed_at,
-                    "duration_ms": node_execution.duration_ms
-                }
-            )
+
             
             return output_data
             
@@ -508,19 +460,7 @@ class WorkflowEngine:
             node_execution.duration_ms = int((end_time - start_time) * 1000)
             self.db.commit()
             
-            # 发送节点失败的WebSocket通知
-            await self.websocket_manager.send_node_status(
-                execution_id=execution.id,
-                node_id=node_id,
-                status="failed",
-                data={
-                    "node_name": node_name,
-                    "node_type": node_type,
-                    "error_message": str(e),
-                    "completed_at": node_execution.completed_at,
-                    "duration_ms": node_execution.duration_ms
-                }
-            )
+
             
             raise
     
