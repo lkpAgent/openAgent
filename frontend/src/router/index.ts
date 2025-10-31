@@ -116,6 +116,12 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
   {
+    path: '/paste',
+    name: 'Paste',
+    component: () => import('../views/Paste.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFound.vue')
