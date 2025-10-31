@@ -5,8 +5,9 @@ __author__ = "Your Name"
 __email__ = "your.email@example.com"
 __description__ = "A modern chat agent application with Vue frontend and FastAPI backend"
 
-# 导出主要组件
-from .core.config import settings
-from .core.app import create_app
+# 轻量化初始化：避免在导入 open_agent 包时加载全局配置
+# 如需使用，请直接从子模块导入：
+#   - 配置：`from open_agent.core.config import get_settings, Settings`
+#   - 应用工厂：`from open_agent.core.app import create_app`
 
-__all__ = ["settings", "create_app", "__version__"]
+__all__ = ["__version__"]
