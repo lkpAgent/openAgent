@@ -64,7 +64,7 @@ export const chatApi = {
   
   // Stream chat (for Server-Sent Events)
   sendMessageStream(data: ChatRequest) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+    const baseURL = '/api'
     const token = localStorage.getItem('access_token')
     
     return new EventSource(`${baseURL}/chat/stream`, {
@@ -79,7 +79,7 @@ export const chatApi = {
   
   // Alternative stream implementation using fetch
   async sendMessageStreamFetch(conversationId: string, data: ChatRequest): Promise<ReadableStream<Uint8Array> | null> {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    const baseURL = '/api'
     const token = localStorage.getItem('access_token')
     
     try {

@@ -681,7 +681,7 @@ const excelFileList = ref([])
 const excelData = ref(null)
 const selectedFile = ref(null)
 const fileListLoading = ref(false)
-const uploadUrl = computed(() => `${import.meta.env.VITE_API_BASE_URL}/smart-query/upload-excel`)
+const uploadUrl = computed(() => `/api/smart-query/upload-excel`)
 const uploadHeaders = computed(() => ({
   'Authorization': `Bearer ${localStorage.getItem('access_token')}`
 }))
@@ -799,7 +799,7 @@ const handleDataSourceChange = async (tab: string) => {
 const loadFileList = async () => {
   fileListLoading.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/files?page=1&page_size=50`, {
+    const response = await fetch(`/api/smart-query/files?page=1&page_size=50`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -886,7 +886,7 @@ const previewFile = (file: any) => {
 
 const removeFile = async (file: any) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/files/${file.id}`, {
+    const response = await fetch(`/api/smart-query/files/${file.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -967,7 +967,7 @@ const loadFilePreview = async (file: any) => {
   previewLoading.value = true
   console.log('设置预览加载状态为true')
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/preview-excel`, {
+    const response = await fetch(`/api/smart-query/preview-excel`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1037,7 +1037,7 @@ const loadTablePreview = async (table: string) => {
   previewLoading.value = true
   try {
     // 调用后端API获取表格预览数据
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/tables/${encodeURIComponent(table)}/data?db_type=${dbConfig.value.type}&limit=100`, {
+    const response = await fetch(`/api/database-config/tables/${encodeURIComponent(table)}/data?db_type=${dbConfig.value.type}&limit=100`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -1203,7 +1203,7 @@ const handleExcelUploadSuccess = async (file: any) => {
   formData.append('file', file.raw)
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/upload-excel`, {
+    const response = await fetch(`/api/smart-query/upload-excel`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -1249,7 +1249,7 @@ const handleUploadError = (error: any, file: any) => {
 const testConnection = async () => {
   testingConnection.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/test-db-connection`, {
+    const response = await fetch(`/api/smart-query/test-db-connection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1295,7 +1295,7 @@ const saveDbConfig = async () => {
     }
 
     // 使用现有的database-config API
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/`, {
+    const response = await fetch(`/api/database-config/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1363,7 +1363,7 @@ const loadDbConfig = async (configId) => {
 // 加载保存的配置列表
 const loadSavedConfigs = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/`, {
+    const response = await fetch(`/api/database-config/`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -1437,7 +1437,7 @@ const handleDatabaseTypeChange = async (dbType) => {
 // 加载指定类型的配置
 const loadConfigByType = async (dbType) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/by-type/${dbType}`, {
+    const response = await fetch(`/api/database-config/by-type/${dbType}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -1515,7 +1515,7 @@ const connectDatabase = async () => {
   try {
     isConnecting.value = true;
     // 修改URL路径，使用database-config的接口
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/database-config/${selectedConfig.value.id}/connect`, {
+    const response = await fetch(`/api/database-config/${selectedConfig.value.id}/connect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1589,7 +1589,7 @@ const collectTableMetadata = async () => {
 
   collectingMetadata.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/collect`, {
+    const response = await fetch(`/api/table-metadata/collect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1625,7 +1625,7 @@ const refreshTableMetadata = async () => {
       params.append('database_config_id', selectedConfig.value.id)
     }
     
-    const url = `${import.meta.env.VITE_API_BASE_URL}/table-metadata/?${params.toString()}`
+    const url = `/api/table-metadata/?${params.toString()}`
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -1679,7 +1679,7 @@ const editMetadataSettings = async (metadata) => {
 
 const saveQASettings = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/${currentEditingMetadata.value.id}/qa-settings`, {
+    const response = await fetch(`/api/table-metadata/${currentEditingMetadata.value.id}/qa-settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -1717,7 +1717,7 @@ const loadTableSchema = async () => {
   if (!selectedTable.value) return
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/table-schema`, {
+    const response = await fetch(`/api/smart-query/table-schema`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1769,7 +1769,7 @@ const loadCurrentTableMetadata = async () => {
 
   loadingMetadata.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/by-table`, {
+    const response = await fetch(`/api/table-metadata/by-table`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1826,7 +1826,7 @@ const saveTableMetadata = async () => {
 
   savingMetadata.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/${currentTableMetadata.value.id}/qa-settings`, {
+    const response = await fetch(`/api/table-metadata/${currentTableMetadata.value.id}/qa-settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -1865,7 +1865,7 @@ const collectCurrentTableMetadata = async () => {
 
   collectingMetadata.value = true
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/table-metadata/collect`, {
+    const response = await fetch(`/api/table-metadata/collect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1945,9 +1945,9 @@ const executeSmartQuery = async () => {
     // 根据数据源类型选择不同的接口
     let apiEndpoint
     if (activeDataSource.value === 'excel') {
-      apiEndpoint = `${import.meta.env.VITE_API_BASE_URL}/smart-query/execute-excel-query`
+      apiEndpoint = `/api/smart-query/execute-excel-query`
     } else if (activeDataSource.value === 'database') {
-      apiEndpoint = `${import.meta.env.VITE_API_BASE_URL}/smart-query/execute-db-query`
+      apiEndpoint = `/api/smart-query/execute-db-query`
     } else {
       throw new Error('未知的数据源类型')
     }
@@ -2098,7 +2098,7 @@ const executeDatabaseQuery = async () => {
     table_name: selectedTable.value
   }
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-query/execute-db-query`, {
+  const response = await fetch(`/api/smart-query/execute-db-query`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -2276,7 +2276,7 @@ const clearChatHistory = () => {
 // 获取文件状态
 const getFilesStatus = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-chat/files/status`, {
+    const response = await fetch(`api/smart-chat/files/status`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
@@ -2300,7 +2300,7 @@ const resetConversationContext = async () => {
   }
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/smart-chat/conversation/${currentConversationId.value}/reset`, {
+    const response = await fetch(`/api/smart-chat/conversation/${currentConversationId.value}/reset`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`

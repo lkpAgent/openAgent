@@ -59,7 +59,7 @@ export class WorkflowSSEService {
    * 执行工作流
    */
   private async executeWorkflow(workflowId: number, inputData: any, token: string): Promise<void> {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const baseUrl = '/api'
     const url = `${baseUrl}/workflows/${workflowId}/execute-stream`
 
     // 创建AbortController来管理请求
