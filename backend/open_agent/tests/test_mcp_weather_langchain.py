@@ -39,7 +39,7 @@ def mcp_weather_call(location: str, unit: str = "c", language: str = "zh-Hans") 
     - Body：{"tool_name":"weather","parameters":{"location":...,"unit":...,"language":...}}
     返回：MCP服务的标准响应字典 {success, result, error, tool_name, executed_at}
     """
-    base_url = os.getenv("MCP_BASE_URL", "http://127.0.0.1:8001")
+    base_url = os.getenv("MCP_BASE_URL", "http://127.0.0.1:8002")
     url = f"{base_url.rstrip('/')}/execute"
     payload = {
         "tool_name": "weather",

@@ -123,7 +123,7 @@ def load_mcp_tools(include: Optional[List[str]] = None) -> List[MCPDynamicTool]:
     """
     settings = get_settings()
     # Try settings.tool.mcp_server_url, fallback to default
-    mcp_base_url = getattr(settings.tool, "mcp_server_url", None) or os.getenv("MCP_SERVER_URL") or "http://127.0.0.1:8001"
+    mcp_base_url = getattr(settings.tool, "mcp_server_url", None) or os.getenv("MCP_SERVER_URL") or "http://127.0.0.1:8002"
 
     url = f"{mcp_base_url.rstrip('/')}/tools"
     try:

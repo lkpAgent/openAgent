@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import List, Dict, Any, Optional, AsyncGenerator
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain.chat_models import init_chat_model
 # from langgraph.prebuilt import create_react_agent
@@ -113,6 +113,28 @@ class LangGraphAgentService:
             
             # Bind tools to the model so it can propose tool calls
             try:
+                # 下面的提示词并不必需，因为langchain的function call内部机制已经设定了底层提示词。除非确定需要自定义，比如让大模型思考过程侧重于哪些方面，才有必要加上。
+                react_system_prompt = """# 角色定位
+                你是一个专业的智能体协调大师，擅长精准调度各类工具资源来解决复杂问题。你的核心能力是准确判断问题性质并选择最合适的工具。
+
+                # 工具调用原则
+
+                ## 1. 工具选择标准
+                **外部搜索工具适用场景：**
+                - 实时性信息（天气、新闻、股价等）
+                - 公开知识查询（概念解释、事实核查）
+                - 动态数据获取（汇率、趋势分析）
+                - 需要最新外部信息的场景
+
+                **内部数据库查询适用场景：**
+                - 内部业务数据检索
+                - 用户个人信息查询
+                - 结构化数据查找
+                - 敏感或私有信息处理
+                
+                要求每一步思考时，都要给出思考过程与结果
+                """
+
                 self.bound_model = self.model.bind_tools(self.tools)
             except Exception as e:
                 logger.warning(f"Failed to bind tools to model, tool calling may not work: {e}")
@@ -131,6 +153,10 @@ class LangGraphAgentService:
             # Node: call the model
             def agent_node(state: AgentState) -> AgentState:
                 messages = state["messages"]
+
+                # 确保有系统提示
+                if not any(isinstance(msg, SystemMessage) for msg in messages):
+                    messages = [SystemMessage(content=react_system_prompt)] + messages
                 # Optionally include a system instruction at the start for first turn
                 if messages and messages[0].__class__.__name__ != 'SystemMessage':
                     # Keep user history untouched; rely on upstream to include system if desired

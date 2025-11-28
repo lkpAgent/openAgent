@@ -29,8 +29,8 @@ def parse_args():
     parser.add_argument(
         "--port",
         type=int,
-        default=8001,
-        help="服务器端口 (默认: 8001)"
+        default=8002,
+        help="服务器端口 (默认: 8002)"
     )
     parser.add_argument(
         "--reload",

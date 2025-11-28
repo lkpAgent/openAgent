@@ -17,7 +17,7 @@ class MCPServerConfig(BaseSettings):
     
     # 服务器配置（与 main.py / api.py 保持一致）
     HOST: str = "127.0.0.1"
-    PORT: int = 8001
+    PORT: int = 8002
     DEBUG: bool = False
     DATABASE_URL: str = os.getenv("DATABASE_URL") or ""
     # 工具服务配置（字典形式以便按名称启用/禁用）

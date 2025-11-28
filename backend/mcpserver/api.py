@@ -299,7 +299,7 @@ def create_app(config: Optional[MCPServerConfig] = None) -> FastAPI:
     return app
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
+def run_server(host: str = "0.0.0.0", port: int = 8002, reload: bool = False):
     """运行MCP服务器"""
     logger.info(f"启动MCP服务器，地址: http://{host}:{port}")
     uvicorn.run(
