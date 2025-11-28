@@ -17,7 +17,7 @@ from .endpoints import table_metadata
 from .endpoints import roles
 from .endpoints import llm_configs
 from .endpoints import users
-
+from .endpoints import testchat
 # Workflow endpoints
 from .endpoints import workflow
 
@@ -95,6 +95,10 @@ router.include_router(
     tags=["workflows"]
 )
 
+router.include_router(
+    testchat.router,
+    tags=["testchat"]
+)
 # Test endpoint
 @router.get("/test")
 async def test_endpoint():

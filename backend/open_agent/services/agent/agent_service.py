@@ -257,7 +257,7 @@ class AgentService:
             # Yield initial status
             yield {
                 "type": "status",
-                "content": "🤖 开始分析您的请求...",
+                "content": " 开始分析您的请求...",
                 "done": False
             }
             await asyncio.sleep(0.2)
@@ -273,7 +273,7 @@ class AgentService:
                         tool_name = event["name"]
                         yield {
                             "type": "tool_start",
-                            "content": f"🔧 正在使用工具: {tool_name}",
+                            "content": f"正在使用工具: {tool_name}",
                             "tool_name": tool_name,
                             "done": False
                         }
@@ -283,7 +283,7 @@ class AgentService:
                         tool_name = event["name"]
                         yield {
                             "type": "tool_end",
-                            "content": f"✅ 工具 {tool_name} 执行完成",
+                            "content": f"工具 {tool_name} 执行完成",
                             "tool_name": tool_name,
                             "done": False
                         }
@@ -326,7 +326,7 @@ class AgentService:
                         # Yield tool execution status
                         yield {
                             "type": "tool",
-                            "content": f"🔧 使用工具 {action.tool}: {str(action.tool_input)[:100]}...",
+                            "content": f"使用工具 {action.tool}: {str(action.tool_input)[:100]}...",
                             "tool_name": action.tool,
                             "tool_input": action.tool_input,
                             "done": False
@@ -335,7 +335,7 @@ class AgentService:
                         
                         yield {
                             "type": "tool_result",
-                            "content": f"✅ 工具结果: {str(observation)[:200]}...",
+                            "content": f"工具结果: {str(observation)[:200]}...",
                             "tool_name": action.tool,
                             "done": False
                         }
@@ -344,7 +344,7 @@ class AgentService:
                 # Yield thinking status
                 yield {
                     "type": "thinking",
-                    "content": "🤔 正在整理回答...",
+                    "content": "正在整理回答...",
                     "done": False
                 }
                 await asyncio.sleep(0.3)

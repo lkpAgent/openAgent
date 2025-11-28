@@ -352,11 +352,11 @@ class LangGraphAgentService:
                                     # 判断是否为 thinking 或 response
                                     if finish_reason == 'tool_calls':
                                         # thinking 状态
-                                        thinking_content = "🤔 正在思考..."
+                                        thinking_content = " 正在思考..."
                                         if hasattr(last_msg, 'content') and last_msg.content:
-                                            thinking_content = f"🤔 思考: {last_msg.content[:200]}..."
+                                            thinking_content = f" 思考: {last_msg.content[:200]}..."
                                         elif isinstance(last_msg, dict) and "content" in last_msg:
-                                            thinking_content = f"🤔 思考: {last_msg['content'][:200]}..."
+                                            thinking_content = f" 思考: {last_msg['content'][:200]}..."
 
                                         yield {
                                             "type": "thinking",
@@ -400,7 +400,7 @@ class LangGraphAgentService:
                                         # 其他 agent 状态
                                         yield {
                                             "type": "step",
-                                            "content": f"📋 执行步骤: {node_name}",
+                                            "content": f" 执行步骤: {node_name}",
                                             "node_name": node_name,
                                             "raw_output": str(node_output)[:500] if node_output else "",
                                             "done": False
@@ -411,7 +411,7 @@ class LangGraphAgentService:
                         else:
                             yield {
                                 "type": "step",
-                                "content": f"📋 执行步骤: {node_name}",
+                                "content": f" 执行步骤: {node_name}",
                                 "node_name": node_name,
                                 "raw_output": str(node_output)[:500] if node_output else "",
                                 "done": False
@@ -727,7 +727,7 @@ class LangGraphAgentService:
 
 
 # Global instance
-_langgraph_agent_service: Optional[LangGraphAgentService] = None
+_langgraph_agent_service: LangGraphAgentService = None
 
 
 def get_langgraph_agent_service(db_session=None) -> LangGraphAgentService:

@@ -1,5 +1,5 @@
 """Chat endpoints."""
-
+import time
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -201,8 +201,9 @@ async def chat_stream(
     db: Session = Depends(get_db)
 ):
     """Send a message and get streaming AI response."""
+    _start = time.perf_counter()
     chat_service = ChatService(db)
-    
+    print(f'init chat_service spend {time.perf_counter() - _start} seconds')
     async def generate_response():
         async for chunk in chat_service.chat_stream(
             conversation_id=conversation_id,

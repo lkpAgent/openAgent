@@ -169,7 +169,7 @@ class ConversationService:
         
         # Set audit fields
         message.set_audit_fields()
-        
+
         self.db.add(message)
         self.db.commit()
         self.db.refresh(message)

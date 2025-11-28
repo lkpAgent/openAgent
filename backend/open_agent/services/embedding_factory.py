@@ -10,7 +10,7 @@ from ..utils.logger import get_logger
 
 logger = get_logger("embedding_factory")
 
-
+_global_embeddings = None
 class EmbeddingFactory:
     """Factory class for creating embedding instances based on provider."""
     
@@ -30,23 +30,27 @@ class EmbeddingFactory:
         Returns:
             Embeddings instance
         """
-        # 使用新的embedding配置
-        embedding_config = settings.embedding.get_current_config()
-        provider = provider or settings.embedding.provider
-        model = model or embedding_config.get("model")
-        dimensions = dimensions or settings.vector_db.embedding_dimension
-        
-        logger.info(f"Creating embeddings with provider: {provider}, model: {model}")
-        
-        if provider == "openai":
-            return EmbeddingFactory._create_openai_embeddings(embedding_config, model, dimensions)
-        elif provider in ["zhipu", "deepseek", "doubao", "moonshot"]:
-            return EmbeddingFactory._create_openai_compatible_embeddings(embedding_config, model, dimensions, provider)
-        elif provider == "sentence-transformers":
-            return EmbeddingFactory._create_huggingface_embeddings(model)
-        else:
-            raise ValueError(f"Unsupported embedding provider: {provider}")
-    
+        global _global_embeddings
+
+        if _global_embeddings is None:
+
+            # 使用新的embedding配置
+            embedding_config = settings.embedding.get_current_config()
+            provider = provider or settings.embedding.provider
+            model = model or embedding_config.get("model")
+            dimensions = dimensions or settings.vector_db.embedding_dimension
+
+            logger.info(f"Creating embeddings with provider: {provider}, model: {model}")
+
+            if provider == "openai":
+                _global_embeddings = EmbeddingFactory._create_openai_embeddings(embedding_config, model, dimensions)
+            elif provider in ["zhipu", "deepseek", "doubao", "moonshot"]:
+                _global_embeddings = EmbeddingFactory._create_openai_compatible_embeddings(embedding_config, model, dimensions, provider)
+            elif provider == "sentence-transformers":
+                _global_embeddings = EmbeddingFactory._create_huggingface_embeddings(model)
+            else:
+                raise ValueError(f"Unsupported embedding provider: {provider}")
+        return _global_embeddings
     @staticmethod
     def _create_openai_embeddings(embedding_config: dict, model: str, dimensions: int) -> OpenAIEmbeddings:
         """Create OpenAI embeddings."""

@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from ..models.llm_config import LLMConfig
 from ..utils.logger import get_logger
-
+from ..core.config import settings
 logger = get_logger("llm_service")
 
 
@@ -15,8 +15,14 @@ class LLMService:
     """LLM服务，用于工作流中的大模型调用"""
     
     def __init__(self):
-        pass
-    
+        self.config = settings.llm.get_current_config()
+        self.llm = ChatOpenAI(
+            model=settings.llm.get_current_model(),
+            api_key=settings.llm.api_key,
+            base_url=settings.llm.base_url,
+            temperature=settings.llm.temperature,
+            max_tokens=settings.llm.max_tokens
+        )
     async def chat_completion(
         self,
         model_config: LLMConfig,
@@ -27,14 +33,15 @@ class LLMService:
         """调用大模型进行对话完成"""
         try:
             # 创建LangChain ChatOpenAI实例
-            llm = ChatOpenAI(
-                model=model_config.model_name,
-                api_key=model_config.api_key,
-                base_url=model_config.base_url,
-                temperature=temperature or model_config.temperature,
-                max_tokens=max_tokens or model_config.max_tokens,
-                streaming=False
-            )
+            if self.llm is None:
+                llm = ChatOpenAI(
+                    model=model_config.model_name,
+                    api_key=model_config.api_key,
+                    base_url=model_config.base_url,
+                    temperature=temperature or model_config.temperature,
+                    max_tokens=max_tokens or model_config.max_tokens,
+                    streaming=False
+                )
             
             # 转换消息格式
             langchain_messages = []

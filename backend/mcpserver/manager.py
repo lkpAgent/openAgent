@@ -5,7 +5,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from .config import MCPServerConfig
-from .tools import MySQLMCPTool, PostgreSQLMCPTool, WeatherMCPTool, SearchMCPTool
+from .tools import MySQLMCPTool, PostgreSQLDescribeTableTool, PostgreSQLExecuteQueryTool, PostgreSQLListTablesTool, WeatherMCPTool, SearchMCPTool
 
 from mcpserver.utils.logger import get_logger
 
@@ -33,7 +33,9 @@ class MCPServiceManager:
             logger.info("MySQL MCP工具已加载")
             
         if self.config.ENABLED_TOOLS.get("postgresql", False):
-            self.tools["postgresql"] = PostgreSQLMCPTool()
+            self.tools["postgresql_describe_table"] = PostgreSQLDescribeTableTool()
+            self.tools["postgresql_execute_query"] = PostgreSQLExecuteQueryTool()
+            self.tools["postgresql_list_tables"] = PostgreSQLListTablesTool()
             logger.info("PostgreSQL MCP工具已加载")
 
         if self.config.ENABLED_TOOLS.get("weather", False):

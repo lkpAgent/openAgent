@@ -20,6 +20,7 @@ from .agent.langgraph_agent_service import get_langgraph_agent_service
 logger = get_logger("chat_service")
 
 
+
 class ChatService:
     """Service for handling AI chat functionality using LangChain."""
     
@@ -336,3 +337,12 @@ class ChatService:
             temperature=temperature,
             max_tokens=max_tokens
         )
+
+_chat_service : ChatService = None
+
+def get_chat_service(db_session : None) -> ChatService:
+    global _chat_service
+    if _chat_service is None:
+        _chat_service = ChatService(db=db_session)
+
+    return _chat_service

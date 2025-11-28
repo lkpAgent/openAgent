@@ -1,6 +1,7 @@
 """Knowledge base chat service using LangChain RAG."""
 
 import asyncio
+import time
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from sqlalchemy.orm import Session
 
@@ -22,13 +23,13 @@ from ..utils.exceptions import ChatServiceError
 from ..utils.logger import get_logger
 from .conversation import ConversationService
 from .document_processor import get_document_processor
-
+from .llm_service import LLMService
 logger = get_logger("knowledge_chat_service")
 
 
 class KnowledgeChatService:
     """Knowledge base chat service using LangChain RAG."""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.conversation_service = ConversationService(db)
@@ -36,30 +37,16 @@ class KnowledgeChatService:
         # 获取当前LLM配置
         llm_config = settings.llm.get_current_config()
         
-        # Initialize LangChain ChatOpenAI
-        self.llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-            streaming=False
-        )
-        
+
+        from ..core.llm import create_llm
         # Streaming LLM for stream responses
-        self.streaming_llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=llm_config["api_key"],
-            base_url=llm_config["base_url"],
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-            streaming=True
-        )
-        
+
+        self.streaming_llm = create_llm(streaming=True)
         # Initialize embeddings based on provider
+        start_time = time.perf_counter()
         self.embeddings = EmbeddingFactory.create_embeddings()
-        
-        logger.info(f"Knowledge Chat Service initialized with model: {self.llm.model_name}")
+        print(f'execute time :{time.perf_counter() - start_time}秒')
+        logger.info(f"Knowledge Chat Service initialized with model: {self.streaming_llm.model_name}")
     
     def _get_vector_store(self, knowledge_base_id: int) -> Optional[PGVector]:
         """Get vector store for knowledge base."""
@@ -132,7 +119,7 @@ class KnowledgeChatService:
                 "chat_history": lambda x: conversation_history
             }
             | prompt
-            | self.llm
+            | self.streaming_llm
             | StrOutputParser()
         )
         
@@ -218,7 +205,7 @@ class KnowledgeChatService:
             return ChatResponse(
                 user_message=MessageResponse.from_orm(user_message),
                 assistant_message=MessageResponse.from_orm(assistant_message),
-                model_used=self.llm.model_name,
+                model_used=self.streaming_llm.model_name,
                 total_tokens=None  # TODO: Calculate tokens if needed
             )
             
@@ -272,17 +259,7 @@ class KnowledgeChatService:
             relevant_docs = retriever.get_relevant_documents(message)
             context = "\n\n".join([doc.page_content for doc in relevant_docs])
             
-            # Create streaming LLM
-            llm_config = settings.llm.get_current_config()
-            streaming_llm = ChatOpenAI(
-                model=llm_config["model"],
-                temperature=temperature or llm_config["temperature"],
-                max_tokens=max_tokens or llm_config["max_tokens"],
-                streaming=True,
-                api_key=llm_config["api_key"],
-                base_url=llm_config["base_url"]
-            )
-            
+
             # Create prompt for streaming
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "你是一个智能助手。请基于以下上下文信息回答用户的问题。如果上下文中没有相关信息，请诚实地说明。\n\n上下文信息：\n{context}"),
@@ -306,7 +283,7 @@ class KnowledgeChatService:
                     "question": lambda x: x["question"]
                 }
                 | prompt
-                | streaming_llm
+                | self.streaming_llm
                 | StrOutputParser()
             )
             

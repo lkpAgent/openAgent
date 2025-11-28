@@ -31,7 +31,6 @@ class UserContextMiddleware(BaseHTTPMiddleware):
             "/auth/register",
             "/auth/login-oauth",
             "/health",
-            "/test"
         ]
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:

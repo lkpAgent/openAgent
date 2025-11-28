@@ -3,6 +3,7 @@
 import json
 import asyncio
 import os
+import time
 from typing import AsyncGenerator, Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 
@@ -51,7 +52,7 @@ class LangChainChatService:
         
         # 添加调试日志
         logger.info(f"LLM Provider: {settings.llm.provider}")
-        
+
         # Initialize LangChain ChatOpenAI
         self.llm = create_llm(streaming=False)
         
@@ -209,7 +210,7 @@ class LangChainChatService:
     ) -> AsyncGenerator[str, None]:
         """Send a message and get streaming AI response using LangChain."""
         logger.info(f"Processing LangChain streaming chat request for conversation {conversation_id}")
-        
+        _start_time = time.perf_counter()
         try:
             # Get conversation details
             conversation = self.conversation_service.get_conversation(conversation_id)
@@ -222,7 +223,7 @@ class LangChainChatService:
                 content=message,
                 role=MessageRole.USER
             )
-            
+            print(f'spend {time.perf_counter() - _start_time} seconds')
             # Get conversation history for context
             history = self.conversation_service.get_conversation_history(
                 conversation_id, limit=20
@@ -230,23 +231,12 @@ class LangChainChatService:
             
             # Prepare messages for LangChain
             langchain_messages = self._prepare_langchain_messages(conversation, history)
-            
             # Update streaming LLM parameters if provided
             streaming_llm_to_use = self.streaming_llm
-            if temperature is not None or max_tokens is not None:
-                llm_config = settings.llm.get_current_config()
-                streaming_llm_to_use = ChatOpenAI(
-                    model=llm_config["model"],
-                    openai_api_key=llm_config["api_key"],
-                    openai_api_base=llm_config["base_url"],
-                    temperature=temperature if temperature is not None else float(conversation.temperature),
-                    max_tokens=max_tokens if max_tokens is not None else conversation.max_tokens,
-                    streaming=True
-                )
-            
+
             # Clear previous streaming handler state
             self.streaming_handler.clear()
-            
+            print(f'spend {time.perf_counter() - _start_time} seconds')
             # Stream response
             full_response = ""
             async for chunk in streaming_llm_to_use.astream(langchain_messages):
@@ -255,7 +245,7 @@ class LangChainChatService:
                     yield chunk.content
             
             # Add complete assistant message to database
-            assistant_message = self.conversation_service.add_message(
+            self.conversation_service.add_message(
                 conversation_id=conversation_id,
                 content=full_response,
                 role=MessageRole.ASSISTANT,

@@ -4,6 +4,9 @@ from typing import Optional
 from langchain_openai import ChatOpenAI
 from .config import get_settings
 
+_global_llm:Optional[ChatOpenAI] = None
+_global_streaming_llm:Optional[ChatOpenAI] = None
+
 def create_llm(model: Optional[str] = None, temperature: Optional[float] = None, streaming: bool = False) -> ChatOpenAI:
     """创建LLM实例
     
@@ -15,9 +18,20 @@ def create_llm(model: Optional[str] = None, temperature: Optional[float] = None,
     Returns:
         ChatOpenAI实例
     """
+
+    global _global_llm, _global_streaming_llm
+    if streaming:
+        if  _global_streaming_llm is None:
+            _global_streaming_llm = create_new_llm(model,temperature,streaming)
+        return _global_streaming_llm
+    else:
+        if _global_llm is None:
+            _global_llm = create_new_llm(model,temperature,streaming)
+        return _global_llm
+
+def create_new_llm(model: Optional[str] = None, temperature: Optional[float] = None, streaming: bool = False) -> ChatOpenAI:
     settings = get_settings()
     llm_config = settings.llm.get_current_config()
-    
     if model:
         # 根据指定的模型获取对应配置
         if model.startswith('deepseek'):
@@ -36,7 +50,6 @@ def create_llm(model: Optional[str] = None, temperature: Optional[float] = None,
             llm_config['model'] = settings.llm.moonshot_model
             llm_config['api_key'] = settings.llm.moonshot_api_key
             llm_config['base_url'] = settings.llm.moonshot_base_url
-
     return ChatOpenAI(
         model=llm_config['model'],
         api_key=llm_config['api_key'],

@@ -19,10 +19,10 @@ class MCPServerConfig(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8001
     DEBUG: bool = False
-    
+    DATABASE_URL: str = os.getenv("DATABASE_URL") or ""
     # 工具服务配置（字典形式以便按名称启用/禁用）
     ENABLED_TOOLS: Dict[str, bool] = {
-        "mysql": True,
+        "mysql": False,
         "postgresql": True,
         "weather": True,
         "search": True,
